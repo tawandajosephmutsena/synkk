@@ -324,53 +324,53 @@ new #[Title('Vault Details')] class extends Component {
                 @else
                     <flux:table>
                         <flux:table.columns>
-                            <flux:table.column>{{ __('Path / Folder') }}</flux:table.column>
-                            <flux:table.column>{{ __('Target Scope') }}</flux:table.column>
-                            <flux:table.column>{{ __('Access Level') }}</flux:table.column>
-                            <flux:table.column align="end">{{ __('Actions') }}</flux:table.column>
+                            <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Path / Folder') }}</flux:table.column>
+                            <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Target Scope') }}</flux:table.column>
+                            <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Access Level') }}</flux:table.column>
+                            <flux:table.column align="end" class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Actions') }}</flux:table.column>
                         </flux:table.columns>
 
                         <flux:table.rows>
                             @foreach ($this->permissionRules as $rule)
-                                <flux:table.row :key="$rule->id">
-                                    <flux:table.cell class="font-mono text-xs font-semibold">
-                                        <div class="flex items-center gap-2">
+                                <flux:table.row :key="$rule->id" class="hover:bg-zinc-50/50 dark:hover:bg-white/5 transition-colors">
+                                    <flux:table.cell class="py-3.5 px-4 font-mono text-xs font-semibold">
+                                        <div class="flex items-center gap-2.5">
                                             @if ($rule->is_folder)
                                                 <flux:icon icon="folder" class="size-4 text-amber-500 shrink-0" />
                                             @else
                                                 <flux:icon icon="document-text" class="size-4 text-blue-500 shrink-0" />
                                             @endif
-                                            <span>{{ $rule->path }}</span>
+                                            <span class="text-zinc-900 dark:text-zinc-100">{{ $rule->path }}</span>
                                             @if ($rule->is_folder)
-                                                <span class="text-[10px] text-zinc-400 font-sans">({{ __('recursive') }})</span>
+                                                <span class="text-[10px] text-zinc-400 font-sans font-normal">({{ __('recursive') }})</span>
                                             @endif
                                         </div>
                                     </flux:table.cell>
 
-                                    <flux:table.cell>
+                                    <flux:table.cell class="py-3.5 px-4">
                                         @if ($rule->user)
                                             <div class="flex items-center gap-2">
                                                 <flux:avatar :name="$rule->user->name" size="xs" />
-                                                <span class="text-xs font-medium text-zinc-800 dark:text-zinc-200">{{ $rule->user->name }}</span>
+                                                <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200">{{ $rule->user->name }}</span>
                                             </div>
                                         @else
-                                            <flux:badge color="zinc" size="sm">{{ __('All Team Members') }}</flux:badge>
+                                            <flux:badge color="zinc" size="sm" class="font-medium">{{ __('All Team Members') }}</flux:badge>
                                         @endif
                                     </flux:table.cell>
 
-                                    <flux:table.cell>
+                                    <flux:table.cell class="py-3.5 px-4">
                                         @if ($rule->permission === 'read_write')
-                                            <flux:badge color="emerald" size="sm" icon="pencil-square">{{ __('Read & Write (Full Sync)') }}</flux:badge>
+                                            <flux:badge color="emerald" size="sm" icon="pencil-square" class="font-medium">{{ __('Read & Write (Full Sync)') }}</flux:badge>
                                         @elseif ($rule->permission === 'read_only')
-                                            <flux:badge color="amber" size="sm" icon="eye">{{ __('Read-Only (Download Only)') }}</flux:badge>
+                                            <flux:badge color="amber" size="sm" icon="eye" class="font-medium">{{ __('Read-Only (Download Only)') }}</flux:badge>
                                         @else
-                                            <flux:badge color="red" size="sm" icon="eye-slash">{{ __('Hidden (No Access / Omitted)') }}</flux:badge>
+                                            <flux:badge color="red" size="sm" icon="eye-slash" class="font-medium">{{ __('Hidden (No Access / Omitted)') }}</flux:badge>
                                         @endif
                                     </flux:table.cell>
 
-                                    <flux:table.cell align="end">
+                                    <flux:table.cell align="end" class="py-3.5 px-4">
                                         <flux:button
-                                            variant="ghost"
+                                            variant="subtle"
                                             size="sm"
                                             icon="trash"
                                             wire:click="deletePermission({{ $rule->id }})"

@@ -83,9 +83,6 @@
                 <flux:sidebar.item icon="folder-git-2" href="https://ottomate.space" target="_blank">
                     {{ __('Repository') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="book-open-text" :href="route('docs')" wire:navigate>
-                    {{ __('Documentation') }}
-                </flux:sidebar.item>
             </flux:sidebar.nav>
         </flux:sidebar>
 

@@ -182,19 +182,19 @@ new class extends Component
 
                 <div class="space-y-3">
                     @foreach ($members as $member)
-                        <div class="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900" data-test="member-row">
-                            <div class="flex items-center gap-4">
-                                <flux:avatar :name="$member['name']" :initials="$member['initials']" />
+                        <div class="flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 dark:border-white/10 dark:bg-zinc-900 shadow-xs" data-test="member-row">
+                            <div class="flex items-center gap-3.5">
+                                <flux:avatar :name="$member['name']" :initials="$member['initials']" size="md" />
                                 <div>
-                                    <div class="font-medium">{{ $member['name'] }}</div>
-                                    <flux:text class="text-sm text-zinc-500 dark:text-zinc-400">{{ $member['email'] }}</flux:text>
+                                    <div class="font-semibold text-sm text-zinc-900 dark:text-zinc-100">{{ $member['name'] }}</div>
+                                    <flux:text class="text-xs text-zinc-500 dark:text-zinc-400">{{ $member['email'] }}</flux:text>
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2.5">
                                 @if ($member['role'] !== 'owner' && $this->permissions->canUpdateMember)
                                     <flux:dropdown position="bottom" align="end">
-                                        <flux:button variant="outline" size="sm" icon:trailing="chevron-down" data-test="member-role-trigger">
+                                        <flux:button variant="subtle" size="sm" icon:trailing="chevron-down" data-test="member-role-trigger" class="font-medium">
                                             {{ $member['role_label'] }}
                                         </flux:button>
                                         <flux:menu>
@@ -204,6 +204,7 @@ new class extends Component
                                                     type="button"
                                                     wire:click="updateMember({{ $member['id'] }}, '{{ $role['value'] }}')"
                                                     data-test="member-role-option"
+                                                    class="text-xs"
                                                 >
                                                     {{ $role['label'] }}
                                                 </flux:menu.item>
@@ -211,17 +212,18 @@ new class extends Component
                                         </flux:menu>
                                     </flux:dropdown>
                                 @else
-                                    <flux:badge color="zinc">{{ $member['role_label'] }}</flux:badge>
+                                    <flux:badge color="{{ $member['role'] === 'owner' ? 'indigo' : 'zinc' }}" size="sm" class="font-semibold uppercase tracking-wider text-[10px]">{{ $member['role_label'] }}</flux:badge>
                                 @endif
 
                                 @if ($member['role'] !== 'owner' && $this->permissions->canRemoveMember)
                                     <flux:modal.trigger name="remove-member-{{ $member['id'] }}">
-                                        <flux:tooltip :content="__('Remove member')">
+                                        <flux:tooltip :content="__('Remove member from team')">
                                             <flux:button
-                                                variant="ghost"
+                                                variant="subtle"
                                                 size="sm"
                                                 icon="x-mark"
                                                 data-test="member-remove-button"
+                                                class="text-red-500 hover:text-red-600"
                                             />
                                         </flux:tooltip>
                                     </flux:modal.trigger>

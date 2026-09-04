@@ -201,54 +201,64 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         @else
             <flux:table>
                 <flux:table.columns>
-                    <flux:table.column>{{ __('Device Name') }}</flux:table.column>
-                    <flux:table.column>{{ __('Platform') }}</flux:table.column>
-                    <flux:table.column>{{ __('Token Preview') }}</flux:table.column>
-                    <flux:table.column>{{ __('Owner') }}</flux:table.column>
-                    <flux:table.column>{{ __('Last Active') }}</flux:table.column>
-                    <flux:table.column align="end">{{ __('Actions') }}</flux:table.column>
+                    <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Device Name') }}</flux:table.column>
+                    <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Platform & State') }}</flux:table.column>
+                    <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Token Preview') }}</flux:table.column>
+                    <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Owner') }}</flux:table.column>
+                    <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Last Active') }}</flux:table.column>
+                    <flux:table.column align="end" class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Actions') }}</flux:table.column>
                 </flux:table.columns>
 
                 <flux:table.rows>
                     @foreach ($this->tokens as $token)
-                        <flux:table.row :key="$token->id">
-                            <flux:table.cell class="font-medium text-xs">
-                                <div class="flex items-center gap-2.5">
-                                    @if ($token->client_platform === 'ios')
-                                        <flux:icon icon="device-phone-mobile" class="size-4 text-blue-500" />
-                                    @elseif ($token->client_platform === 'android')
-                                        <flux:icon icon="device-phone-mobile" class="size-4 text-emerald-500" />
-                                    @elseif ($token->client_platform === 'mac')
-                                        <flux:icon icon="computer-desktop" class="size-4 text-zinc-700 dark:text-zinc-300" />
-                                    @elseif ($token->client_platform === 'windows')
-                                        <flux:icon icon="computer-desktop" class="size-4 text-sky-500" />
-                                    @else
-                                        <flux:icon icon="laptop" class="size-4 text-zinc-400" />
-                                    @endif
-                                    <span class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $token->name }}</span>
+                        <flux:table.row :key="$token->id" class="hover:bg-zinc-50/50 dark:hover:bg-white/5 transition-colors">
+                            <flux:table.cell class="py-3.5 px-4 font-medium text-xs">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300">
+                                        @if ($token->client_platform === 'ios')
+                                            <flux:icon icon="device-phone-mobile" class="size-4 text-blue-500" />
+                                        @elseif ($token->client_platform === 'android')
+                                            <flux:icon icon="device-phone-mobile" class="size-4 text-emerald-500" />
+                                        @elseif ($token->client_platform === 'mac')
+                                            <flux:icon icon="computer-desktop" class="size-4 text-zinc-700 dark:text-zinc-300" />
+                                        @elseif ($token->client_platform === 'windows')
+                                            <flux:icon icon="computer-desktop" class="size-4 text-sky-500" />
+                                        @else
+                                            <flux:icon icon="laptop" class="size-4 text-zinc-400" />
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <span class="font-semibold text-sm text-zinc-900 dark:text-zinc-100 block">{{ $token->name }}</span>
+                                        <span class="text-[10px] text-zinc-400 font-mono">{{ __('ID:') }} {{ $token->id }}</span>
+                                    </div>
                                 </div>
                             </flux:table.cell>
 
-                            <flux:table.cell>
+                            <flux:table.cell class="py-3.5 px-4">
                                 <div class="flex items-center gap-1.5">
-                                    <flux:badge color="zinc" size="sm" class="uppercase font-mono text-[10px]">{{ $token->client_platform ?? 'client' }}</flux:badge>
+                                    <flux:badge color="zinc" size="sm" class="uppercase font-mono text-[10px] font-bold">{{ $token->client_platform ?? 'client' }}</flux:badge>
                                     @if ($token->is_wiped)
-                                        <flux:badge color="red" size="sm" icon="no-symbol">{{ __('Wiped') }}</flux:badge>
+                                        <flux:badge color="red" size="sm" icon="no-symbol" class="font-bold">{{ __('Wiped') }}</flux:badge>
+                                    @else
+                                        <flux:badge color="emerald" size="sm" class="font-semibold">{{ __('Active') }}</flux:badge>
                                     @endif
                                 </div>
                             </flux:table.cell>
 
-                            <flux:table.cell class="font-mono text-xs text-zinc-400">
-                                {{ $token->token_preview }}
+                            <flux:table.cell class="py-3.5 px-4 font-mono text-xs text-zinc-500">
+                                <span class="rounded bg-zinc-100 dark:bg-white/10 px-2 py-1 font-bold text-zinc-700 dark:text-zinc-300">{{ $token->token_preview }}</span>
                             </flux:table.cell>
 
-                            <flux:table.cell class="text-xs">
-                                <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ $token->user?->name ?? __('Unknown') }}</span>
+                            <flux:table.cell class="py-3.5 px-4 text-xs">
+                                <div class="flex items-center gap-2">
+                                    <flux:avatar :name="$token->user?->name ?? 'User'" size="xs" />
+                                    <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ $token->user?->name ?? __('Unknown') }}</span>
+                                </div>
                             </flux:table.cell>
 
-                            <flux:table.cell class="text-xs text-zinc-500 dark:text-zinc-400">
+                            <flux:table.cell class="py-3.5 px-4 text-xs text-zinc-500 dark:text-zinc-400">
                                 @if ($token->last_used_at)
-                                    <div>{{ $token->last_used_at->diffForHumans() }}</div>
+                                    <div class="font-medium text-zinc-700 dark:text-zinc-300">{{ $token->last_used_at->diffForHumans() }}</div>
                                     @if ($token->last_ip)
                                         <div class="text-[10px] font-mono text-zinc-400">{{ $token->last_ip }}</div>
                                     @endif
@@ -257,12 +267,12 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                                 @endif
                             </flux:table.cell>
 
-                            <flux:table.cell align="end">
-                                <div class="flex items-center justify-end gap-1">
+                            <flux:table.cell align="end" class="py-3.5 px-4">
+                                <div class="flex items-center justify-end gap-1.5">
                                     @if (! $token->is_wiped)
                                         <flux:tooltip :content="__('Remote Wipe device')">
                                             <flux:button
-                                                variant="ghost"
+                                                variant="subtle"
                                                 size="sm"
                                                 icon="no-symbol"
                                                 wire:click="triggerRemoteWipe({{ $token->id }})"
@@ -271,17 +281,17 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                                             />
                                         </flux:tooltip>
                                     @endif
-                                    <flux:tooltip :content="__('Edit device')">
+                                    <flux:tooltip :content="__('Edit device settings')">
                                         <flux:button
-                                            variant="ghost"
+                                            variant="subtle"
                                             size="sm"
                                             icon="pencil-square"
                                             wire:click="editToken({{ $token->id }})"
                                         />
                                     </flux:tooltip>
-                                    <flux:tooltip :content="__('Revoke token')">
+                                    <flux:tooltip :content="__('Revoke sync token')">
                                         <flux:button
-                                            variant="ghost"
+                                            variant="subtle"
                                             size="sm"
                                             icon="trash"
                                             wire:click="revokeToken({{ $token->id }})"
