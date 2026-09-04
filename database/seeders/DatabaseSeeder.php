@@ -2,7 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\DeviceToken;
+use App\Models\Team;
 use App\Models\User;
+use App\Models\Vault;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -20,7 +23,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        $team = \App\Models\Team::create([
+        $team = Team::create([
             'name' => 'Demo Team',
             'slug' => 'demo-team',
             'is_personal' => true,
@@ -30,7 +33,7 @@ class DatabaseSeeder extends Seeder
 
         $user->forceFill(['current_team_id' => $team->id])->save();
 
-        $vault = \App\Models\Vault::create([
+        $vault = Vault::create([
             'team_id' => $team->id,
             'name' => 'Demo Vault',
             'slug' => 'demo-vault',
@@ -41,7 +44,7 @@ class DatabaseSeeder extends Seeder
 
         // Known local testing token: synkk_demo_token_123456789012345678901234567890
         $plainToken = 'synkk_demo_token_123456789012345678901234567890';
-        \App\Models\DeviceToken::create([
+        DeviceToken::create([
             'user_id' => $user->id,
             'team_id' => $team->id,
             'name' => 'Obsidian Desktop (Local)',

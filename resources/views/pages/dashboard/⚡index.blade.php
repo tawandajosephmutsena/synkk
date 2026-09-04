@@ -19,6 +19,7 @@ new #[Title('Dashboard')] class extends Component {
     public string $vaultDescription = '';
     public string $vaultDefaultPermission = 'read_write';
     public string $activityFilter = 'all';
+    public string $activitySearch = '';
 
     public function createVault(): void
     {
@@ -105,6 +106,52 @@ new #[Title('Dashboard')] class extends Component {
     }
 
     #[Computed]
+    public function deviceBreakdown(): array
+    {
+        if (! $this->team) {
+            return ['mac' => 0, 'windows' => 0, 'ios' => 0, 'android' => 0, 'linux' => 0, 'wiped' => 0];
+        }
+
+        $tokens = DeviceToken::where('team_id', $this->team->id)->get();
+
+        return [
+            'mac' => $tokens->where('client_platform', 'mac')->count(),
+            'windows' => $tokens->where('client_platform', 'windows')->count(),
+            'ios' => $tokens->where('client_platform', 'ios')->count(),
+            'android' => $tokens->where('client_platform', 'android')->count(),
+            'linux' => $tokens->where('client_platform', 'linux')->count(),
+            'wiped' => $tokens->where('is_wiped', true)->count(),
+        ];
+    }
+
+    #[Computed]
+    public function secretAlertsCount(): int
+    {
+        if (! $this->team) {
+            return 0;
+        }
+
+        return VaultChangeLog::whereIn('vault_id', $this->vaults->pluck('id'))
+            ->where('has_secrets', true)
+            ->count();
+    }
+
+    #[Computed]
+    public function recentSecurityAlerts(): Collection
+    {
+        if (! $this->team) {
+            return collect();
+        }
+
+        return VaultChangeLog::whereIn('vault_id', $this->vaults->pluck('id'))
+            ->where('has_secrets', true)
+            ->with(['user', 'vault'])
+            ->latest('created_at')
+            ->limit(5)
+            ->get();
+    }
+
+    #[Computed]
     public function recentActivities(): Collection
     {
         if (! $this->team) {
@@ -115,11 +162,21 @@ new #[Title('Dashboard')] class extends Component {
             ->with(['user', 'vault'])
             ->latest('created_at');
 
-        if ($this->activityFilter !== 'all') {
+        if ($this->activityFilter === 'secrets') {
+            $query->where('has_secrets', true);
+        } elseif ($this->activityFilter !== 'all') {
             $query->where('action', $this->activityFilter);
         }
 
-        return $query->limit(10)->get();
+        if (! empty($this->activitySearch)) {
+            $search = $this->activitySearch;
+            $query->where(function ($q) use ($search) {
+                $q->where('path', 'like', "%{$search}%")
+                    ->orWhere('device_name', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->limit(15)->get();
     }
 
     #[Computed]
@@ -139,9 +196,9 @@ new #[Title('Dashboard')] class extends Component {
     {
         if (! $this->team || $this->vaults->isEmpty()) {
             return [
-                'markdown' => ['count' => 0, 'size' => 0, 'percentage' => 0],
-                'assets' => ['count' => 0, 'size' => 0, 'percentage' => 0],
-                'canvas' => ['count' => 0, 'size' => 0, 'percentage' => 0],
+                'markdown' => ['count' => 0, 'size' => '0 B', 'percentage' => 0],
+                'assets' => ['count' => 0, 'size' => '0 B', 'percentage' => 0],
+                'canvas' => ['count' => 0, 'size' => '0 B', 'percentage' => 0],
             ];
         }
 
@@ -185,19 +242,41 @@ new #[Title('Dashboard')] class extends Component {
         <div>
             <flux:breadcrumbs class="mb-1">
                 <flux:breadcrumbs.item href="{{ route('dashboard') }}">{{ $this->team?->name ?? __('Team') }}</flux:breadcrumbs.item>
-                <flux:breadcrumbs.item>{{ __('Sync Engine') }}</flux:breadcrumbs.item>
+                <flux:breadcrumbs.item>{{ __('Sync Engine Command Center') }}</flux:breadcrumbs.item>
             </flux:breadcrumbs>
-            <flux:heading size="xl" level="1" class="tracking-tight">{{ __('Vault Sync Dashboard') }}</flux:heading>
+            <div class="flex items-center gap-3">
+                <flux:heading size="xl" level="1" class="tracking-tight">{{ __('Vault Sync Dashboard') }}</flux:heading>
+                <flux:badge color="emerald" size="sm" class="flex items-center gap-1 font-semibold">
+                    <span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {{ __('v1.4 Enterprise') }}
+                </flux:badge>
+            </div>
         </div>
 
         <div class="flex items-center gap-2">
+            <div
+                x-data="{ copyState: 'idle', async copyUrl() { this.copyState = 'copying'; const result = await window.SynkkClipboard.copy(@js(url('/api/v1'))); this.copyState = result.copied ? 'copied' : 'manual'; setTimeout(() => this.copyState = 'idle', 3000); } }"
+            >
+                <flux:button
+                    type="button"
+                    variant="subtle"
+                    size="sm"
+                    icon="link"
+                    x-on:click="copyUrl()"
+                >
+                    <span x-text="copyState === 'copied' ? '{{ __('API Copied!') }}' : '{{ __('Copy Sync URL') }}'"></span>
+                </flux:button>
+            </div>
+
             <flux:dropdown>
                 <flux:button variant="subtle" size="sm" icon="ellipsis-horizontal" aria-label="Quick Actions" />
                 <flux:menu>
                     <flux:menu.item icon="arrow-path" wire:click="$refresh">{{ __('Refresh Sync Status') }}</flux:menu.item>
                     <flux:menu.item icon="key" :href="route('devices.index')" wire:navigate>{{ __('Manage Device Tokens') }}</flux:menu.item>
-                    <flux:menu.separator />
-                    <flux:menu.item icon="shield-check" :href="route('teams.edit', $this->team?->slug ?? '')" wire:navigate>{{ __('Team Permissions') }}</flux:menu.item>
+                    @if ($this->team)
+                        <flux:menu.separator />
+                        <flux:menu.item icon="shield-check" :href="route('teams.edit', $this->team)" wire:navigate>{{ __('Team Permissions') }}</flux:menu.item>
+                    @endif
                 </flux:menu>
             </flux:dropdown>
 
@@ -213,7 +292,34 @@ new #[Title('Dashboard')] class extends Component {
         </div>
     </div>
 
-    <!-- Stat Cards (Flux Soft Cards with Micro Trends) -->
+    <!-- DLP Threat Banner (If Secrets Detected in Sync Stream) -->
+    @if ($this->secretAlertsCount > 0)
+        <flux:card variant="soft" class="border-amber-300/60 bg-amber-50/50 dark:border-amber-500/30 dark:bg-amber-950/30 py-3.5 px-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-start gap-3">
+                    <div class="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                        <flux:icon icon="shield-exclamation" class="size-5" />
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h4 class="text-xs font-semibold text-amber-900 dark:text-amber-200">{{ __('DLP Security Alerts Detected') }}</h4>
+                            <flux:badge color="amber" size="sm" rounded>{{ $this->secretAlertsCount }} {{ __('events') }}</flux:badge>
+                        </div>
+                        <p class="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                            {{ __('Sensitive credentials or API keys were uploaded in synced markdown notes. Review flagged sync logs below to audit threat vectors.') }}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <flux:button size="xs" variant="filled" wire:click="$set('activityFilter', 'secrets')">
+                        {{ __('Filter DLP Logs') }}
+                    </flux:button>
+                </div>
+            </div>
+        </flux:card>
+    @endif
+
+    <!-- Stat Cards Grid (4 Soft Cards with Micro Trends) -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <!-- 1. Total Vaults -->
         <flux:card variant="soft" class="relative min-w-0 py-4.5">
@@ -263,21 +369,23 @@ new #[Title('Dashboard')] class extends Component {
             </div>
         </flux:card>
 
-        <!-- 4. Connected Devices -->
+        <!-- 4. Security & DLP Audits -->
         <flux:card variant="soft" class="relative min-w-0 py-4.5">
             <div class="flex items-center justify-between">
-                <flux:text class="truncate text-xs font-medium text-zinc-500 dark:text-zinc-400">{{ __('Connected Devices') }}</flux:text>
+                <flux:text class="truncate text-xs font-medium text-zinc-500 dark:text-zinc-400">{{ __('Security & DLP Audits') }}</flux:text>
                 <div class="flex size-7 items-center justify-center rounded-md bg-zinc-200/50 text-zinc-700 dark:bg-white/10 dark:text-zinc-300">
-                    <flux:icon icon="device-phone-mobile" class="size-4" />
+                    <flux:icon icon="shield-check" class="size-4" />
                 </div>
             </div>
-            <flux:heading size="xl" class="mt-2 text-2xl font-semibold tracking-tight">{{ $this->activeDevicesCount }}</flux:heading>
+            <flux:heading size="xl" class="mt-2 text-2xl font-semibold tracking-tight">{{ $this->secretAlertsCount }}</flux:heading>
             <div class="mt-2 flex items-center gap-1.5 text-xs">
-                <flux:text inline class="flex items-center gap-0.5 font-medium text-blue-600 dark:text-blue-400">
-                    <flux:icon icon="signal" class="size-3" />
-                    <span>{{ __('Online') }}</span>
-                </flux:text>
-                <flux:text inline class="text-zinc-400 dark:text-zinc-500">{{ __('iOS, Android, Mac, PC') }}</flux:text>
+                @if ($this->secretAlertsCount > 0)
+                    <flux:badge color="amber" size="sm" class="rounded-full px-1.5 py-0 text-[10px] font-semibold">{{ __('Action Required') }}</flux:badge>
+                    <flux:text inline class="text-amber-600 dark:text-amber-400">{{ __('secrets detected') }}</flux:text>
+                @else
+                    <flux:badge color="emerald" size="sm" class="rounded-full px-1.5 py-0 text-[10px] font-semibold">{{ __('Clean') }}</flux:badge>
+                    <flux:text inline class="text-zinc-400 dark:text-zinc-500">{{ __('zero leak alerts') }}</flux:text>
+                @endif
             </div>
         </flux:card>
     </div>
@@ -366,12 +474,13 @@ new #[Title('Dashboard')] class extends Component {
 
         <!-- Right Column: Storage Breakdown & Fleet Status -->
         <div class="space-y-4">
-            <flux:heading size="lg">{{ __('Storage & Fleet') }}</flux:heading>
+            <flux:heading size="lg">{{ __('Storage & Fleet Overview') }}</flux:heading>
 
-            <flux:card variant="soft" class="space-y-5">
+            <!-- Vault Storage Breakdown -->
+            <flux:card variant="soft" class="space-y-4">
                 <div>
-                    <flux:heading size="sm">{{ __('Vault Content Breakdown') }}</flux:heading>
-                    <flux:subheading class="text-xs">{{ __('Distribution of synced file formats') }}</flux:subheading>
+                    <flux:heading size="sm">{{ __('Vault Content Distribution') }}</flux:heading>
+                    <flux:subheading class="text-xs">{{ __('File format breakdown across all vaults') }}</flux:subheading>
                 </div>
 
                 <!-- Markdown Progress -->
@@ -410,9 +519,9 @@ new #[Title('Dashboard')] class extends Component {
                     <flux:progress :value="$this->storageBreakdown['canvas']['percentage']" max="100" color="purple" class="h-1.5" />
                 </div>
 
-                <div class="border-t border-zinc-200 pt-4 dark:border-white/10">
+                <div class="border-t border-zinc-200 pt-3 dark:border-white/10">
                     <div class="flex items-center justify-between text-xs">
-                        <span class="text-zinc-500 dark:text-zinc-400">{{ __('Sync Health Status:') }}</span>
+                        <span class="text-zinc-500 dark:text-zinc-400">{{ __('Sync Engine Status:') }}</span>
                         <span class="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
                             <span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                             {{ __('100% Operational') }}
@@ -421,19 +530,43 @@ new #[Title('Dashboard')] class extends Component {
                 </div>
             </flux:card>
 
-            <!-- Quick Endpoint Card -->
+            <!-- Connected Device Fleet Widget -->
             <flux:card variant="outline" class="space-y-3">
-                <div class="flex items-center gap-2">
-                    <flux:icon icon="bolt" class="size-4 text-amber-500" />
-                    <flux:heading size="sm">{{ __('Obsidian Sync API') }}</flux:heading>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <flux:icon icon="device-phone-mobile" class="size-4 text-blue-500" />
+                        <flux:heading size="sm">{{ __('Device Fleet Breakdown') }}</flux:heading>
+                    </div>
+                    <flux:button variant="ghost" size="xs" :href="route('devices.index')" wire:navigate>
+                        {{ __('Manage') }}
+                    </flux:button>
                 </div>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                    {{ __('Enter this endpoint in your Obsidian mobile or desktop client settings:') }}
-                </p>
-                <div class="flex items-center gap-2">
-                    <code class="w-full truncate rounded bg-zinc-100 p-2 font-mono text-[11px] text-zinc-800 dark:bg-white/10 dark:text-zinc-200">
-                        {{ url('/api/v1') }}
-                    </code>
+
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div class="rounded-lg bg-zinc-50 p-2 dark:bg-white/5">
+                        <div class="text-[10px] text-zinc-400">{{ __('macOS') }}</div>
+                        <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $this->deviceBreakdown['mac'] }}</div>
+                    </div>
+                    <div class="rounded-lg bg-zinc-50 p-2 dark:bg-white/5">
+                        <div class="text-[10px] text-zinc-400">{{ __('Windows') }}</div>
+                        <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $this->deviceBreakdown['windows'] }}</div>
+                    </div>
+                    <div class="rounded-lg bg-zinc-50 p-2 dark:bg-white/5">
+                        <div class="text-[10px] text-zinc-400">{{ __('iOS / iPad') }}</div>
+                        <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $this->deviceBreakdown['ios'] }}</div>
+                    </div>
+                    <div class="rounded-lg bg-zinc-50 p-2 dark:bg-white/5">
+                        <div class="text-[10px] text-zinc-400">{{ __('Android') }}</div>
+                        <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $this->deviceBreakdown['android'] }}</div>
+                    </div>
+                    <div class="rounded-lg bg-zinc-50 p-2 dark:bg-white/5">
+                        <div class="text-[10px] text-zinc-400">{{ __('Linux') }}</div>
+                        <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $this->deviceBreakdown['linux'] }}</div>
+                    </div>
+                    <div class="rounded-lg bg-zinc-50 p-2 dark:bg-white/5">
+                        <div class="text-[10px] text-zinc-400">{{ __('Wiped') }}</div>
+                        <div class="font-semibold text-red-600 dark:text-red-400">{{ $this->deviceBreakdown['wiped'] }}</div>
+                    </div>
                 </div>
             </flux:card>
         </div>
@@ -443,17 +576,20 @@ new #[Title('Dashboard')] class extends Component {
     <div class="space-y-4">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-2">
-                <flux:heading size="lg">{{ __('Live Sync Activity') }}</flux:heading>
+                <flux:heading size="lg">{{ __('Live Sync Activity Log') }}</flux:heading>
                 <flux:badge size="sm" color="zinc" rounded>{{ $this->recentActivities->count() }}</flux:badge>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <flux:input wire:model.live.debounce.250ms="activitySearch" size="sm" icon="magnifying-glass" placeholder="Search path or device..." class="w-full sm:w-48" />
+
                 <flux:radio.group wire:model.live="activityFilter" variant="segmented" size="sm">
                     <flux:radio value="all">{{ __('All Events') }}</flux:radio>
                     <flux:radio value="created">{{ __('Created') }}</flux:radio>
                     <flux:radio value="updated">{{ __('Updated') }}</flux:radio>
                     <flux:radio value="deleted">{{ __('Deleted') }}</flux:radio>
                     <flux:radio value="conflict">{{ __('Conflicts') }}</flux:radio>
+                    <flux:radio value="secrets">{{ __('🔒 DLP Flags') }}</flux:radio>
                 </flux:radio.group>
             </div>
         </div>
@@ -461,14 +597,14 @@ new #[Title('Dashboard')] class extends Component {
         <flux:card class="p-0 overflow-hidden">
             @if ($this->recentActivities->isEmpty())
                 <div class="p-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                    {{ __('No sync events found matching the selected filter.') }}
+                    {{ __('No sync events found matching the selected filter or search term.') }}
                 </div>
             @else
                 <flux:table>
                     <flux:table.columns>
                         <flux:table.column>{{ __('File / Note') }}</flux:table.column>
                         <flux:table.column>{{ __('Target Vault') }}</flux:table.column>
-                        <flux:table.column>{{ __('Action') }}</flux:table.column>
+                        <flux:table.column>{{ __('Action Status') }}</flux:table.column>
                         <flux:table.column>{{ __('Author & Device') }}</flux:table.column>
                         <flux:table.column align="end">{{ __('Timestamp') }}</flux:table.column>
                     </flux:table.columns>
@@ -478,7 +614,11 @@ new #[Title('Dashboard')] class extends Component {
                             <flux:table.row :key="$act->id">
                                 <flux:table.cell class="font-mono text-xs font-medium">
                                     <div class="flex items-center gap-2">
-                                        @if ($act->action === 'conflict')
+                                        @if ($act->has_secrets)
+                                            <flux:tooltip content="DLP Alert: Secrets detected in note">
+                                                <flux:icon icon="shield-exclamation" class="size-4 text-amber-500 shrink-0" />
+                                            </flux:tooltip>
+                                        @elseif ($act->action === 'conflict')
                                             <flux:icon icon="exclamation-triangle" class="size-4 text-amber-500 shrink-0" />
                                         @elseif ($act->action === 'deleted')
                                             <flux:icon icon="trash" class="size-4 text-red-500 shrink-0" />
@@ -496,15 +636,21 @@ new #[Title('Dashboard')] class extends Component {
                                 </flux:table.cell>
 
                                 <flux:table.cell>
-                                    @if ($act->action === 'created')
-                                        <flux:badge color="emerald" size="sm">{{ __('Created') }}</flux:badge>
-                                    @elseif ($act->action === 'updated')
-                                        <flux:badge color="blue" size="sm">{{ __('Updated') }}</flux:badge>
-                                    @elseif ($act->action === 'deleted')
-                                        <flux:badge color="red" size="sm">{{ __('Deleted') }}</flux:badge>
-                                    @elseif ($act->action === 'conflict')
-                                        <flux:badge color="amber" size="sm">{{ __('Conflict Branched') }}</flux:badge>
-                                    @endif
+                                    <div class="flex items-center gap-1.5">
+                                        @if ($act->action === 'created')
+                                            <flux:badge color="emerald" size="sm">{{ __('Created') }}</flux:badge>
+                                        @elseif ($act->action === 'updated')
+                                            <flux:badge color="blue" size="sm">{{ __('Updated') }}</flux:badge>
+                                        @elseif ($act->action === 'deleted')
+                                            <flux:badge color="red" size="sm">{{ __('Deleted') }}</flux:badge>
+                                        @elseif ($act->action === 'conflict')
+                                            <flux:badge color="amber" size="sm">{{ __('Conflict Branched') }}</flux:badge>
+                                        @endif
+
+                                        @if ($act->has_secrets)
+                                            <flux:badge color="amber" size="sm" icon="key">{{ __('Secret Flagged') }}</flux:badge>
+                                        @endif
+                                    </div>
                                 </flux:table.cell>
 
                                 <flux:table.cell>

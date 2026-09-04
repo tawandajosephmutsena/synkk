@@ -4,6 +4,7 @@ use App\Models\DeviceToken;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Vault;
+use App\Models\VaultChangeLog;
 use App\Models\VaultPermission;
 use Illuminate\Support\Facades\Storage;
 
@@ -249,4 +250,41 @@ test('handles concurrent conflicts without data loss by creating conflict branch
     $manifestPaths = collect($manifest->json('files'))->pluck('path')->toArray();
     expect($manifestPaths)->toContain('TeamMeeting.md');
     expect($manifestPaths)->toContain($conflictPath);
+});
+
+test('detects sensitive API keys and records DLP secret flags in sync change logs', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => 'owner']);
+    $user->update(['current_team_id' => $team->id]);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Security Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $token = DeviceToken::createToken($user, $team, 'MacBook', 'mac')['plain_token'];
+
+    $secretContent = "# Sensitive Config\nAWS_KEY=AKIAIOSFODNN7EXAMPLE\ngithub_pat=ghp_1234567890abcdef1234567890abcdef1234";
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson("/api/v1/vaults/{$vault->slug}/upload", [
+            'path' => 'Secrets/env.md',
+            'content_base64' => base64_encode($secretContent),
+            'base_version' => 0,
+        ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('status', 'created')
+        ->assertJsonPath('has_secrets', true);
+
+    $log = VaultChangeLog::where('vault_id', $vault->id)
+        ->where('path', 'Secrets/env.md')
+        ->first();
+
+    expect($log)->not->toBeNull();
+    expect($log->has_secrets)->toBeTrue();
+    expect($log->detected_secrets)->toContain('AWS Access Key ID');
 });

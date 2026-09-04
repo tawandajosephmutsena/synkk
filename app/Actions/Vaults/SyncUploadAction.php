@@ -36,8 +36,10 @@ class SyncUploadAction
 
         // DLP Secret Scan
         $scanResult = $this->secretScanner->scan($contents);
+        $hasSecrets = $scanResult['has_secrets'];
+        $detectedSecrets = $scanResult['detected'];
 
-        return DB::transaction(function () use ($vault, $user, $deviceName, $cleanPath, $contents, $sha256, $size, $baseVersion, $disk) {
+        return DB::transaction(function () use ($vault, $user, $deviceName, $cleanPath, $contents, $sha256, $size, $baseVersion, $disk, $hasSecrets, $detectedSecrets) {
             $existing = $vault->files()->where('path', $cleanPath)->lockForUpdate()->first();
             $latestVaultVersion = $vault->latestVersion();
             $nextVersion = $latestVaultVersion + 1;
@@ -49,6 +51,8 @@ class SyncUploadAction
                     'path' => $existing->path,
                     'version' => $existing->version,
                     'sha256' => $existing->sha256,
+                    'has_secrets' => $hasSecrets,
+                    'detected_secrets' => $detectedSecrets,
                     'message' => 'File is already up-to-date.',
                 ];
             }
@@ -87,6 +91,8 @@ class SyncUploadAction
                     'version' => $nextVersion,
                     'sha256' => $sha256,
                     'size' => $size,
+                    'has_secrets' => $hasSecrets,
+                    'detected_secrets' => $detectedSecrets,
                 ]);
 
                 return [
@@ -97,6 +103,8 @@ class SyncUploadAction
                     'version' => $nextVersion,
                     'sha256' => $sha256,
                     'size' => $size,
+                    'has_secrets' => $hasSecrets,
+                    'detected_secrets' => $detectedSecrets,
                     'message' => "Concurrent change detected. Your version was safely preserved as '{$savePath}'.",
                 ];
             }
@@ -158,6 +166,8 @@ class SyncUploadAction
                     'version' => $nextVersion,
                     'sha256' => $sha256,
                     'size' => $size,
+                    'has_secrets' => $hasSecrets,
+                    'detected_secrets' => $detectedSecrets,
                 ]);
 
                 return [
@@ -166,6 +176,8 @@ class SyncUploadAction
                     'version' => $nextVersion,
                     'sha256' => $sha256,
                     'size' => $size,
+                    'has_secrets' => $hasSecrets,
+                    'detected_secrets' => $detectedSecrets,
                 ];
             }
 
@@ -188,6 +200,8 @@ class SyncUploadAction
                 'version' => $nextVersion,
                 'sha256' => $sha256,
                 'size' => $size,
+                'has_secrets' => $hasSecrets,
+                'detected_secrets' => $detectedSecrets,
             ]);
 
             return [
@@ -196,6 +210,8 @@ class SyncUploadAction
                 'version' => $nextVersion,
                 'sha256' => $sha256,
                 'size' => $size,
+                'has_secrets' => $hasSecrets,
+                'detected_secrets' => $detectedSecrets,
             ];
         });
     }

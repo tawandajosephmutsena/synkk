@@ -18,11 +18,13 @@ use Illuminate\Support\Carbon;
  * @property int $version
  * @property string|null $sha256
  * @property int $size
+ * @property bool $has_secrets
+ * @property array|null $detected_secrets
  * @property Carbon|null $created_at
  * @property-read Vault $vault
  * @property-read User|null $user
  */
-#[Fillable(['vault_id', 'user_id', 'device_name', 'path', 'action', 'version', 'sha256', 'size'])]
+#[Fillable(['vault_id', 'user_id', 'device_name', 'path', 'action', 'version', 'sha256', 'size', 'has_secrets', 'detected_secrets'])]
 class VaultChangeLog extends Model
 {
     use HasFactory;
@@ -34,6 +36,8 @@ class VaultChangeLog extends Model
         return [
             'version' => 'integer',
             'size' => 'integer',
+            'has_secrets' => 'boolean',
+            'detected_secrets' => 'array',
             'created_at' => 'datetime',
         ];
     }
