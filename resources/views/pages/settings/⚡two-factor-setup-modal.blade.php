@@ -203,7 +203,7 @@ new class extends Component {
                     <div class="flex items-center space-x-3">
                         <flux:button
                             variant="outline"
-                            class="flex-1"
+                            class="flex-1 !rounded-full font-bold"
                             wire:click="resetVerification"
                         >
                             {{ __('Back') }}
@@ -211,7 +211,7 @@ new class extends Component {
 
                         <flux:button
                             variant="primary"
-                            class="flex-1"
+                            class="flex-1 !bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full font-bold shadow-xs"
                             wire:click="confirmTwoFactor"
                             x-bind:disabled="$wire.code.length < 6"
                         >
@@ -247,7 +247,7 @@ new class extends Component {
                     <flux:button
                         :disabled="$errors->has('setupData')"
                         variant="primary"
-                        class="w-full"
+                        class="w-full !bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full font-bold shadow-xs py-2.5"
                         wire:click="showVerificationIfNecessary"
                     >
                         {{ $this->modalConfig['buttonText'] }}

@@ -46,13 +46,15 @@ new class extends Component {
 }; ?>
 
 <div
-    class="py-6 space-y-6 border shadow-sm rounded-xl border-zinc-200 dark:border-white/10"
+    class="py-6 space-y-6 border rounded-2xl border-gray-100 bg-[#FBFBFA] dark:border-zinc-800/80 dark:bg-zinc-800/40 shadow-2xs"
     wire:cloak
     x-data="{ showRecoveryCodes: false }"
 >
     <div class="px-6 space-y-2">
         <div class="flex items-center gap-2">
-            <flux:icon.lock-closed variant="outline" class="size-4"/>
+            <div class="flex size-7 items-center justify-center rounded-lg bg-emerald-50 text-[#0D3B29] dark:bg-emerald-950 dark:text-emerald-400">
+                <flux:icon.lock-closed variant="outline" class="size-3.5"/>
+            </div>
             <flux:heading size="lg" level="3">{{ __('2FA recovery codes') }}</flux:heading>
         </div>
         <flux:text variant="subtle">
@@ -70,6 +72,7 @@ new class extends Component {
                 @click="showRecoveryCodes = true;"
                 aria-expanded="false"
                 aria-controls="recovery-codes-section"
+                class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full px-5 font-bold text-xs shadow-xs"
             >
                 {{ __('View recovery codes') }}
             </flux:button>
@@ -82,6 +85,7 @@ new class extends Component {
                 @click="showRecoveryCodes = false"
                 aria-expanded="true"
                 aria-controls="recovery-codes-section"
+                class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full px-5 font-bold text-xs shadow-xs"
             >
                 {{ __('Hide recovery codes') }}
             </flux:button>
@@ -92,6 +96,7 @@ new class extends Component {
                     icon="arrow-path"
                     variant="filled"
                     wire:click="regenerateRecoveryCodes"
+                    class="!rounded-full px-4 font-bold text-xs"
                 >
                     {{ __('Regenerate codes') }}
                 </flux:button>

@@ -76,7 +76,7 @@ new #[Title('Teams')] class extends Component {
     <x-pages::settings.layout :heading="__('Teams')" :subheading="__('Manage your teams and team memberships')">
         <div class="flex items-center justify-end">
             <flux:modal.trigger name="create-team">
-                <flux:button variant="primary" icon="plus" x-data="" x-on:click.prevent="$dispatch('open-modal', 'create-team')" data-test="teams-new-team-button">
+                <flux:button variant="primary" icon="plus" x-data="" x-on:click.prevent="$dispatch('open-modal', 'create-team')" data-test="teams-new-team-button" class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full px-5 py-2 font-bold text-xs shadow-xs">
                     {{ __('New team') }}
                 </flux:button>
             </flux:modal.trigger>
@@ -84,23 +84,23 @@ new #[Title('Teams')] class extends Component {
 
         <div class="mt-6 space-y-3">
             @forelse ($this->teams as $team)
-                <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900" data-test="team-row">
-                    <div class="flex items-center gap-4">
-                        <div class="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 font-bold dark:bg-emerald-950/60 dark:text-emerald-400">
+                <div class="flex items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-[#FBFBFA] p-4.5 transition-all hover:border-gray-200 hover:shadow-2xs dark:border-zinc-800/80 dark:bg-zinc-800/40" data-test="team-row">
+                    <div class="flex items-center gap-3.5">
+                        <div class="flex size-11 items-center justify-center rounded-2xl bg-emerald-50 text-[#0D3B29] font-black dark:bg-emerald-950/60 dark:text-emerald-400 shadow-2xs">
                             <flux:icon icon="users" class="size-5" />
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
-                                <span class="font-bold text-sm text-slate-900 dark:text-white">{{ $team->name }}</span>
+                                <span class="font-bold text-sm text-gray-900 dark:text-white">{{ $team->name }}</span>
                                 @if ($team->isPersonal)
-                                    <flux:badge color="zinc" size="sm" class="rounded-md text-[10px] font-bold">{{ __('Personal') }}</flux:badge>
+                                    <flux:badge color="zinc" size="sm" class="rounded-full text-[10px] font-bold">{{ __('Personal') }}</flux:badge>
                                 @endif
                             </div>
-                            <flux:text class="text-xs text-slate-500 dark:text-zinc-400">{{ $team->roleLabel }}</flux:text>
+                            <flux:text class="text-xs text-gray-500 dark:text-zinc-400">{{ $team->roleLabel }}</flux:text>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-2">
                         @if (! $team->isPersonal && $team->role !== 'owner')
                             <flux:modal.trigger :name="'leave-team-'.$team->id">
                                 <flux:tooltip :content="__('Leave team')">
@@ -111,7 +111,7 @@ new #[Title('Teams')] class extends Component {
                                         x-data=""
                                         x-on:click.prevent="$dispatch('open-modal', 'leave-team-{{ $team->id }}')"
                                         data-test="team-leave-button"
-                                        class="text-red-500 hover:text-red-600"
+                                        class="text-red-500 hover:text-red-600 rounded-full"
                                     />
                                 </flux:tooltip>
                             </flux:modal.trigger>
@@ -125,7 +125,7 @@ new #[Title('Teams')] class extends Component {
                                 :href="route('teams.edit', $team->slug)"
                                 wire:navigate
                                 :data-test="$team->role === 'member' ? 'team-view-button' : 'team-edit-button'"
-                                class="rounded-xl border-slate-200 font-semibold"
+                                class="!rounded-full border-gray-200 font-bold text-xs hover:bg-gray-50 dark:border-zinc-700"
                             />
                         </flux:tooltip>
                     </div>
@@ -143,10 +143,10 @@ new #[Title('Teams')] class extends Component {
 
                             <div class="flex justify-end space-x-2 rtl:space-x-reverse">
                                 <flux:modal.close>
-                                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                                    <flux:button variant="filled" class="!rounded-full px-4">{{ __('Cancel') }}</flux:button>
                                 </flux:modal.close>
 
-                                <flux:button variant="danger" type="submit" data-test="leave-team-confirm">
+                                <flux:button variant="danger" type="submit" data-test="leave-team-confirm" class="!rounded-full px-4 font-bold">
                                     {{ __('Leave team') }}
                                 </flux:button>
                             </div>
@@ -172,10 +172,10 @@ new #[Title('Teams')] class extends Component {
 
             <div class="flex justify-end space-x-2 rtl:space-x-reverse">
                 <flux:modal.close>
-                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                    <flux:button variant="filled" class="!rounded-full px-4">{{ __('Cancel') }}</flux:button>
                 </flux:modal.close>
 
-                <flux:button variant="primary" type="submit" data-test="create-team-submit">
+                <flux:button variant="primary" type="submit" data-test="create-team-submit" class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full px-5 font-bold shadow-xs">
                     {{ __('Create team') }}
                 </flux:button>
             </div>

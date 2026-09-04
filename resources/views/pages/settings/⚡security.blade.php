@@ -201,9 +201,9 @@ new #[Title('Security settings')] class extends Component {
             />
 
             <div class="flex items-center gap-4">
-                <flux:button variant="primary" type="submit" data-test="update-password-button">
-                    {{ __('Save') }}
-                </flux:button>
+                <button type="submit" class="rounded-full bg-[#0D3B29] px-6 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#09261b] active:scale-98 dark:bg-emerald-700 dark:hover:bg-emerald-600" data-test="update-password-button">
+                    {{ __('Save Password') }}
+                </button>
             </div>
         </form>
 
@@ -223,6 +223,7 @@ new #[Title('Security settings')] class extends Component {
                                 <flux:button
                                     variant="danger"
                                     wire:click="disable"
+                                    class="!rounded-full px-5 font-bold text-xs"
                                 >
                                     {{ __('Disable 2FA') }}
                                 </flux:button>
@@ -237,12 +238,13 @@ new #[Title('Security settings')] class extends Component {
                             </flux:text>
 
                             <flux:modal.trigger name="two-factor-setup-modal">
-                                <flux:button
-                                    variant="primary"
+                                <button
+                                    type="button"
+                                    class="rounded-full bg-[#0D3B29] px-6 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#09261b] active:scale-98 dark:bg-emerald-700 dark:hover:bg-emerald-600"
                                     wire:click="$dispatch('start-two-factor-setup')"
                                 >
                                     {{ __('Enable 2FA') }}
-                                </flux:button>
+                                </button>
                             </flux:modal.trigger>
 
                             <livewire:pages::settings.two-factor-setup-modal :requires-confirmation="$requiresConfirmation" />
@@ -258,21 +260,21 @@ new #[Title('Security settings')] class extends Component {
                 <flux:subheading>{{ __('Manage your passkeys for passwordless sign-in') }}</flux:subheading>
 
                 <div class="mt-6 flex flex-col w-full mx-auto space-y-6 text-sm" wire:cloak>
-                    <div class="border rounded-lg border-zinc-200 dark:border-zinc-700 overflow-hidden">
+                    <div class="border rounded-2xl border-gray-100 bg-[#FBFBFA] dark:border-zinc-800/80 dark:bg-zinc-800/40 overflow-hidden shadow-2xs">
                         @forelse ($passkeys as $passkey)
-                            <div class="flex items-center justify-between p-4 {{ ! $loop->last ? 'border-b border-zinc-200 dark:border-zinc-700' : '' }}">
+                            <div class="flex items-center justify-between p-4 {{ ! $loop->last ? 'border-b border-gray-100 dark:border-zinc-800' : '' }}">
                                 <div class="flex items-center gap-4">
-                                    <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                                        <flux:icon.key class="size-5 text-zinc-500 dark:text-zinc-400" />
+                                    <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#0D3B29] dark:bg-emerald-950 dark:text-emerald-400">
+                                        <flux:icon.key class="size-4 text-[#0D3B29] dark:text-emerald-400" />
                                     </div>
                                     <div class="space-y-1">
                                         <div class="flex items-center gap-2.5">
-                                            <p class="font-medium tracking-tight">{{ $passkey['name'] }}</p>
+                                            <p class="font-bold tracking-tight text-gray-900 dark:text-white">{{ $passkey['name'] }}</p>
                                             @if ($passkey['authenticator'])
-                                                <flux:badge size="sm">{{ $passkey['authenticator'] }}</flux:badge>
+                                                <flux:badge size="sm" class="rounded-full text-[10px]">{{ $passkey['authenticator'] }}</flux:badge>
                                             @endif
                                         </div>
-                                        <p class="text-zinc-500 dark:text-zinc-400 text-xs">
+                                        <p class="text-gray-500 dark:text-zinc-400 text-xs">
                                             {{ __('Added :time', ['time' => $passkey['created_at_diff']]) }}
                                             @if ($passkey['last_used_at_diff'])
                                                 <span class="opacity-50 mx-1">/</span>
@@ -288,16 +290,16 @@ new #[Title('Security settings')] class extends Component {
                                     icon="trash"
                                     icon:variant="outline"
                                     wire:click="confirmDelete({{ $passkey['id'] }})"
-                                    class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
+                                    class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-full"
                                 />
                             </div>
                         @empty
                             <div class="p-8 text-center">
-                                <div class="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-800">
-                                    <flux:icon.key class="size-7 text-zinc-400 dark:text-zinc-500" />
+                                <div class="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-emerald-50 text-[#0D3B29] dark:bg-emerald-950 dark:text-emerald-400">
+                                    <flux:icon.key class="size-7 text-[#0D3B29] dark:text-emerald-400" />
                                 </div>
-                                <p class="font-medium">{{ __('No passkeys yet') }}</p>
-                                <flux:text class="mt-1">{{ __('Add a passkey to sign in without a password') }}</flux:text>
+                                <p class="font-bold text-gray-900 dark:text-white">{{ __('No passkeys yet') }}</p>
+                                <flux:text class="mt-1 text-xs">{{ __('Add a passkey to sign in without a password') }}</flux:text>
                             </div>
                         @endforelse
                     </div>
@@ -326,12 +328,14 @@ new #[Title('Security settings')] class extends Component {
                 <flux:button
                     variant="outline"
                     wire:click="closeDeleteModal"
+                    class="!rounded-full px-4"
                 >
                     {{ __('Cancel') }}
                 </flux:button>
                 <flux:button
                     variant="danger"
                     wire:click="deletePasskey"
+                    class="!rounded-full px-5 font-bold"
                 >
                     {{ __('Remove passkey') }}
                 </flux:button>

@@ -109,11 +109,10 @@ new #[Title('Profile settings')] class extends Component {
 
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-end">
-                    <flux:button variant="primary" type="submit" class="w-full" data-test="update-profile-button">
-                        {{ __('Save') }}
-                    </flux:button>
+                    <button type="submit" class="rounded-full bg-[#0D3B29] px-6 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#09261b] active:scale-98 dark:bg-emerald-700 dark:hover:bg-emerald-600" data-test="update-profile-button">
+                        {{ __('Save Changes') }}
+                    </button>
                 </div>
-
             </div>
         </form>
 

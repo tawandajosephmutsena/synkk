@@ -91,9 +91,9 @@ new class extends Component {
 
         <div class="flex justify-end space-x-2 rtl:space-x-reverse">
             <flux:modal.close>
-                <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                <flux:button variant="filled" class="!rounded-full px-4">{{ __('Cancel') }}</flux:button>
             </flux:modal.close>
-            <flux:button variant="danger" type="submit" data-test="delete-team-confirm">
+            <flux:button variant="danger" type="submit" data-test="delete-team-confirm" class="!rounded-full px-4 font-bold">
                 {{ __('Delete team') }}
             </flux:button>
         </div>

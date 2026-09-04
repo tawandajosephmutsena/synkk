@@ -150,7 +150,7 @@ new class extends Component
                         <form wire:submit="updateTeam" class="space-y-6">
                             <flux:input wire:model="teamName" :label="__('Team name')" required data-test="team-name-input" />
 
-                            <flux:button variant="primary" type="submit" data-test="team-save-button">
+                            <flux:button variant="primary" type="submit" data-test="team-save-button" class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full px-6 font-bold shadow-xs">
                                 {{ __('Save') }}
                             </flux:button>
                         </form>
@@ -173,7 +173,7 @@ new class extends Component
 
                     @if ($this->permissions->canCreateInvitation)
                         <flux:modal.trigger name="invite-member">
-                            <flux:button variant="primary" icon="user-plus" data-test="invite-member-button">
+                            <flux:button variant="primary" icon="user-plus" data-test="invite-member-button" class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full px-4 font-bold shadow-xs">
                                 {{ __('Invite member') }}
                             </flux:button>
                         </flux:modal.trigger>
@@ -182,19 +182,19 @@ new class extends Component
 
                 <div class="space-y-3">
                     @foreach ($members as $member)
-                        <div class="flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 dark:border-white/10 dark:bg-zinc-900 shadow-xs" data-test="member-row">
+                        <div class="flex items-center justify-between rounded-2xl border border-gray-100 bg-[#FBFBFA] p-4 transition-all hover:border-gray-200 dark:border-zinc-800/80 dark:bg-zinc-800/40 shadow-2xs" data-test="member-row">
                             <div class="flex items-center gap-3.5">
                                 <flux:avatar :name="$member['name']" :initials="$member['initials']" size="md" />
                                 <div>
-                                    <div class="font-semibold text-sm text-zinc-900 dark:text-zinc-100">{{ $member['name'] }}</div>
-                                    <flux:text class="text-xs text-zinc-500 dark:text-zinc-400">{{ $member['email'] }}</flux:text>
+                                    <div class="font-bold text-sm text-gray-900 dark:text-zinc-100">{{ $member['name'] }}</div>
+                                    <flux:text class="text-xs text-gray-500 dark:text-zinc-400">{{ $member['email'] }}</flux:text>
                                 </div>
                             </div>
 
                             <div class="flex items-center gap-2.5">
                                 @if ($member['role'] !== 'owner' && $this->permissions->canUpdateMember)
                                     <flux:dropdown position="bottom" align="end">
-                                        <flux:button variant="subtle" size="sm" icon:trailing="chevron-down" data-test="member-role-trigger" class="font-medium">
+                                        <flux:button variant="subtle" size="sm" icon:trailing="chevron-down" data-test="member-role-trigger" class="font-medium !rounded-full">
                                             {{ $member['role_label'] }}
                                         </flux:button>
                                         <flux:menu>
@@ -212,7 +212,7 @@ new class extends Component
                                         </flux:menu>
                                     </flux:dropdown>
                                 @else
-                                    <flux:badge color="{{ $member['role'] === 'owner' ? 'indigo' : 'zinc' }}" size="sm" class="font-semibold uppercase tracking-wider text-[10px]">{{ $member['role_label'] }}</flux:badge>
+                                    <flux:badge color="{{ $member['role'] === 'owner' ? 'emerald' : 'zinc' }}" size="sm" class="font-bold uppercase tracking-wider text-[10px] rounded-full {{ $member['role'] === 'owner' ? 'bg-emerald-50 text-[#0D3B29] border border-emerald-200/60 dark:bg-emerald-950 dark:text-emerald-400' : '' }}">{{ $member['role_label'] }}</flux:badge>
                                 @endif
 
                                 @if ($member['role'] !== 'owner' && $this->permissions->canRemoveMember)
@@ -223,7 +223,7 @@ new class extends Component
                                                 size="sm"
                                                 icon="x-mark"
                                                 data-test="member-remove-button"
-                                                class="text-red-500 hover:text-red-600"
+                                                class="text-red-500 hover:text-red-600 rounded-full"
                                             />
                                         </flux:tooltip>
                                     </flux:modal.trigger>
@@ -253,14 +253,14 @@ new class extends Component
 
                     <div class="space-y-3">
                         @foreach ($invitations as $invitation)
-                            <div class="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900" data-test="invitation-row">
+                            <div class="flex items-center justify-between rounded-2xl border border-gray-100 bg-[#FBFBFA] p-4 dark:border-zinc-800/80 dark:bg-zinc-800/40 shadow-2xs" data-test="invitation-row">
                                 <div class="flex items-center gap-4">
-                                    <div class="flex size-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                                        <flux:icon name="envelope" class="text-zinc-500" />
+                                    <div class="flex size-10 items-center justify-center rounded-2xl bg-emerald-50 text-[#0D3B29] dark:bg-emerald-950/60 dark:text-emerald-400">
+                                        <flux:icon name="envelope" class="size-4 text-[#0D3B29] dark:text-emerald-400" />
                                     </div>
                                     <div>
-                                        <div class="font-medium">{{ $invitation['email'] }}</div>
-                                        <flux:text class="text-sm text-zinc-500 dark:text-zinc-400">{{ $invitation['role_label'] }}</flux:text>
+                                        <div class="font-bold text-sm text-gray-900 dark:text-white">{{ $invitation['email'] }}</div>
+                                        <flux:text class="text-xs text-gray-500 dark:text-zinc-400">{{ $invitation['role_label'] }}</flux:text>
                                     </div>
                                 </div>
 
@@ -272,6 +272,7 @@ new class extends Component
                                                 size="sm"
                                                 icon="x-mark"
                                                 data-test="invitation-cancel-button"
+                                                class="rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800"
                                             />
                                         </flux:tooltip>
                                     </flux:modal.trigger>
@@ -298,14 +299,14 @@ new class extends Component
                         <flux:subheading>{{ __('Permanently delete your team') }}</flux:subheading>
                     </div>
 
-                    <div class="space-y-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-200/10 dark:bg-red-900/20 dark:text-red-100">
+                    <div class="space-y-4 rounded-2xl border border-red-200/80 bg-red-50/50 p-5 text-red-800 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
                         <div>
-                            <p class="font-medium">{{ __('Warning') }}</p>
-                            <p class="text-sm">{{ __('Please proceed with caution, this cannot be undone.') }}</p>
+                            <p class="font-bold text-sm">{{ __('Warning') }}</p>
+                            <p class="text-xs mt-0.5 text-red-600 dark:text-red-400">{{ __('Please proceed with caution, this cannot be undone.') }}</p>
                         </div>
 
                         <flux:modal.trigger name="delete-team">
-                            <flux:button variant="danger" data-test="delete-team-button">
+                            <flux:button variant="danger" data-test="delete-team-button" class="!rounded-full px-5 font-bold text-xs">
                                 {{ __('Delete team') }}
                             </flux:button>
                         </flux:modal.trigger>
