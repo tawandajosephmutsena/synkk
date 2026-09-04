@@ -3,14 +3,14 @@
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-slate-50/70 text-slate-900 dark:bg-[#090D16] dark:text-zinc-100 antialiased selection:bg-indigo-500 selection:text-white">
-        <flux:header container class="border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-white/5 dark:bg-[#0F1420]/95 shadow-xs">
+    <body class="min-h-screen bg-slate-100/60 text-slate-900 dark:bg-[#070A12] dark:text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+        <flux:header container class="border-b border-slate-200/90 bg-white/95 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#0D121F]/95 shadow-sm">
             <flux:sidebar.toggle class="lg:hidden mr-2" icon="bars-2" inset="left" />
 
             <x-app-logo href="{{ route('dashboard') }}" wire:navigate />
 
             <flux:navbar class="-mb-px max-lg:hidden">
-                <flux:navbar.item icon="layout-grid" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
+                <flux:navbar.item icon="layout-grid" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate class="font-semibold">
                     {{ __('Dashboard') }}
                 </flux:navbar.item>
             </flux:navbar>
@@ -49,7 +49,7 @@
         </flux:header>
 
         <!-- Mobile Menu -->
-        <flux:sidebar collapsible="mobile" sticky class="lg:hidden border-e border-zinc-200/80 bg-[#f7f5ed] dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar collapsible="mobile" sticky class="lg:hidden border-e border-slate-200/90 bg-white dark:border-slate-800 dark:bg-[#0D121F]">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
                 <flux:sidebar.collapse class="in-data-flux-sidebar-on-desktop:not-in-data-flux-sidebar-collapsed-desktop:-mr-2" />
@@ -58,20 +58,20 @@
             <livewire:team-switcher />
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Platform')">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
+                <flux:sidebar.group :heading="__('Platform Core')">
+                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate class="font-semibold">
                         {{ __('Dashboard')  }}
                     </flux:sidebar.item>
 
-                    <flux:sidebar.item icon="folder" :href="route('vaults.index')" :current="request()->routeIs('vaults.*')" wire:navigate>
+                    <flux:sidebar.item icon="folder" :href="route('vaults.index')" :current="request()->routeIs('vaults.*')" wire:navigate class="font-semibold">
                         {{ __('Vaults') }}
                     </flux:sidebar.item>
 
-                    <flux:sidebar.item icon="device-phone-mobile" :href="route('devices.index')" :current="request()->routeIs('devices.*')" wire:navigate>
+                    <flux:sidebar.item icon="device-phone-mobile" :href="route('devices.index')" :current="request()->routeIs('devices.*')" wire:navigate class="font-semibold">
                         {{ __('Devices & Tokens') }}
                     </flux:sidebar.item>
 
-                    <flux:sidebar.item icon="book-open-text" :href="route('docs')" :current="request()->routeIs('docs')" wire:navigate>
+                    <flux:sidebar.item icon="book-open-text" :href="route('docs')" :current="request()->routeIs('docs')" wire:navigate class="font-semibold">
                         {{ __('Documentation') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
@@ -80,7 +80,7 @@
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://ottomate.space" target="_blank">
+                <flux:sidebar.item icon="folder-git-2" href="https://ottomate.space" target="_blank" class="font-semibold">
                     {{ __('Repository') }}
                 </flux:sidebar.item>
             </flux:sidebar.nav>
@@ -99,3 +99,4 @@
         @fluxScripts
     </body>
 </html>
+
