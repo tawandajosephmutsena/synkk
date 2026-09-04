@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -23,6 +25,7 @@ use Illuminate\Support\Facades\Storage;
  * @property Carbon|null $updated_at
  * @property-read Vault $vault
  * @property-read User|null $lastModifier
+ * @property-read Collection<int, VaultFileVersion> $versions
  */
 #[Fillable(['vault_id', 'path', 'storage_path', 'sha256', 'size', 'version', 'is_deleted', 'last_modified_by'])]
 class VaultFile extends Model
@@ -48,14 +51,23 @@ class VaultFile extends Model
         return $this->belongsTo(User::class, 'last_modified_by');
     }
 
+    public function versions(): HasMany
+    {
+        return $this->hasMany(VaultFileVersion::class)->orderBy('version', 'desc');
+    }
+
     public function getDiskPathAttribute(): string
     {
-        return Storage::disk('local')->path($this->storage_path);
+        $disk = config('synkk.storage_disk', 'local');
+
+        return Storage::disk($disk)->path($this->storage_path);
     }
 
     public function existsOnDisk(): bool
     {
-        return Storage::disk('local')->exists($this->storage_path);
+        $disk = config('synkk.storage_disk', 'local');
+
+        return Storage::disk($disk)->exists($this->storage_path);
     }
 
     public function getContents(): ?string
@@ -64,7 +76,9 @@ class VaultFile extends Model
             return null;
         }
 
-        return Storage::disk('local')->get($this->storage_path);
+        $disk = config('synkk.storage_disk', 'local');
+
+        return Storage::disk($disk)->get($this->storage_path);
     }
 
     public function isMarkdown(): bool

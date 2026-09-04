@@ -2,18 +2,24 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Vaults\BatchSyncAction;
+use App\Actions\Vaults\SyncUploadAction;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceToken;
 use App\Models\Vault;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class VaultSyncController extends Controller
 {
+    public function __construct(
+        protected SyncUploadAction $uploadAction,
+        protected BatchSyncAction $batchSyncAction
+    ) {}
+
     /**
      * List all vaults accessible to the current team member.
      */
@@ -182,6 +188,7 @@ class VaultSyncController extends Controller
         /** @var DeviceToken $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
         $user = $deviceToken->user;
+        $disk = config('synkk.storage_disk', 'local');
 
         if ($vault->team_id !== $deviceToken->team_id) {
             return response()->json(['error' => 'Vault not found'], 404);
@@ -202,11 +209,11 @@ class VaultSyncController extends Controller
             ->where('is_deleted', false)
             ->first();
 
-        if (! $file || ! Storage::disk('local')->exists($file->storage_path)) {
+        if (! $file || ! Storage::disk($disk)->exists($file->storage_path)) {
             return response()->json(['error' => 'File not found on storage'], 404);
         }
 
-        $fullDiskPath = Storage::disk('local')->path($file->storage_path);
+        $fullDiskPath = Storage::disk($disk)->path($file->storage_path);
 
         return response()->file($fullDiskPath, [
             'Content-Type' => $this->guessMimeType($file->path),
@@ -257,141 +264,54 @@ class VaultSyncController extends Controller
             return response()->json(['error' => 'No file or content provided'], 400);
         }
 
-        $sha256 = hash('sha256', $contents);
-        $size = strlen($contents);
         $baseVersion = (int) $request->input('base_version', 0);
 
-        return DB::transaction(function () use ($vault, $user, $deviceToken, $path, $contents, $sha256, $size, $baseVersion) {
-            $existing = $vault->files()->where('path', $path)->lockForUpdate()->first();
-            $latestVaultVersion = $vault->latestVersion();
-            $nextVersion = $latestVaultVersion + 1;
+        $res = $this->uploadAction->execute(
+            $vault,
+            $user,
+            $deviceToken->name,
+            $path,
+            $contents,
+            $baseVersion
+        );
 
-            // Scenario 1: File is identical - no update needed
-            if ($existing && ! $existing->is_deleted && $existing->sha256 === $sha256) {
-                return response()->json([
-                    'status' => 'identical',
-                    'path' => $existing->path,
-                    'version' => $existing->version,
-                    'sha256' => $existing->sha256,
-                    'message' => 'File is already up-to-date.',
-                ]);
-            }
+        $statusCode = ($res['status'] ?? '') === 'created' ? 201 : 200;
 
-            // Scenario 2: Concurrent Conflict Detection
-            // If the client's base_version is older than the existing file's version, and hashes differ
-            $isConflict = false;
-            $savePath = $path;
+        return response()->json($res, $statusCode);
+    }
 
-            if ($existing && ! $existing->is_deleted && $baseVersion > 0 && $baseVersion < $existing->version) {
-                $isConflict = true;
-                $savePath = $this->generateConflictPath($path, $user->name);
-            }
+    /**
+     * Process bulk batch file sync.
+     */
+    public function batchSync(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        $user = $deviceToken->user;
 
-            // Write content to storage
-            $storageFolder = "vaults/{$vault->id}";
-            $storageFileName = Str::random(40);
-            $storagePath = "{$storageFolder}/{$storageFileName}";
-            Storage::disk('local')->put($storagePath, $contents);
+        if ($vault->team_id !== $deviceToken->team_id) {
+            return response()->json(['error' => 'Vault not found'], 404);
+        }
 
-            if ($isConflict) {
-                // Save conflict file as a new file in the vault
-                $conflictFile = $vault->files()->create([
-                    'path' => $savePath,
-                    'storage_path' => $storagePath,
-                    'sha256' => $sha256,
-                    'size' => $size,
-                    'version' => $nextVersion,
-                    'is_deleted' => false,
-                    'last_modified_by' => $user->id,
-                ]);
+        $maxBatch = config('synkk.max_batch_size', 100);
 
-                // Record change log
-                $vault->changeLogs()->create([
-                    'user_id' => $user->id,
-                    'device_name' => $deviceToken->name,
-                    'path' => $savePath,
-                    'action' => 'conflict',
-                    'version' => $nextVersion,
-                    'sha256' => $sha256,
-                    'size' => $size,
-                ]);
+        $request->validate([
+            'items' => "required|array|max:{$maxBatch}",
+            'items.*.path' => 'required|string',
+            'items.*.action' => 'nullable|string|in:upload,delete',
+            'items.*.base_version' => 'nullable|integer',
+        ]);
 
-                return response()->json([
-                    'status' => 'conflict',
-                    'is_conflict' => true,
-                    'original_path' => $path,
-                    'path' => $savePath,
-                    'version' => $nextVersion,
-                    'sha256' => $sha256,
-                    'size' => $size,
-                    'message' => "Concurrent change detected. Your version was safely preserved as '{$savePath}'.",
-                ], 200);
-            }
+        $items = $request->input('items', []);
 
-            // Scenario 3: Standard Update or New File
-            if ($existing) {
-                // Clean up old storage file if desired
-                if (Storage::disk('local')->exists($existing->storage_path)) {
-                    Storage::disk('local')->delete($existing->storage_path);
-                }
+        $result = $this->batchSyncAction->execute(
+            $vault,
+            $user,
+            $deviceToken->name,
+            $items
+        );
 
-                $existing->update([
-                    'storage_path' => $storagePath,
-                    'sha256' => $sha256,
-                    'size' => $size,
-                    'version' => $nextVersion,
-                    'is_deleted' => false,
-                    'last_modified_by' => $user->id,
-                ]);
-
-                $vault->changeLogs()->create([
-                    'user_id' => $user->id,
-                    'device_name' => $deviceToken->name,
-                    'path' => $path,
-                    'action' => 'updated',
-                    'version' => $nextVersion,
-                    'sha256' => $sha256,
-                    'size' => $size,
-                ]);
-
-                return response()->json([
-                    'status' => 'updated',
-                    'path' => $path,
-                    'version' => $nextVersion,
-                    'sha256' => $sha256,
-                    'size' => $size,
-                ]);
-            }
-
-            // Create new file record
-            $vault->files()->create([
-                'path' => $path,
-                'storage_path' => $storagePath,
-                'sha256' => $sha256,
-                'size' => $size,
-                'version' => $nextVersion,
-                'is_deleted' => false,
-                'last_modified_by' => $user->id,
-            ]);
-
-            $vault->changeLogs()->create([
-                'user_id' => $user->id,
-                'device_name' => $deviceToken->name,
-                'path' => $path,
-                'action' => 'created',
-                'version' => $nextVersion,
-                'sha256' => $sha256,
-                'size' => $size,
-            ]);
-
-            return response()->json([
-                'status' => 'created',
-                'path' => $path,
-                'version' => $nextVersion,
-                'sha256' => $sha256,
-                'size' => $size,
-            ], 201);
-        });
+        return response()->json($result);
     }
 
     /**

@@ -1,10 +1,12 @@
 <?php
 
+use App\Actions\Vaults\RestoreFileVersionAction;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultChangeLog;
 use App\Models\VaultFile;
+use App\Models\VaultFileVersion;
 use App\Models\VaultPermission;
 use Flux\Flux;
 use Illuminate\Support\Collection;
@@ -32,12 +34,34 @@ new #[Title('Vault Details')] class extends Component {
     // Search
     public string $fileSearch = '';
 
+    // Version History Modal State
+    public ?int $selectedFileId = null;
+    public ?VaultFile $selectedFile = null;
+
     public function mount(Vault $vault): void
     {
         $this->vault = $vault;
         $this->editName = $vault->name;
         $this->editDescription = $vault->description ?? '';
         $this->editDefaultPermission = $vault->default_permission;
+    }
+
+    public function showFileHistory(int $fileId): void
+    {
+        $this->selectedFileId = $fileId;
+        $this->selectedFile = VaultFile::with(['versions.creator', 'lastModifier'])->find($fileId);
+        $this->dispatch('open-modal', name: 'file-history');
+    }
+
+    public function restoreVersion(int $versionId, RestoreFileVersionAction $restoreAction): void
+    {
+        $versionRecord = VaultFileVersion::where('vault_id', $this->vault->id)->findOrFail($versionId);
+
+        $restoreAction->execute($versionRecord, Auth::user());
+
+        $this->selectedFile = VaultFile::with(['versions.creator', 'lastModifier'])->find($this->selectedFileId);
+
+        Flux::toast(variant: 'success', text: __('Version v:version restored as current active note.', ['version' => $versionRecord->version]));
     }
 
     public function updateVaultSettings(): void
@@ -387,7 +411,8 @@ new #[Title('Vault Details')] class extends Component {
                             <flux:table.column>{{ __('Size') }}</flux:table.column>
                             <flux:table.column>{{ __('Revision') }}</flux:table.column>
                             <flux:table.column>{{ __('Modified By') }}</flux:table.column>
-                            <flux:table.column align="end">{{ __('Last Synced') }}</flux:table.column>
+                            <flux:table.column>{{ __('Last Synced') }}</flux:table.column>
+                            <flux:table.column align="end">{{ __('Actions') }}</flux:table.column>
                         </flux:table.columns>
 
                         <flux:table.rows>
@@ -416,8 +441,19 @@ new #[Title('Vault Details')] class extends Component {
                                         <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $file->lastModifier?->name ?? __('Sync') }}</span>
                                     </flux:table.cell>
 
-                                    <flux:table.cell align="end" class="text-xs text-zinc-400">
+                                    <flux:table.cell class="text-xs text-zinc-400">
                                         {{ $file->updated_at->diffForHumans() }}
+                                    </flux:table.cell>
+
+                                    <flux:table.cell align="end">
+                                        <flux:button
+                                            variant="subtle"
+                                            size="xs"
+                                            icon="clock"
+                                            wire:click="showFileHistory({{ $file->id }})"
+                                        >
+                                            {{ __('History') }}
+                                        </flux:button>
                                     </flux:table.cell>
                                 </flux:table.row>
                             @endforeach
@@ -571,5 +607,73 @@ new #[Title('Vault Details')] class extends Component {
                 <flux:button variant="primary" type="submit">{{ __('Save Permission') }}</flux:button>
             </div>
         </form>
+    </flux:modal>
+
+    <!-- Note Revision History Modal -->
+    <flux:modal name="file-history" focusable class="max-w-xl">
+        @if ($selectedFile)
+            <div class="space-y-5">
+                <div>
+                    <flux:heading size="lg" class="flex items-center gap-2">
+                        <flux:icon icon="clock" class="size-5 text-blue-500" />
+                        <span>{{ __('Note Revision History') }}</span>
+                    </flux:heading>
+                    <flux:subheading class="font-mono text-xs text-zinc-500 truncate mt-1">
+                        {{ $selectedFile->path }}
+                    </flux:subheading>
+                </div>
+
+                <div class="rounded-lg border border-zinc-200 p-3 bg-zinc-50 dark:border-white/10 dark:bg-white/5 space-y-1">
+                    <div class="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                        {{ __('Current Active Version:') }} <flux:badge color="emerald" size="sm">v{{ $selectedFile->version }}</flux:badge>
+                    </div>
+                    <div class="text-xs text-zinc-500">
+                        {{ __('Last modified:') }} {{ $selectedFile->updated_at?->diffForHumans() }} {{ __('by') }} {{ $selectedFile->lastModifier?->name ?? __('Sync') }}
+                    </div>
+                </div>
+
+                <div>
+                    <flux:heading size="sm" class="mb-2">{{ __('Historical Version Snapshots') }}</flux:heading>
+
+                    @if ($selectedFile->versions->isEmpty())
+                        <div class="py-8 text-center text-xs text-zinc-500 dark:text-zinc-400 border rounded-lg border-dashed">
+                            {{ __('No previous historical versions stored for this note yet. Modifying this file will generate automatic snapshot revisions.') }}
+                        </div>
+                    @else
+                        <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                            @foreach ($selectedFile->versions as $version)
+                                <div class="flex items-center justify-between p-3 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900">
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <flux:badge color="zinc" size="sm">v{{ $version->version }}</flux:badge>
+                                            <span class="text-xs font-mono text-zinc-600 dark:text-zinc-400">{{ Number::fileSize($version->size, precision: 1) }}</span>
+                                        </div>
+                                        <div class="text-[11px] text-zinc-400 mt-0.5">
+                                            {{ $version->created_at?->format('M j, Y g:i A') }} ({{ $version->created_at?->diffForHumans() }})
+                                        </div>
+                                    </div>
+
+                                    <flux:button
+                                        variant="subtle"
+                                        size="xs"
+                                        icon="arrow-path"
+                                        wire:click="restoreVersion({{ $version->id }})"
+                                        wire:confirm="Restore version v{{ $version->version }} as the active version of this note?"
+                                    >
+                                        {{ __('Restore') }}
+                                    </flux:button>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <flux:modal.close>
+                        <flux:button variant="filled">{{ __('Close') }}</flux:button>
+                    </flux:modal.close>
+                </div>
+            </div>
+        @endif
     </flux:modal>
 </div>

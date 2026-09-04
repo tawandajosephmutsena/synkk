@@ -21,5 +21,6 @@ Route::prefix('v1')
             Route::get('download', [VaultSyncController::class, 'download'])->name('api.vaults.download');
             Route::post('upload', [VaultSyncController::class, 'upload'])->name('api.vaults.upload');
             Route::post('delete', [VaultSyncController::class, 'delete'])->name('api.vaults.delete');
+            Route::post('batch-sync', [VaultSyncController::class, 'batchSync'])->name('api.vaults.batch_sync');
         });
     });

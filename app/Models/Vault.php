@@ -78,6 +78,11 @@ class Vault extends Model
         return $this->hasMany(VaultChangeLog::class);
     }
 
+    public function fileVersions(): HasMany
+    {
+        return $this->hasMany(VaultFileVersion::class);
+    }
+
     public function latestVersion(): int
     {
         return (int) ($this->files()->max('version') ?? 0);
