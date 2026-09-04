@@ -91,6 +91,17 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         Flux::toast(variant: 'info', text: __('Device token revoked.'));
     }
 
+    public function triggerRemoteWipe(int $tokenId): void
+    {
+        $token = DeviceToken::where('id', $tokenId)
+            ->where('team_id', Auth::user()->currentTeam?->id)
+            ->firstOrFail();
+
+        $token->triggerRemoteWipe();
+
+        Flux::toast(variant: 'warning', text: __('Remote wipe signal issued for device ":name".', ['name' => $token->name]));
+    }
+
     #[Computed]
     public function team(): ?Team
     {
@@ -219,7 +230,12 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                             </flux:table.cell>
 
                             <flux:table.cell>
-                                <flux:badge color="zinc" size="sm" class="uppercase font-mono text-[10px]">{{ $token->client_platform ?? 'client' }}</flux:badge>
+                                <div class="flex items-center gap-1.5">
+                                    <flux:badge color="zinc" size="sm" class="uppercase font-mono text-[10px]">{{ $token->client_platform ?? 'client' }}</flux:badge>
+                                    @if ($token->is_wiped)
+                                        <flux:badge color="red" size="sm" icon="no-symbol">{{ __('Wiped') }}</flux:badge>
+                                    @endif
+                                </div>
                             </flux:table.cell>
 
                             <flux:table.cell class="font-mono text-xs text-zinc-400">
@@ -243,6 +259,18 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
 
                             <flux:table.cell align="end">
                                 <div class="flex items-center justify-end gap-1">
+                                    @if (! $token->is_wiped)
+                                        <flux:tooltip :content="__('Remote Wipe device')">
+                                            <flux:button
+                                                variant="ghost"
+                                                size="sm"
+                                                icon="no-symbol"
+                                                wire:click="triggerRemoteWipe({{ $token->id }})"
+                                                wire:confirm="Issue Remote Wipe signal for this device? Next time it connects, all local sync state will be purged."
+                                                class="text-amber-600 hover:text-amber-700"
+                                            />
+                                        </flux:tooltip>
+                                    @endif
                                     <flux:tooltip :content="__('Edit device')">
                                         <flux:button
                                             variant="ghost"
