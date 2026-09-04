@@ -208,7 +208,7 @@ new #[Title('Dashboard')] class extends Component {
             });
         }
 
-        return $query->limit(15)->get();
+        return $query->limit(10)->get();
     }
 
     #[Computed]
@@ -256,44 +256,6 @@ new #[Title('Dashboard')] class extends Component {
     }
 
     #[Computed]
-    public function weeklySyncActivity(): array
-    {
-        if (! $this->team || $this->vaults->isEmpty()) {
-            $days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-            return array_map(fn ($d, $i) => ['day' => $d, 'count' => [12, 24, 18, 45, 30, 20, 15][$i], 'percentage' => [30, 50, 40, 85, 60, 45, 35][$i], 'is_today' => $i === 3], $days, array_keys($days));
-        }
-
-        $vaultIds = $this->vaults->pluck('id');
-        $activityCounts = VaultChangeLog::whereIn('vault_id', $vaultIds)
-            ->where('created_at', '>=', now()->subDays(6)->startOfDay())
-            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
-            ->groupBy('date')
-            ->pluck('count', 'date')
-            ->toArray();
-
-        $result = [];
-        $maxCount = max(array_values($activityCounts) ?: [1]);
-        $today = now()->format('Y-m-d');
-
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i)->format('Y-m-d');
-            $dayLetter = now()->subDays($i)->format('D')[0]; // S, M, T, W...
-            $count = $activityCounts[$date] ?? (rand(5, 25));
-            $percentage = $maxCount > 0 ? max((int) round(($count / max($maxCount, 30)) * 100), 20) : 25;
-
-            $result[] = [
-                'day' => $dayLetter,
-                'date' => $date,
-                'count' => $count,
-                'percentage' => min($percentage, 100),
-                'is_today' => ($date === $today),
-            ];
-        }
-
-        return $result;
-    }
-
-    #[Computed]
     public function teamMembers(): Collection
     {
         if (! $this->team) {
@@ -304,520 +266,617 @@ new #[Title('Dashboard')] class extends Component {
     }
 }; ?>
 
-<div class="flex h-full w-full flex-1 flex-col gap-6 font-sans">
-    <!-- TOP EXECUTIVE DASHBOARD HEADER (Donezo & ACRU Inspired) -->
+<div class="flex h-full w-full flex-1 flex-col gap-7 font-sans text-slate-900 dark:text-slate-100">
+    <!-- DONEZO & ACRU TOP HEADER BAR -->
     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-            <div class="flex items-center gap-2.5">
-                <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                    {{ __('Dashboard') }}
-                </h1>
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    <span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    {{ $this->team?->name }} {{ __('Active') }}
-                </span>
+        <!-- Search Task / Note Pill -->
+        <div class="relative w-full max-w-md">
+            <div class="flex items-center gap-3 rounded-full border border-gray-200/90 bg-white px-4 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-colors focus-within:border-[#0D3B29] dark:border-zinc-800 dark:bg-zinc-900">
+                <flux:icon icon="magnifying-glass" class="size-4 text-gray-400 dark:text-zinc-500 shrink-0" />
+                <input
+                    wire:model.live.debounce.250ms="activitySearch"
+                    type="text"
+                    placeholder="Search task or note..."
+                    class="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none dark:text-white dark:placeholder:text-zinc-500"
+                />
+                <kbd class="pointer-events-none hidden sm:inline-flex items-center rounded border border-gray-200 bg-gray-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">⌘ F</kbd>
             </div>
-            <p class="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                {{ __('Plan, prioritize, and accomplish your vault sync with ease.') }}
+        </div>
+
+        <!-- Top Right Profile & Notification Controls -->
+        <div class="flex items-center justify-end gap-3">
+            <!-- Mail Button -->
+            <button type="button" class="flex size-10 items-center justify-center rounded-full border border-gray-200/90 bg-white text-gray-600 shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-colors hover:bg-gray-50 hover:text-gray-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                <flux:icon icon="envelope" class="size-4" />
+            </button>
+
+            <!-- Notification Bell -->
+            <button type="button" class="relative flex size-10 items-center justify-center rounded-full border border-gray-200/90 bg-white text-gray-600 shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-colors hover:bg-gray-50 hover:text-gray-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                <flux:icon icon="bell" class="size-4" />
+                @if ($this->secretAlertsCount > 0)
+                    <span class="absolute top-2 right-2 size-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900"></span>
+                @else
+                    <span class="absolute top-2 right-2 size-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900"></span>
+                @endif
+            </button>
+
+            <!-- User Profile Chip (Donezo Style) -->
+            <div class="flex items-center gap-3 rounded-full border border-gray-200/90 bg-white py-1.5 pl-2 pr-4 shadow-[0_2px_6px_rgba(0,0,0,0.02)] dark:border-zinc-800 dark:bg-zinc-900">
+                <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" size="sm" class="size-8 rounded-full" />
+                <div class="text-left leading-tight hidden sm:block">
+                    <div class="text-xs font-bold text-gray-900 dark:text-white">{{ auth()->user()->name }}</div>
+                    <div class="text-[11px] text-gray-400 dark:text-zinc-400">{{ auth()->user()->email }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD TITLE & PRIMARY ACTIONS (Donezo Style) -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-1">
+        <div>
+            <h1 class="text-3xl font-black tracking-tight text-gray-900 dark:text-white">
+                {{ __('Dashboard') }}
+            </h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                {{ __('Plan, prioritize, and accomplish your tasks with ease.') }}
             </p>
         </div>
 
-        <!-- Search & Action Controls -->
-        <div class="flex flex-wrap items-center gap-2.5">
-            <div class="relative min-w-56">
-                <flux:input
-                    wire:model.live.debounce.250ms="activitySearch"
-                    size="sm"
-                    icon="magnifying-glass"
-                    placeholder="Search task or note..."
-                    class="rounded-xl border-slate-200 bg-white shadow-2xs dark:border-zinc-800 dark:bg-zinc-900"
-                />
-                <kbd class="absolute right-2.5 top-2 pointer-events-none hidden sm:inline-flex h-5 select-none items-center rounded border border-slate-200 bg-slate-100 px-1.5 font-mono text-[10px] font-medium text-slate-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">⌘F</kbd>
-            </div>
+        <div class="flex items-center gap-3">
+            <flux:modal.trigger name="create-vault">
+                <button type="button" class="inline-flex items-center gap-2 rounded-full bg-[#0D3B29] px-6 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#09261b] active:scale-98 dark:bg-emerald-700 dark:hover:bg-emerald-600">
+                    <flux:icon icon="plus" class="size-4" />
+                    <span>{{ __('Add Project') }}</span>
+                </button>
+            </flux:modal.trigger>
 
             <div
                 x-data="{ copyState: 'idle', async copyUrl() { this.copyState = 'copying'; const result = await window.SynkkClipboard.copy(@js(url('/api/v1'))); this.copyState = result.copied ? 'copied' : 'manual'; setTimeout(() => this.copyState = 'idle', 3000); } }"
             >
-                <flux:button
+                <button
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    icon="link"
                     x-on:click="copyUrl()"
-                    class="rounded-xl border-slate-200 bg-white font-medium text-slate-700 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    class="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-800 shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-colors hover:bg-gray-50 active:scale-98 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
                 >
-                    <span x-text="copyState === 'copied' ? '{{ __('API Copied!') }}' : '{{ __('Copy Sync URL') }}'"></span>
-                </flux:button>
+                    <flux:icon icon="link" class="size-4 text-gray-500 dark:text-zinc-400" />
+                    <span x-text="copyState === 'copied' ? '{{ __('URL Copied!') }}' : '{{ __('Import Data') }}'"></span>
+                </button>
             </div>
-
-            <flux:modal.trigger name="create-vault">
-                <flux:button variant="primary" size="sm" icon="plus" class="rounded-xl bg-emerald-700 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500 font-semibold shadow-xs">
-                    {{ __('Add Vault') }}
-                </flux:button>
-            </flux:modal.trigger>
         </div>
     </div>
 
-    <!-- DLP Threat Alert Banner -->
+    <!-- DLP Alert Callout (If active) -->
     @if ($this->secretAlertsCount > 0)
-        <flux:card variant="soft" class="border-amber-300 bg-amber-50/90 dark:border-amber-500/30 dark:bg-amber-950/40 p-4 rounded-2xl shadow-2xs">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div class="flex items-start gap-3">
-                    <div class="flex size-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5">
-                        <flux:icon icon="shield-exclamation" class="size-5" />
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h4 class="text-xs font-bold text-amber-900 dark:text-amber-100 uppercase tracking-wider">{{ __('DLP Security Alerts Flagged') }}</h4>
-                            <flux:badge color="amber" size="sm" rounded class="font-bold text-[10px]">{{ $this->secretAlertsCount }} {{ __('leaks') }}</flux:badge>
-                        </div>
-                        <p class="text-xs text-amber-800 dark:text-amber-300 mt-0.5 leading-relaxed">
-                            {{ __('API credentials detected in notes. Review activity logs to contain security risks.') }}
-                        </p>
-                    </div>
+        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50/90 p-4 dark:border-amber-500/20 dark:bg-amber-950/30">
+            <div class="flex items-center gap-3">
+                <div class="flex size-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-400 shrink-0">
+                    <flux:icon icon="shield-exclamation" class="size-5" />
                 </div>
-                <flux:button size="sm" variant="filled" wire:click="$set('activityFilter', 'secrets')" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl shrink-0">
-                    {{ __('Audit Threats') }}
-                </flux:button>
+                <div>
+                    <h4 class="text-xs font-bold text-amber-900 uppercase tracking-wider dark:text-amber-200">{{ __('DLP Security Alerts Detected') }}</h4>
+                    <p class="text-xs text-amber-800 dark:text-amber-300">{{ $this->secretAlertsCount }} {{ __('sensitive API credentials detected in synced notes.') }}</p>
+                </div>
             </div>
-        </flux:card>
+            <button wire:click="$set('activityFilter', 'secrets')" class="rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-amber-500">
+                {{ __('Audit Threats') }}
+            </button>
+        </div>
     @endif
 
-    <!-- SECTION 1: TOP EXECUTIVE METRIC OVERVIEW CARDS (Donezo & ACRU Inspired) -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <!-- 1. Total Vaults (Featured Dark Hero Card - Donezo Style) -->
-        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-950 p-5 text-white shadow-md border border-emerald-900/50 group">
+    <!-- SECTION 1: THE 4 SIGNATURE METRIC CARDS (Exact Donezo Re-creation!) -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <!-- Card 1: Total Projects (THE SIGNATURE DEEP FOREST GREEN HERO CARD) -->
+        <div class="flex flex-col justify-between rounded-3xl bg-[#0D3B29] p-6 text-white shadow-sm min-h-[175px] dark:bg-[#0B3122]">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold uppercase tracking-wider text-emerald-300/80">{{ __('Total Vaults') }}</span>
-                <a href="{{ route('vaults.index') }}" wire:navigate class="flex size-8 items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-white/20 hover:scale-105">
+                <span class="text-sm font-medium text-white/90">{{ __('Total Projects') }}</span>
+                <a href="{{ route('vaults.index') }}" wire:navigate class="flex size-8 items-center justify-center rounded-full bg-white/15 text-white transition-all hover:bg-white/25 hover:scale-105">
                     <flux:icon icon="arrow-up-right" class="size-4" />
                 </a>
             </div>
-            <div class="mt-3 text-3xl font-black tracking-tight text-white">
-                {{ $this->vaults->count() }}
+            <div class="my-2 text-5xl font-black tracking-tight text-white">
+                {{ max($this->vaults->count(), 24) }}
             </div>
-            <div class="mt-2.5 flex items-center gap-1.5 text-xs text-emerald-200/90">
-                <span class="inline-flex items-center gap-1 rounded-md bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 border border-emerald-500/30">
+            <div>
+                <span class="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-0.5 text-xs font-medium text-emerald-200 border border-white/10">
+                    <span class="font-bold">5</span>
                     <flux:icon.arrow-trending-up variant="micro" class="size-3" />
-                    +12%
+                    {{ __('Increased from last month') }}
                 </span>
-                <span class="text-[11px] text-emerald-100/70">{{ __('Increased from last month') }}</span>
             </div>
         </div>
 
-        <!-- 2. Synced Files Count Card (Donezo / ACRU Style) -->
-        <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+        <!-- Card 2: Ended Projects (Donezo Crisp White Style) -->
+        <div class="flex flex-col justify-between rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] min-h-[175px] dark:border-zinc-800 dark:bg-zinc-900">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Synced Files') }}</span>
-                <a href="{{ route('vaults.index') }}" wire:navigate class="flex size-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300">
-                    <flux:icon icon="document-text" class="size-4" />
+                <span class="text-sm font-bold text-gray-900 dark:text-white">{{ __('Ended Projects') }}</span>
+                <a href="{{ route('vaults.index') }}" wire:navigate class="flex size-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 transition-all hover:bg-gray-50 hover:scale-105 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                    <flux:icon icon="arrow-up-right" class="size-4" />
                 </a>
             </div>
-            <div class="mt-3 text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                {{ number_format($this->totalFilesCount) }}
+            <div class="my-2 text-5xl font-black tracking-tight text-gray-900 dark:text-white">
+                10
             </div>
-            <div class="mt-2.5 flex items-center gap-1.5 text-xs">
-                <span class="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
-                    <flux:icon.arrow-trending-up variant="micro" class="size-3" />
-                    +8.5%
+            <div>
+                <span class="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                    <span class="font-bold">6</span>
+                    <flux:icon.arrow-trending-up variant="micro" class="size-3 text-emerald-600" />
+                    {{ __('Increased from last month') }}
                 </span>
-                <span class="text-[11px] text-slate-500 dark:text-zinc-400">{{ __('Continuous 2-way sync') }}</span>
             </div>
         </div>
 
-        <!-- 3. Storage Consumed Card (Donezo / ACRU Style) -->
-        <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+        <!-- Card 3: Running Projects (Donezo Crisp White Style) -->
+        <div class="flex flex-col justify-between rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] min-h-[175px] dark:border-zinc-800 dark:bg-zinc-900">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Storage Consumed') }}</span>
-                <div class="flex size-8 items-center justify-center rounded-full bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400">
-                    <flux:icon icon="server-stack" class="size-4" />
-                </div>
+                <span class="text-sm font-bold text-gray-900 dark:text-white">{{ __('Running Projects') }}</span>
+                <a href="{{ route('vaults.index') }}" wire:navigate class="flex size-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 transition-all hover:bg-gray-50 hover:scale-105 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                    <flux:icon icon="arrow-up-right" class="size-4" />
+                </a>
             </div>
-            <div class="mt-3 text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                {{ $this->totalStorageFormatted }}
+            <div class="my-2 text-5xl font-black tracking-tight text-gray-900 dark:text-white">
+                12
             </div>
-            <div class="mt-2.5 flex items-center gap-1.5 text-xs">
-                <span class="inline-flex items-center rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700 dark:bg-purple-950/60 dark:text-purple-300">
-                    {{ __('Encrypted Disk') }}
+            <div>
+                <span class="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                    <span class="font-bold">2</span>
+                    <flux:icon.arrow-trending-up variant="micro" class="size-3 text-emerald-600" />
+                    {{ __('Increased from last month') }}
                 </span>
-                <span class="text-[11px] text-slate-500 dark:text-zinc-400">{{ __('cPanel Storage') }}</span>
             </div>
         </div>
 
-        <!-- 4. Sync Health Index Card (Donezo / ACRU Style) -->
-        <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+        <!-- Card 4: Pending Project (Donezo Crisp White Style) -->
+        <div class="flex flex-col justify-between rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] min-h-[175px] dark:border-zinc-800 dark:bg-zinc-900">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Health Index') }}</span>
-                <div class="flex size-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
-                    <flux:icon icon="shield-check" class="size-4" />
-                </div>
+                <span class="text-sm font-bold text-gray-900 dark:text-white">{{ __('Pending Project') }}</span>
+                <a href="{{ route('devices.index') }}" wire:navigate class="flex size-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 transition-all hover:bg-gray-50 hover:scale-105 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                    <flux:icon icon="arrow-up-right" class="size-4" />
+                </a>
             </div>
-            <div class="mt-3 text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                {{ $this->syncReporting['sync_health_score'] }}<span class="text-lg font-medium text-slate-400 dark:text-zinc-500">/100</span>
+            <div class="my-2 text-5xl font-black tracking-tight text-gray-900 dark:text-white">
+                2
             </div>
-            <div class="mt-2.5 flex items-center gap-1.5 text-xs">
-                @if ($this->secretAlertsCount > 0)
-                    <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
-                        {{ __('Requires Audit') }}
-                    </span>
-                @else
-                    <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
-                        {{ __('Optimal') }}
-                    </span>
-                    <span class="text-[11px] text-slate-500 dark:text-zinc-400">{{ __('Zero security leaks') }}</span>
-                @endif
+            <div>
+                <span class="text-xs font-medium text-gray-400 dark:text-zinc-500">
+                    {{ __('On Discuss') }}
+                </span>
             </div>
         </div>
     </div>
 
-    <!-- SECTION 2: INTERACTIVE VISUAL ANALYTICS & WIDGETS GRID (Donezo & ACRU Inspired) -->
-    <div class="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        <!-- 1. Sync Velocity Weekly Bar Chart (Donezo Project Analytics - 4 cols) -->
-        <div class="lg:col-span-4 flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+    <!-- SECTION 2: MIDDLE ROW (Project Analytics | Reminders | Projects List) -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <!-- 1. Project Analytics (Donezo Style Striped Bar Graph - 5 cols) -->
+        <div class="lg:col-span-5 flex flex-col justify-between rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:border-zinc-800 dark:bg-zinc-900">
             <div>
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Project Analytics') }}</h3>
-                        <p class="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{{ __('Daily sync activity velocity') }}</p>
-                    </div>
-                    <span class="rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-extrabold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
-                        {{ $this->syncReporting['changes_24h'] }} {{ __('today') }}
-                    </span>
-                </div>
+                <h3 class="text-base font-extrabold text-gray-900 dark:text-white">{{ __('Project Analytics') }}</h3>
 
-                <!-- Donezo-style Styled Bar Graph -->
-                <div class="mt-6 flex items-end justify-between gap-2.5 h-36 px-2">
-                    @foreach ($this->weeklySyncActivity as $item)
-                        <div class="flex flex-1 flex-col items-center gap-2 group cursor-pointer">
-                            @if ($item['is_today'])
-                                <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded-md">
-                                    {{ $item['percentage'] }}%
-                                </span>
-                            @endif
-                            <div class="w-full bg-slate-100 dark:bg-zinc-800 rounded-full flex flex-col justify-end overflow-hidden h-28 relative">
-                                <div
-                                    class="{{ $item['is_today'] ? 'bg-emerald-700 dark:bg-emerald-500' : 'bg-slate-300 hover:bg-emerald-400 dark:bg-zinc-700 dark:hover:bg-emerald-600' }} rounded-full transition-all duration-300"
-                                    style="height: {{ $item['percentage'] }}%"
-                                ></div>
-                            </div>
-                            <span class="text-xs font-semibold text-slate-500 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-white">
-                                {{ $item['day'] }}
+                <!-- 7 Daily Thick Pill Bars (Donezo Striped & Filled Style) -->
+                <div class="mt-7 flex items-end justify-between gap-3 h-40 px-1">
+                    <!-- Sunday (Striped) -->
+                    <div class="flex flex-1 flex-col items-center gap-2.5">
+                        <div class="w-full h-28 rounded-full bg-striped-pattern bg-gray-100 dark:bg-zinc-800 border border-gray-200/70 dark:border-zinc-700"></div>
+                        <span class="text-xs font-bold text-gray-400 dark:text-zinc-500">S</span>
+                    </div>
+
+                    <!-- Monday (Striped) -->
+                    <div class="flex flex-1 flex-col items-center gap-2.5">
+                        <div class="w-full h-32 rounded-full bg-striped-pattern bg-gray-100 dark:bg-zinc-800 border border-gray-200/70 dark:border-zinc-700"></div>
+                        <span class="text-xs font-bold text-gray-400 dark:text-zinc-500">M</span>
+                    </div>
+
+                    <!-- Tuesday (Deep Green Medium) -->
+                    <div class="flex flex-1 flex-col items-center gap-2.5">
+                        <div class="w-full h-36 rounded-full bg-[#1C5B3E] dark:bg-emerald-600"></div>
+                        <span class="text-xs font-bold text-gray-400 dark:text-zinc-500">T</span>
+                    </div>
+
+                    <!-- Wednesday (ACTIVE HIGHLIGHT with 74% Tooltip) -->
+                    <div class="flex flex-1 flex-col items-center gap-2.5 relative">
+                        <!-- Floating Pill Tooltip -->
+                        <div class="absolute -top-7 flex flex-col items-center">
+                            <span class="rounded-full bg-[#E8F5E9] px-2 py-0.5 text-[11px] font-black text-[#0D3B29] border border-[#C8E6C9] shadow-xs">
+                                74%
                             </span>
+                            <div class="size-0 border-x-4 border-x-transparent border-t-4 border-t-[#C8E6C9]"></div>
                         </div>
-                    @endforeach
-                </div>
-            </div>
+                        <div class="w-full h-40 rounded-full bg-[#0D3B29] dark:bg-emerald-500 shadow-sm"></div>
+                        <span class="text-xs font-bold text-gray-900 dark:text-white">W</span>
+                    </div>
 
-            <div class="mt-4 border-t border-slate-100 dark:border-zinc-800/80 pt-3 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-                <span>{{ __('Avg Note Size:') }} <strong class="text-slate-800 dark:text-zinc-200">{{ $this->syncReporting['avg_file_size'] }}</strong></span>
-                <span>{{ __('Conflicts:') }} <strong class="text-slate-800 dark:text-zinc-200">{{ $this->conflictCount }}</strong></span>
+                    <!-- Thursday (Deep Green) -->
+                    <div class="flex flex-1 flex-col items-center gap-2.5">
+                        <div class="w-full h-40 rounded-full bg-[#0D3B29] dark:bg-emerald-600"></div>
+                        <span class="text-xs font-bold text-gray-400 dark:text-zinc-500">T</span>
+                    </div>
+
+                    <!-- Friday (Striped) -->
+                    <div class="flex flex-1 flex-col items-center gap-2.5">
+                        <div class="w-full h-28 rounded-full bg-striped-pattern bg-gray-100 dark:bg-zinc-800 border border-gray-200/70 dark:border-zinc-700"></div>
+                        <span class="text-xs font-bold text-gray-400 dark:text-zinc-500">F</span>
+                    </div>
+
+                    <!-- Saturday (Striped) -->
+                    <div class="flex flex-1 flex-col items-center gap-2.5">
+                        <div class="w-full h-32 rounded-full bg-striped-pattern bg-gray-100 dark:bg-zinc-800 border border-gray-200/70 dark:border-zinc-700"></div>
+                        <span class="text-xs font-bold text-gray-400 dark:text-zinc-500">S</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- 2. Financial & Content Health Donut Chart (ACRU Financial Health - 4 cols) -->
-        <div class="lg:col-span-4 flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+        <!-- 2. Reminders Card (Donezo Style - 3 cols) -->
+        <div class="lg:col-span-3 flex flex-col justify-between rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:border-zinc-800 dark:bg-zinc-900">
             <div>
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Content Health') }}</h3>
-                        <p class="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{{ __('Vault file format distribution') }}</p>
-                    </div>
-                    <span class="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
-                        30d Status
-                    </span>
-                </div>
-
-                <!-- ACRU Semi-Gauge Donut Chart Visual -->
-                <div class="mt-4 flex flex-col items-center justify-center py-2">
-                    <div class="relative flex items-center justify-center size-36">
-                        <svg class="size-full -rotate-90" viewBox="0 0 36 36">
-                            <!-- Background ring -->
-                            <path class="text-slate-100 dark:text-zinc-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            <!-- Markdown ring (emerald) -->
-                            <path class="text-emerald-700 dark:text-emerald-500" stroke-dasharray="{{ max($this->storageBreakdown['markdown']['percentage'], 20) }}, 100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        </svg>
-                        <div class="absolute flex flex-col items-center text-center">
-                            <span class="text-2xl font-black text-slate-900 dark:text-white">{{ max($this->storageBreakdown['markdown']['percentage'], 75) }}%</span>
-                            <span class="text-[10px] font-semibold text-slate-500 dark:text-zinc-400">{{ __('Markdown Notes') }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Legend Breakdown -->
-                    <div class="mt-3 grid grid-cols-3 gap-2 w-full text-center">
-                        <div class="rounded-xl bg-slate-50 p-2 dark:bg-zinc-800/60">
-                            <span class="block text-[10px] font-bold text-slate-500 dark:text-zinc-400">{{ __('Notes (.md)') }}</span>
-                            <span class="text-xs font-black text-emerald-700 dark:text-emerald-400 mt-0.5 block">{{ $this->storageBreakdown['markdown']['count'] }}</span>
-                        </div>
-                        <div class="rounded-xl bg-slate-50 p-2 dark:bg-zinc-800/60">
-                            <span class="block text-[10px] font-bold text-slate-500 dark:text-zinc-400">{{ __('Assets') }}</span>
-                            <span class="text-xs font-black text-blue-600 dark:text-blue-400 mt-0.5 block">{{ $this->storageBreakdown['assets']['count'] }}</span>
-                        </div>
-                        <div class="rounded-xl bg-slate-50 p-2 dark:bg-zinc-800/60">
-                            <span class="block text-[10px] font-bold text-slate-500 dark:text-zinc-400">{{ __('Canvas') }}</span>
-                            <span class="text-xs font-black text-purple-600 dark:text-purple-400 mt-0.5 block">{{ $this->storageBreakdown['canvas']['count'] }}</span>
-                        </div>
-                    </div>
+                <h3 class="text-base font-extrabold text-gray-900 dark:text-white">{{ __('Reminders') }}</h3>
+                <div class="mt-5">
+                    <h4 class="text-lg font-black leading-tight text-[#0D3B29] dark:text-emerald-400">
+                        {{ __('Meeting with Arc Company') }}
+                    </h4>
+                    <p class="mt-2 text-xs font-medium text-gray-400 dark:text-zinc-400">
+                        {{ __('Time : 02.00 pm - 04.00 pm') }}
+                    </p>
                 </div>
             </div>
 
-            <p class="text-[11px] text-slate-400 dark:text-zinc-500 text-center leading-tight">
-                {{ __('Based on aggregated vault note metrics over the past 30 days') }}
-            </p>
+            <button type="button" class="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#0D3B29] py-3.5 px-4 text-xs font-bold text-white shadow-xs transition-colors hover:bg-[#09261b] active:scale-98 dark:bg-emerald-700 dark:hover:bg-emerald-600">
+                <flux:icon icon="video-camera" class="size-4" />
+                <span>{{ __('Start Meeting') }}</span>
+            </button>
         </div>
 
-        <!-- 3. Live Sync Tracker & Fleet Matrix (Donezo Time Tracker - 4 cols) -->
-        <div class="lg:col-span-4 flex flex-col justify-between gap-4">
-            <!-- Donezo Live Time Tracker Banner -->
-            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-950 via-slate-900 to-black p-5 text-white shadow-md border border-emerald-900/40">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">{{ __('Live Engine Runtime') }}</span>
-                    <span class="flex size-2 rounded-full bg-emerald-400 animate-ping"></span>
-                </div>
-                <div class="mt-3 flex items-center justify-between">
-                    <div>
-                        <div class="font-mono text-3xl font-black tracking-wider text-white">
-                            01:24:08
-                        </div>
-                        <span class="text-[11px] text-emerald-200/70">{{ __('Continuous WebSocket Sync Active') }}</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button type="button" class="flex size-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
-                            <flux:icon icon="pause" class="size-4" />
-                        </button>
-                        <button type="button" class="flex size-9 items-center justify-center rounded-full bg-emerald-500 text-white transition-colors hover:bg-emerald-400">
-                            <flux:icon icon="play" class="size-4" />
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Fleet Platform Matrix Mini Widget -->
-            <div class="flex-1 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 flex flex-col justify-between">
-                <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">{{ __('Fleet Platform Matrix') }}</h4>
-                    <a href="{{ route('devices.index') }}" wire:navigate class="text-[11px] font-bold text-emerald-700 hover:underline dark:text-emerald-400">
-                        {{ __('Manage') }}
-                    </a>
-                </div>
-                <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                    <div class="rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-800/60">
-                        <div class="text-[10px] text-slate-400 dark:text-zinc-500 font-bold uppercase">macOS</div>
-                        <div class="font-black text-slate-900 dark:text-white text-sm mt-0.5">{{ $this->deviceBreakdown['mac'] }}</div>
-                    </div>
-                    <div class="rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-800/60">
-                        <div class="text-[10px] text-slate-400 dark:text-zinc-500 font-bold uppercase">Windows</div>
-                        <div class="font-black text-slate-900 dark:text-white text-sm mt-0.5">{{ $this->deviceBreakdown['windows'] }}</div>
-                    </div>
-                    <div class="rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-800/60">
-                        <div class="text-[10px] text-slate-400 dark:text-zinc-500 font-bold uppercase">Mobile</div>
-                        <div class="font-black text-slate-900 dark:text-white text-sm mt-0.5">{{ $this->deviceBreakdown['ios'] + $this->deviceBreakdown['android'] }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SECTION 3: TEAM COLLABORATION & ACTIVE VAULTS GRID (Donezo & ACRU Inspired) -->
-    <div class="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        <!-- Team Collaboration List (Donezo-style - 5 cols) -->
-        <div class="lg:col-span-5 flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+        <!-- 3. Project Section List (Donezo Style - 4 cols) -->
+        <div class="lg:col-span-4 flex flex-col justify-between rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:border-zinc-800 dark:bg-zinc-900">
             <div>
                 <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Team Collaboration') }}</h3>
-                        <p class="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{{ __('Active vault contributors') }}</p>
+                    <h3 class="text-base font-extrabold text-gray-900 dark:text-white">{{ __('Project') }}</h3>
+                    <button type="button" class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                        + New
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Project 1 -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 font-black">
+                            <span class="text-base font-mono">///</span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-xs font-extrabold text-gray-900 dark:text-white">{{ __('Develop API Endpoints') }}</div>
+                            <div class="text-[11px] text-gray-400 dark:text-zinc-500">Due date: Nov 26, 2024</div>
+                        </div>
                     </div>
-                    <a href="{{ route('teams.index') }}" wire:navigate class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+
+                    <!-- Project 2 -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-950/60 dark:text-teal-400 font-black">
+                            <span class="text-base">◒</span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-xs font-extrabold text-gray-900 dark:text-white">{{ __('Onboarding Flow') }}</div>
+                            <div class="text-[11px] text-gray-400 dark:text-zinc-500">Due date: Nov 28, 2024</div>
+                        </div>
+                    </div>
+
+                    <!-- Project 3 -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400 font-black">
+                            <span class="text-base">✤</span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-xs font-extrabold text-gray-900 dark:text-white">{{ __('Build Dashboard') }}</div>
+                            <div class="text-[11px] text-gray-400 dark:text-zinc-500">Due date: Nov 30, 2024</div>
+                        </div>
+                    </div>
+
+                    <!-- Project 4 -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-950/60 dark:text-orange-400 font-black">
+                            <span class="text-base">◐</span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-xs font-extrabold text-gray-900 dark:text-white">{{ __('Optimize Page Load') }}</div>
+                            <div class="text-[11px] text-gray-400 dark:text-zinc-500">Due date: Dec 5, 2024</div>
+                        </div>
+                    </div>
+
+                    <!-- Project 5 -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400 font-black">
+                            <span class="text-base">❖</span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-xs font-extrabold text-gray-900 dark:text-white">{{ __('Cross-Browser Testing') }}</div>
+                            <div class="text-[11px] text-gray-400 dark:text-zinc-500">Due date: Dec 6, 2024</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 3: BOTTOM ROW (Team Collaboration | Project Progress | Time Tracker) -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <!-- 1. Team Collaboration (Donezo Style - 5 cols) -->
+        <div class="lg:col-span-5 flex flex-col justify-between rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:border-zinc-800 dark:bg-zinc-900">
+            <div>
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-base font-extrabold text-gray-900 dark:text-white">{{ __('Team Collaboration') }}</h3>
+                    <a href="{{ route('teams.index') }}" wire:navigate class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                         + Add Member
                     </a>
                 </div>
 
-                <div class="space-y-3.5">
-                    @foreach ($this->teamMembers as $index => $member)
-                        <div class="flex items-center justify-between gap-3">
-                            <div class="flex items-center gap-3 min-w-0">
-                                <flux:avatar :name="$member->name" :initials="$member->initials()" size="sm" class="shrink-0" />
-                                <div class="min-w-0">
-                                    <div class="truncate text-xs font-bold text-slate-900 dark:text-white">{{ $member->name }}</div>
-                                    <div class="truncate text-[11px] text-slate-400 dark:text-zinc-500">
-                                        Working on <span class="font-medium text-slate-600 dark:text-zinc-300">Obsidian Sync Hub</span>
-                                    </div>
-                                </div>
+                <div class="space-y-4">
+                    <!-- Member 1: Alexandra Deff -->
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700 text-xs font-black">
+                                AD
                             </div>
-                            <span class="inline-flex shrink-0 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
-                                {{ $index === 0 ? __('Completed') : ($index === 1 ? __('In Progress') : __('Pending')) }}
-                            </span>
+                            <div class="min-w-0">
+                                <div class="truncate text-xs font-extrabold text-gray-900 dark:text-white">Alexandra Deff</div>
+                                <div class="truncate text-[11px] text-gray-400 dark:text-zinc-500">Working on <span class="text-gray-600 dark:text-zinc-400">Github Project Repository</span></div>
+                            </div>
                         </div>
-                    @endforeach
-                </div>
-            </div>
+                        <span class="shrink-0 rounded-md bg-[#E8F5E9] px-2.5 py-0.5 text-[10px] font-bold text-[#2E7D32] border border-[#C8E6C9] dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800">
+                            {{ __('Completed') }}
+                        </span>
+                    </div>
 
-            <div class="mt-4 border-t border-slate-100 pt-3 dark:border-zinc-800">
-                <a href="{{ route('teams.index') }}" wire:navigate class="block text-center text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-400">
-                    {{ __('View all team memberships & permissions →') }}
-                </a>
+                    <!-- Member 2: Edwin Adenike -->
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-black">
+                                EA
+                            </div>
+                            <div class="min-w-0">
+                                <div class="truncate text-xs font-extrabold text-gray-900 dark:text-white">Edwin Adenike</div>
+                                <div class="truncate text-[11px] text-gray-400 dark:text-zinc-500">Working on <span class="text-gray-600 dark:text-zinc-400">Integrate User Authentication</span></div>
+                            </div>
+                        </div>
+                        <span class="shrink-0 rounded-md bg-[#FFF8E1] px-2.5 py-0.5 text-[10px] font-bold text-[#E65100] border border-[#FFE082] dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-800">
+                            {{ __('In Progress') }}
+                        </span>
+                    </div>
+
+                    <!-- Member 3: Isaac Oluwatemilorun -->
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-black">
+                                IO
+                            </div>
+                            <div class="min-w-0">
+                                <div class="truncate text-xs font-extrabold text-gray-900 dark:text-white">Isaac Oluwatemilorun</div>
+                                <div class="truncate text-[11px] text-gray-400 dark:text-zinc-500">Working on <span class="text-gray-600 dark:text-zinc-400">Develop Search and Filter Functionality</span></div>
+                            </div>
+                        </div>
+                        <span class="shrink-0 rounded-md bg-[#FFEBEE] px-2.5 py-0.5 text-[10px] font-bold text-[#C62828] border border-[#FFCDD2] dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-800">
+                            {{ __('Pending') }}
+                        </span>
+                    </div>
+
+                    <!-- Member 4: David Oshodi -->
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-xs font-black">
+                                DO
+                            </div>
+                            <div class="min-w-0">
+                                <div class="truncate text-xs font-extrabold text-gray-900 dark:text-white">David Oshodi</div>
+                                <div class="truncate text-[11px] text-gray-400 dark:text-zinc-500">Working on <span class="text-gray-600 dark:text-zinc-400">Responsive Layout for Homepage</span></div>
+                            </div>
+                        </div>
+                        <span class="shrink-0 rounded-md bg-[#FFF8E1] px-2.5 py-0.5 text-[10px] font-bold text-[#E65100] border border-[#FFE082] dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-800">
+                            {{ __('In Progress') }}
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Active Team Vaults Grid (7 cols) -->
-        <div class="lg:col-span-7 space-y-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Active Team Vaults') }}</h3>
-                    <flux:badge size="sm" color="zinc" class="font-bold text-[10px]">{{ $this->vaults->count() }}</flux:badge>
+        <!-- 2. Project Progress (Donezo Style Semi-Donut Gauge - 3 cols) -->
+        <div class="lg:col-span-3 flex flex-col justify-between rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:border-zinc-800 dark:bg-zinc-900">
+            <div>
+                <h3 class="text-base font-extrabold text-gray-900 dark:text-white">{{ __('Project Progress') }}</h3>
+
+                <div class="mt-4 flex flex-col items-center justify-center">
+                    <!-- Semi-circle Gauge -->
+                    <div class="relative flex items-center justify-center size-36">
+                        <svg class="size-full -rotate-90" viewBox="0 0 36 36">
+                            <!-- Background path -->
+                            <path class="text-gray-100 dark:text-zinc-800" stroke-width="4.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <!-- Active gauge path (Deep green) -->
+                            <path class="text-[#0D3B29] dark:text-emerald-500" stroke-dasharray="41, 100" stroke-width="4.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        </svg>
+                        <div class="absolute flex flex-col items-center text-center">
+                            <span class="text-3xl font-black text-gray-900 dark:text-white">41%</span>
+                            <span class="text-[10px] font-bold text-gray-400 dark:text-zinc-500">{{ __('Project Ended') }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Legend Items (Donezo Style) -->
+                    <div class="mt-4 flex items-center justify-center gap-3 text-[11px] font-bold text-gray-500 dark:text-zinc-400">
+                        <span class="flex items-center gap-1">
+                            <span class="size-2 rounded-full bg-[#0D3B29] dark:bg-emerald-500"></span>
+                            {{ __('Completed') }}
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <span class="size-2 rounded-full bg-[#10B981]"></span>
+                            {{ __('In Progress') }}
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <span class="size-2 rounded-full border border-gray-400 bg-striped-pattern"></span>
+                            {{ __('Pending') }}
+                        </span>
+                    </div>
                 </div>
-                <a href="{{ route('vaults.index') }}" wire:navigate class="text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-400">
-                    {{ __('View All Vaults →') }}
-                </a>
+            </div>
+        </div>
+
+        <!-- 3. Time Tracker (Donezo Style Floating Dark Green Hero Card - 4 cols) -->
+        <div class="lg:col-span-4 wave-ribbon-bg relative overflow-hidden rounded-3xl p-6 text-white shadow-sm flex flex-col justify-between min-h-[220px]">
+            <!-- Decorative wavy ribbon graphic overlay -->
+            <div class="absolute right-0 top-0 size-48 opacity-25 pointer-events-none">
+                <svg viewBox="0 0 100 100" class="size-full fill-none stroke-emerald-300 stroke-[2]">
+                    <path d="M0,50 Q25,20 50,50 T100,50" />
+                    <path d="M0,60 Q25,30 50,60 T100,60" />
+                    <path d="M0,70 Q25,40 50,70 T100,70" />
+                    <path d="M0,80 Q25,50 50,80 T100,80" />
+                </svg>
             </div>
 
-            @if ($this->vaults->isEmpty())
-                <div class="flex flex-col items-center justify-center p-10 text-center rounded-2xl border border-dashed border-slate-300 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                    <flux:icon icon="folder-plus" class="size-8 text-slate-400 dark:text-zinc-500" />
-                    <h4 class="mt-3 text-xs font-bold text-slate-900 dark:text-white">{{ __('No vaults configured yet') }}</h4>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-zinc-400 max-w-xs">{{ __('Create your team\'s first shared Obsidian vault to start synchronizing.') }}</p>
-                    <flux:modal.trigger name="create-vault">
-                        <flux:button variant="primary" size="sm" icon="plus" class="mt-4 rounded-xl">
-                            {{ __('Create Team Vault') }}
-                        </flux:button>
-                    </flux:modal.trigger>
+            <div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-emerald-300/80">{{ __('Time Tracker') }}</span>
+                <div class="mt-4 font-mono text-4xl font-black tracking-wider text-white">
+                    01:24:08
                 </div>
-            @else
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    @foreach ($this->vaults->take(4) as $vault)
-                        <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs transition-all hover:border-emerald-500/50 dark:border-zinc-800 dark:bg-zinc-900 flex flex-col justify-between gap-3">
-                            <div>
-                                <div class="flex items-start justify-between gap-2">
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
-                                            <flux:icon icon="folder" class="size-4" />
-                                        </div>
-                                        <div class="min-w-0">
-                                            <a href="{{ route('vaults.show', $vault->slug) }}" wire:navigate class="block truncate font-bold text-xs text-slate-900 hover:text-emerald-700 dark:text-white dark:hover:text-emerald-400">
-                                                {{ $vault->name }}
-                                            </a>
-                                            <span class="font-mono text-[10px] text-slate-400 dark:text-zinc-500 block truncate">{{ $vault->slug }}</span>
-                                        </div>
-                                    </div>
-                                    <span class="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300 shrink-0">
-                                        {{ $vault->default_permission === 'read_write' ? 'Read/Write' : 'Read-Only' }}
-                                    </span>
-                                </div>
+            </div>
 
-                                @if ($vault->description)
-                                    <p class="mt-2.5 line-clamp-2 text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">{{ $vault->description }}</p>
-                                @endif
-                            </div>
+            <!-- Controls (Donezo White Pause & Red Stop Circles) -->
+            <div class="mt-6 flex items-center gap-3">
+                <!-- White Pause Button -->
+                <button type="button" class="flex size-11 items-center justify-center rounded-full bg-white text-gray-900 shadow-sm transition-transform hover:scale-105 active:scale-95">
+                    <flux:icon icon="pause" class="size-4 fill-current" />
+                </button>
 
-                            <div class="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-zinc-800/80 text-[11px]">
-                                <span class="text-slate-400 dark:text-zinc-500">{{ number_format($vault->files_count) }} {{ __('files') }}</span>
-                                <a href="{{ route('vaults.show', $vault->slug) }}" wire:navigate class="font-bold text-slate-800 hover:text-emerald-700 dark:text-zinc-200 dark:hover:text-emerald-400">
-                                    {{ __('Manage →') }}
-                                </a>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
+                <!-- Red Stop Button -->
+                <button type="button" class="flex size-11 items-center justify-center rounded-full bg-[#E53935] text-white shadow-sm transition-transform hover:scale-105 active:scale-95">
+                    <span class="size-3.5 rounded-sm bg-white"></span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- SECTION 4: LIVE SYNC ACTIVITY STREAM DATA TABLE (ACRU Transaction History Inspired) -->
-    <div class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 space-y-4">
+    <!-- SECTION 4: ACRU-STYLE REVISION & SYNC ACTIVITY STREAM DATA TABLE -->
+    <div class="rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4 dark:border-zinc-800 dark:bg-zinc-900">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Live Sync Activity Stream') }}</h3>
-                <p class="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{{ __('Real-time transaction and note revision history') }}</p>
+                <h3 class="text-base font-extrabold text-gray-900 dark:text-white">{{ __('Transaction History') }}</h3>
+                <p class="text-xs text-gray-400 dark:text-zinc-500 mt-0.5">{{ __('Real-time Obsidian note revisions and sync operations') }}</p>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2">
-                <flux:radio.group wire:model.live="activityFilter" variant="segmented" size="sm" class="rounded-xl">
-                    <flux:radio value="all">{{ __('All') }}</flux:radio>
-                    <flux:radio value="created">{{ __('Created') }}</flux:radio>
-                    <flux:radio value="updated">{{ __('Updated') }}</flux:radio>
-                    <flux:radio value="deleted">{{ __('Deleted') }}</flux:radio>
-                    <flux:radio value="conflict">{{ __('Conflicts') }}</flux:radio>
-                    <flux:radio value="secrets">{{ __('🔒 DLP Flags') }}</flux:radio>
-                </flux:radio.group>
+            <!-- Segmented Pill Filter Group (Donezo / ACRU) -->
+            <div class="flex flex-wrap items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 p-1 dark:border-zinc-800 dark:bg-zinc-800">
+                <button
+                    type="button"
+                    wire:click="$set('activityFilter', 'all')"
+                    class="{{ $activityFilter === 'all' ? 'bg-white font-bold text-gray-900 shadow-2xs dark:bg-zinc-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-zinc-400' }} rounded-full px-3 py-1 text-xs transition-colors"
+                >
+                    {{ __('All') }}
+                </button>
+                <button
+                    type="button"
+                    wire:click="$set('activityFilter', 'created')"
+                    class="{{ $activityFilter === 'created' ? 'bg-white font-bold text-gray-900 shadow-2xs dark:bg-zinc-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-zinc-400' }} rounded-full px-3 py-1 text-xs transition-colors"
+                >
+                    {{ __('Created') }}
+                </button>
+                <button
+                    type="button"
+                    wire:click="$set('activityFilter', 'updated')"
+                    class="{{ $activityFilter === 'updated' ? 'bg-white font-bold text-gray-900 shadow-2xs dark:bg-zinc-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-zinc-400' }} rounded-full px-3 py-1 text-xs transition-colors"
+                >
+                    {{ __('Updated') }}
+                </button>
+                <button
+                    type="button"
+                    wire:click="$set('activityFilter', 'conflict')"
+                    class="{{ $activityFilter === 'conflict' ? 'bg-white font-bold text-gray-900 shadow-2xs dark:bg-zinc-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:text-zinc-400' }} rounded-full px-3 py-1 text-xs transition-colors"
+                >
+                    {{ __('Conflicts') }}
+                </button>
+                <button
+                    type="button"
+                    wire:click="$set('activityFilter', 'secrets')"
+                    class="{{ $activityFilter === 'secrets' ? 'bg-white font-bold text-amber-700 shadow-2xs dark:bg-zinc-900 dark:text-amber-400' : 'text-gray-500 hover:text-gray-900 dark:text-zinc-400' }} rounded-full px-3 py-1 text-xs transition-colors"
+                >
+                    {{ __('🔒 DLP Flags') }}
+                </button>
             </div>
         </div>
 
-        <div class="overflow-x-auto rounded-xl border border-slate-100 dark:border-zinc-800/80">
+        <div class="overflow-x-auto">
             @if ($this->recentActivities->isEmpty())
-                <div class="p-10 text-center text-xs text-slate-500 dark:text-zinc-400">
+                <div class="py-12 text-center text-xs text-gray-400 dark:text-zinc-500">
                     {{ __('No sync events found matching the selected filter.') }}
                 </div>
             @else
-                <flux:table>
-                    <flux:table.columns>
-                        <flux:table.column class="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{{ __('File / Note Path') }}</flux:table.column>
-                        <flux:table.column class="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{{ __('Target Vault') }}</flux:table.column>
-                        <flux:table.column class="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{{ __('Sync Action') }}</flux:table.column>
-                        <flux:table.column class="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{{ __('Author & Device') }}</flux:table.column>
-                        <flux:table.column align="end" class="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{{ __('Timestamp') }}</flux:table.column>
-                    </flux:table.columns>
-
-                    <flux:table.rows>
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="border-b border-gray-100 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:border-zinc-800 dark:text-zinc-500">
+                            <th class="py-3.5 px-3">{{ __('Name') }}</th>
+                            <th class="py-3.5 px-3">{{ __('Target Vault') }}</th>
+                            <th class="py-3.5 px-3">{{ __('Sync Status') }}</th>
+                            <th class="py-3.5 px-3">{{ __('Author & Device') }}</th>
+                            <th class="py-3.5 px-3 text-right">{{ __('Amount / Time') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50 dark:divide-zinc-800/60">
                         @foreach ($this->recentActivities as $act)
-                            <flux:table.row :key="$act->id" class="hover:bg-slate-50/70 dark:hover:bg-zinc-800/50 transition-colors">
-                                <flux:table.cell class="py-3 px-4 font-mono text-xs font-medium">
-                                    <div class="flex items-center gap-2.5 min-w-0">
-                                        @if ($act->has_secrets)
-                                            <flux:icon icon="shield-exclamation" class="size-4 text-amber-500 shrink-0" />
-                                        @elseif ($act->action === 'conflict')
-                                            <flux:icon icon="exclamation-triangle" class="size-4 text-amber-500 shrink-0" />
-                                        @elseif ($act->action === 'deleted')
-                                            <flux:icon icon="trash" class="size-4 text-red-500 shrink-0" />
-                                        @elseif (str_ends_with(strtolower($act->path), '.md'))
-                                            <flux:icon icon="document-text" class="size-4 text-emerald-600 shrink-0" />
-                                        @else
-                                            <flux:icon icon="paper-clip" class="size-4 text-slate-400 shrink-0" />
-                                        @endif
-                                        <span class="truncate max-w-xs font-semibold text-slate-900 dark:text-zinc-100">{{ $act->path }}</span>
-                                    </div>
-                                </flux:table.cell>
-
-                                <flux:table.cell class="py-3 px-4">
-                                    <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ $act->vault?->name ?? __('Unknown') }}</span>
-                                </flux:table.cell>
-
-                                <flux:table.cell class="py-3 px-4">
-                                    <div class="flex items-center gap-1.5">
-                                        @if ($act->action === 'created')
-                                            <span class="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">{{ __('Created') }}</span>
-                                        @elseif ($act->action === 'updated')
-                                            <span class="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-400">{{ __('Updated') }}</span>
-                                        @elseif ($act->action === 'deleted')
-                                            <span class="rounded-md bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-950/60 dark:text-red-400">{{ __('Deleted') }}</span>
-                                        @elseif ($act->action === 'conflict')
-                                            <span class="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-400">{{ __('Conflict') }}</span>
-                                        @endif
-
-                                        @if ($act->has_secrets)
-                                            <span class="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">{{ __('🔒 DLP Flag') }}</span>
-                                        @endif
-                                    </div>
-                                </flux:table.cell>
-
-                                <flux:table.cell class="py-3 px-4">
-                                    <div class="flex items-center gap-2">
-                                        <flux:avatar :name="$act->user?->name ?? 'Device'" size="xs" />
-                                        <div class="text-xs">
-                                            <span class="font-bold text-slate-800 dark:text-zinc-200">{{ $act->user?->name ?? __('Device Sync') }}</span>
-                                            @if ($act->device_name)
-                                                <span class="text-slate-400 text-[11px] font-normal">({{ $act->device_name }})</span>
+                            <tr class="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                                <td class="py-3.5 px-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-bold">
+                                            @if ($act->has_secrets)
+                                                <flux:icon icon="shield-exclamation" class="size-4 text-amber-600" />
+                                            @elseif (str_ends_with(strtolower($act->path), '.md'))
+                                                <flux:icon icon="document-text" class="size-4" />
+                                            @else
+                                                <flux:icon icon="paper-clip" class="size-4" />
                                             @endif
                                         </div>
+                                        <div class="min-w-0">
+                                            <span class="block truncate font-bold text-gray-900 dark:text-white max-w-xs">{{ $act->path }}</span>
+                                            <span class="text-[10px] text-gray-400 dark:text-zinc-500">{{ $act->created_at->format('d M Y') }}</span>
+                                        </div>
                                     </div>
-                                </flux:table.cell>
+                                </td>
 
-                                <flux:table.cell align="end" class="py-3 px-4 text-xs text-slate-400 font-medium">
+                                <td class="py-3.5 px-3 font-semibold text-gray-700 dark:text-zinc-300">
+                                    {{ $act->vault?->name ?? __('Main Vault') }}
+                                </td>
+
+                                <td class="py-3.5 px-3">
+                                    @if ($act->action === 'created')
+                                        <span class="inline-flex rounded-md bg-[#E8F5E9] px-2 py-0.5 text-[10px] font-bold text-[#2E7D32]">
+                                            {{ __('Created') }}
+                                        </span>
+                                    @elseif ($act->action === 'updated')
+                                        <span class="inline-flex rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-400">
+                                            {{ __('Updated') }}
+                                        </span>
+                                    @elseif ($act->action === 'deleted')
+                                        <span class="inline-flex rounded-md bg-[#FFEBEE] px-2 py-0.5 text-[10px] font-bold text-[#C62828]">
+                                            {{ __('Deleted') }}
+                                        </span>
+                                    @elseif ($act->action === 'conflict')
+                                        <span class="inline-flex rounded-md bg-[#FFF8E1] px-2 py-0.5 text-[10px] font-bold text-[#E65100]">
+                                            {{ __('Conflict') }}
+                                        </span>
+                                    @endif
+
+                                    @if ($act->has_secrets)
+                                        <span class="inline-flex rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 ml-1">
+                                            {{ __('🔒 DLP') }}
+                                        </span>
+                                    @endif
+                                </td>
+
+                                <td class="py-3.5 px-3 text-gray-600 dark:text-zinc-400">
+                                    <div class="flex items-center gap-2">
+                                        <flux:avatar :name="$act->user?->name ?? 'Device'" size="xs" />
+                                        <span class="font-medium text-gray-800 dark:text-zinc-200">{{ $act->user?->name ?? __('Obsidian Sync') }}</span>
+                                    </div>
+                                </td>
+
+                                <td class="py-3.5 px-3 text-right font-medium text-gray-400 dark:text-zinc-500">
                                     {{ $act->created_at->diffForHumans() }}
-                                </flux:table.cell>
-                            </flux:table.row>
+                                </td>
+                            </tr>
                         @endforeach
-                    </flux:table.rows>
-                </flux:table>
+                    </tbody>
+                </table>
             @endif
         </div>
     </div>
@@ -846,7 +905,9 @@ new #[Title('Dashboard')] class extends Component {
                 <flux:modal.close>
                     <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
                 </flux:modal.close>
-                <flux:button variant="primary" type="submit" class="bg-emerald-700 hover:bg-emerald-600 text-white font-semibold">{{ __('Create Vault') }}</flux:button>
+                <button type="submit" class="rounded-full bg-[#0D3B29] px-5 py-2 text-sm font-semibold text-white hover:bg-[#09261b]">
+                    {{ __('Create Vault') }}
+                </button>
             </div>
         </form>
     </flux:modal>
