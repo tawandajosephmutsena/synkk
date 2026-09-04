@@ -5,12 +5,17 @@ namespace App\Actions\Vaults;
 use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultFileVersion;
+use App\Services\SecretScannerService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class SyncUploadAction
 {
+    public function __construct(
+        protected SecretScannerService $secretScanner
+    ) {}
+
     /**
      * Handle single file upload/update logic.
      *
@@ -28,6 +33,9 @@ class SyncUploadAction
         $sha256 = hash('sha256', $contents);
         $size = strlen($contents);
         $cleanPath = trim($path, '/');
+
+        // DLP Secret Scan
+        $scanResult = $this->secretScanner->scan($contents);
 
         return DB::transaction(function () use ($vault, $user, $deviceName, $cleanPath, $contents, $sha256, $size, $baseVersion, $disk) {
             $existing = $vault->files()->where('path', $cleanPath)->lockForUpdate()->first();

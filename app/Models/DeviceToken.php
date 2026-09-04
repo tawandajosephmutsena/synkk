@@ -18,13 +18,17 @@ use Illuminate\Support\Str;
  * @property string $token_preview
  * @property Carbon|null $last_used_at
  * @property string|null $last_ip
- * @property string|null $client_platform
+ * @property string $access_scope
+ * @property array|null $allowed_ip_subnets
+ * @property array|null $allowed_vault_ids
+ * @property bool $is_wiped
+ * @property Carbon|null $wiped_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read User $user
  * @property-read Team $team
  */
-#[Fillable(['user_id', 'team_id', 'name', 'token_hash', 'token_preview', 'last_used_at', 'last_ip', 'client_platform'])]
+#[Fillable(['user_id', 'team_id', 'name', 'token_hash', 'token_preview', 'last_used_at', 'last_ip', 'client_platform', 'access_scope', 'allowed_ip_subnets', 'allowed_vault_ids', 'is_wiped', 'wiped_at'])]
 class DeviceToken extends Model
 {
     use HasFactory;
@@ -33,6 +37,10 @@ class DeviceToken extends Model
     {
         return [
             'last_used_at' => 'datetime',
+            'wiped_at' => 'datetime',
+            'is_wiped' => 'boolean',
+            'allowed_ip_subnets' => 'array',
+            'allowed_vault_ids' => 'array',
         ];
     }
 
@@ -44,6 +52,38 @@ class DeviceToken extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
+    }
+
+    public function triggerRemoteWipe(): void
+    {
+        $this->update([
+            'is_wiped' => true,
+            'wiped_at' => now(),
+        ]);
+    }
+
+    public function isIpAllowed(?string $clientIp): bool
+    {
+        if (empty($this->allowed_ip_subnets) || empty($clientIp)) {
+            return true;
+        }
+
+        foreach ($this->allowed_ip_subnets as $allowed) {
+            if ($clientIp === $allowed || str_starts_with($clientIp, rtrim($allowed, '*'))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function canAccessVault(int $vaultId): bool
+    {
+        if (empty($this->allowed_vault_ids)) {
+            return true;
+        }
+
+        return in_array($vaultId, $this->allowed_vault_ids, true);
     }
 
     /**

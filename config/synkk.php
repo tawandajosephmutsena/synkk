@@ -31,4 +31,20 @@ return [
     |
     */
     'version_retention_limit' => env('SYNKK_VERSION_RETENTION_LIMIT', 25),
+
+    /*
+    |--------------------------------------------------------------------------
+    | LemonSqueezy Commercial Store & Licensing
+    |--------------------------------------------------------------------------
+    |
+    | License verification parameters for $49 Lifetime License activation.
+    |
+    */
+    'lemon_squeezy' => [
+        'store_url' => env('LEMON_SQUEEZY_STORE_URL', 'https://synkk.lemonsqueezy.com'),
+        'store_id' => env('LEMON_SQUEEZY_STORE_ID', ''),
+        'product_id' => env('LEMON_SQUEEZY_PRODUCT_ID', ''),
+        'api_url' => 'https://api.lemonsqueezy.com/v1/licenses/activate',
+        'enforce_license' => env('SYNKK_ENFORCE_LICENSE', false),
+    ],
 ];

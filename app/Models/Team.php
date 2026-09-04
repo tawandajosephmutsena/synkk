@@ -19,6 +19,9 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $slug
  * @property bool $is_personal
+ * @property string|null $license_key
+ * @property string $license_status
+ * @property Carbon|null $license_activated_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -26,11 +29,20 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Membership> $memberships
  * @property-read Collection<int, User> $members
  */
-#[Fillable(['name', 'slug', 'is_personal'])]
+#[Fillable(['name', 'slug', 'is_personal', 'license_key', 'license_status', 'license_activated_at'])]
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
     use GeneratesUniqueTeamSlugs, HasFactory, SoftDeletes;
+
+    public function hasActiveLicense(): bool
+    {
+        if (! config('synkk.lemon_squeezy.enforce_license', false)) {
+            return true;
+        }
+
+        return $this->license_status === 'active';
+    }
 
     /**
      * Bootstrap the model and its traits.

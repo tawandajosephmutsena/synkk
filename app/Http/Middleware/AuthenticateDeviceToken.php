@@ -3,9 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Models\DeviceToken;
+use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -38,6 +38,23 @@ class AuthenticateDeviceToken
             ], 401);
         }
 
+        // Remote Device Wipe Check
+        if ($deviceToken->is_wiped) {
+            return response()->json([
+                'error' => 'Device Wiped',
+                'action' => 'remote_wipe',
+                'message' => 'This device token has been remotely wiped by an enterprise administrator.',
+            ], 410);
+        }
+
+        // IP Range / Subnet Whitelist Check
+        if (! $deviceToken->isIpAllowed($request->ip())) {
+            return response()->json([
+                'error' => 'IP Access Restricted',
+                'message' => "Access from IP {$request->ip()} is not authorized for this device.",
+            ], 403);
+        }
+
         $heartbeatAt = now();
         $clientIp = $request->ip();
         $clientPlatform = $request->header('X-Client-Platform', $deviceToken->client_platform);
@@ -60,7 +77,7 @@ class AuthenticateDeviceToken
 
     private function heartbeatShouldBeUpdated(
         DeviceToken $deviceToken,
-        \Carbon\CarbonInterface $heartbeatAt,
+        CarbonInterface $heartbeatAt,
         ?string $clientIp,
         ?string $clientPlatform,
     ): bool {

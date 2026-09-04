@@ -1,0 +1,24 @@
+services:
+  synkk:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: synkk-app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:80"
+    environment:
+      APP_NAME: "Synkk Vault Sync"
+      APP_ENV: "production"
+      APP_DEBUG: "false"
+      APP_URL: "${APP_URL:-http://localhost:8000}"
+      DB_CONNECTION: "sqlite"
+      DB_DATABASE: "/var/www/html/database/database.sqlite"
+      SYNKK_STORAGE_DISK: "local"
+    volumes:
+      - synkk_database:/var/www/html/database
+      - synkk_storage:/var/www/html/storage/app/vaults
+
+volumes:
+  synkk_database:
+  synkk_storage:
