@@ -96,6 +96,26 @@ class Team extends Model
     }
 
     /**
+     * Get all vaults belonging to this team.
+     *
+     * @return HasMany<Vault, $this>
+     */
+    public function vaults(): HasMany
+    {
+        return $this->hasMany(Vault::class);
+    }
+
+    /**
+     * Get all device sync tokens for this team.
+     *
+     * @return HasMany<DeviceToken, $this>
+     */
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

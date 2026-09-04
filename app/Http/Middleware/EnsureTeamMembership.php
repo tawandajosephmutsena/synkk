@@ -20,7 +20,18 @@ class EnsureTeamMembership
     {
         [$user, $team] = [$request->user(), $this->team($request)];
 
-        abort_if(! $user || ! $team || ! $user->belongsToTeam($team), 403);
+        if (! $user) {
+            return redirect()->guest(route('login'));
+        }
+
+        if (! $team || ! $user->belongsToTeam($team)) {
+            $fallbackTeam = $user->currentTeam ?? $user->personalTeam() ?? $user->teams()->first();
+            if ($fallbackTeam) {
+                return redirect()->to("/{$fallbackTeam->slug}/dashboard");
+            }
+
+            abort(403);
+        }
 
         $this->ensureTeamMemberHasRequiredRole($user, $team, $minimumRole);
 

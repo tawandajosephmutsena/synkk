@@ -1,0 +1,83 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
+
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property int $team_id
+ * @property string $name
+ * @property string $token_hash
+ * @property string $token_preview
+ * @property Carbon|null $last_used_at
+ * @property string|null $last_ip
+ * @property string|null $client_platform
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User $user
+ * @property-read Team $team
+ */
+#[Fillable(['user_id', 'team_id', 'name', 'token_hash', 'token_preview', 'last_used_at', 'last_ip', 'client_platform'])]
+class DeviceToken extends Model
+{
+    use HasFactory;
+
+    protected function casts(): array
+    {
+        return [
+            'last_used_at' => 'datetime',
+        ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
+
+    /**
+     * Generate a new device token.
+     * Returns: array{token: string, model: DeviceToken}
+     */
+    public static function createToken(User $user, Team $team, string $name, ?string $platform = null): array
+    {
+        $plainText = 'synkk_'.Str::random(40);
+        $hash = hash('sha256', $plainText);
+        $preview = substr($plainText, 0, 12).'...';
+
+        $model = static::create([
+            'user_id' => $user->id,
+            'team_id' => $team->id,
+            'name' => $name,
+            'token_hash' => $hash,
+            'token_preview' => $preview,
+            'client_platform' => $platform,
+        ]);
+
+        return [
+            'plain_token' => $plainText,
+            'device_token' => $model,
+        ];
+    }
+
+    /**
+     * Find a device token by its plain text value.
+     */
+    public static function findToken(string $plainText): ?self
+    {
+        $hash = hash('sha256', $plainText);
+
+        return static::where('token_hash', $hash)->first();
+    }
+}

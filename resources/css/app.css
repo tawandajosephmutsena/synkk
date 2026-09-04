@@ -23,9 +23,19 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
+    --color-accent: #0b6cff;
+    --color-accent-content: #0b6cff;
     --color-accent-foreground: var(--color-white);
+
+    --color-vanilla-50: #fffdfa;
+    --color-vanilla-100: #fbf9f4;
+    --color-vanilla-200: #f4efe6;
+    --color-vanilla-300: #eae2d3;
+    --color-lime-300: #d6ff00;
+    --color-lime-400: #ceff00;
+    --color-lime-500: #b5e600;
+    --color-dark-900: #121212;
+    --color-dark-950: #0a0a0a;
 }
 
 @layer theme {
@@ -64,3 +74,168 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+@keyframes octopus-bob {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-12px) rotate(1.5deg);
+    }
+}
+
+@keyframes tentacle-sway-left {
+    0%, 100% {
+        transform: rotate(0deg);
+    }
+    50% {
+        transform: rotate(-7deg);
+    }
+}
+
+@keyframes tentacle-sway-right {
+    0%, 100% {
+        transform: rotate(0deg);
+    }
+    50% {
+        transform: rotate(7deg);
+    }
+}
+
+@keyframes mascot-blink {
+    0%, 92%, 100% {
+        transform: scaleY(1);
+    }
+    96% {
+        transform: scaleY(0.1);
+    }
+}
+
+@keyframes bubble-rise {
+    0% {
+        transform: translateY(10px) scale(0.6);
+        opacity: 0;
+    }
+    30% {
+        opacity: 0.8;
+    }
+    80% {
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(-50px) scale(1.1);
+        opacity: 0;
+    }
+}
+
+@keyframes marquee {
+    0% {
+        transform: translateX(0%);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.animate-octopus-bob {
+    animation: octopus-bob 4s ease-in-out infinite;
+}
+
+.animate-tentacle-left {
+    transform-origin: 40% 60%;
+    animation: tentacle-sway-left 3s ease-in-out infinite;
+}
+
+.animate-tentacle-right {
+    transform-origin: 60% 60%;
+    animation: tentacle-sway-right 3.2s ease-in-out infinite;
+}
+
+.animate-mascot-blink {
+    transform-origin: center;
+    animation: mascot-blink 4.5s ease-in-out infinite;
+}
+
+.animate-bubble-1 {
+    animation: bubble-rise 3.2s ease-in infinite;
+}
+
+.animate-bubble-2 {
+    animation: bubble-rise 4s ease-in infinite 1.2s;
+}
+
+.animate-bubble-3 {
+    animation: bubble-rise 3.6s ease-in infinite 2.1s;
+}
+
+.animate-marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee 35s linear infinite;
+}
+
+.animate-marquee:hover {
+    animation-play-state: paused;
+}
+
+@keyframes mascot-dance {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg) scale(1);
+    }
+    25% {
+        transform: translateY(-18px) rotate(-3.5deg) scale(1.02);
+    }
+    50% {
+        transform: translateY(-4px) rotate(0deg) scale(0.99);
+    }
+    75% {
+        transform: translateY(-18px) rotate(3.5deg) scale(1.02);
+    }
+}
+
+@keyframes device-wiggle-left {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-8px) rotate(-6deg);
+    }
+}
+
+@keyframes device-wiggle-right {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-8px) rotate(6deg);
+    }
+}
+
+@keyframes beam-glow {
+    0%, 100% {
+        opacity: 0.4;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        opacity: 0.9;
+        stroke-dashoffset: -20;
+    }
+}
+
+.animate-mascot-dance {
+    animation: mascot-dance 3s ease-in-out infinite;
+}
+
+.animate-device-left {
+    animation: device-wiggle-left 2.8s ease-in-out infinite;
+}
+
+.animate-device-right {
+    animation: device-wiggle-right 2.8s ease-in-out infinite 0.4s;
+}
+
+.animate-beam-glow {
+    stroke-dasharray: 6, 6;
+    animation: beam-glow 2s linear infinite;
+}
+

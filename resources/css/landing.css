@@ -1,0 +1,197 @@
+@import 'tailwindcss' source(none);
+
+@source '../views/welcome.blade.php';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+}
+
+:root {
+    color-scheme: light;
+    --synkk-ink: #14213d;
+    --synkk-cream: #f7f5ed;
+    --synkk-cobalt: #0b6cff;
+    --synkk-lime: #d7ff3f;
+}
+
+html {
+    background: var(--synkk-cream);
+}
+
+body {
+    min-width: 320px;
+}
+
+::selection {
+    background: var(--synkk-lime);
+    color: #10182b;
+}
+
+a,
+button,
+summary {
+    -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+    outline: 3px solid var(--synkk-cobalt);
+    outline-offset: 4px;
+}
+
+.synkk-surface {
+    background:
+        radial-gradient(circle at 14% 12%, rgba(215, 255, 63, 0.32), transparent 22rem),
+        radial-gradient(circle at 88% 18%, rgba(81, 188, 255, 0.2), transparent 28rem),
+        linear-gradient(180deg, #fbfaf5 0%, var(--synkk-cream) 36%, #fbfaf6 100%);
+}
+
+.synkk-grid {
+    background-image: radial-gradient(rgba(20, 33, 61, 0.14) 0.8px, transparent 0.8px);
+    background-size: 18px 18px;
+    mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+.synkk-glass {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(18px) saturate(130%);
+}
+
+.synkk-primary-action {
+    box-shadow: 0 10px 25px -14px rgba(11, 108, 255, 0.8);
+    transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.synkk-primary-action:hover {
+    box-shadow: 0 16px 30px -14px rgba(11, 108, 255, 0.9);
+    transform: translateY(-2px);
+}
+
+.synkk-mascot-stage {
+    background:
+        radial-gradient(circle at 52% 48%, rgba(99, 215, 255, 0.96) 0%, rgba(11, 108, 255, 0.93) 34%, rgba(45, 35, 151, 0.98) 72%),
+        #0b6cff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 36px 80px -44px rgba(20, 33, 61, 0.75);
+}
+
+.synkk-mascot-stage::before,
+.synkk-mascot-stage::after {
+    position: absolute;
+    content: '';
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 9999px;
+    pointer-events: none;
+}
+
+.synkk-mascot-stage::before {
+    inset: 10%;
+}
+
+.synkk-mascot-stage::after {
+    inset: 22%;
+}
+
+.synkk-mascot {
+    filter: drop-shadow(0 28px 25px rgba(10, 22, 75, 0.24));
+    transform-origin: 50% 70%;
+    animation: synkk-float 7s ease-in-out infinite;
+}
+
+.synkk-status-card {
+    animation: synkk-drift 6s ease-in-out infinite;
+}
+
+.synkk-status-card:nth-of-type(2) {
+    animation-delay: -2.4s;
+}
+
+.synkk-flow-line {
+    position: relative;
+    overflow: hidden;
+}
+
+.synkk-flow-line::after {
+    position: absolute;
+    inset: 0 auto 0 -35%;
+    width: 35%;
+    content: '';
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.92), transparent);
+    animation: synkk-flow 3.4s ease-in-out infinite;
+}
+
+.synkk-step-number {
+    box-shadow: 0 0 0 7px #fbfaf5;
+}
+
+.synkk-device-dot {
+    animation: synkk-pulse 2.8s ease-out infinite;
+}
+
+.synkk-deferred {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 720px;
+}
+
+.synkk-platform-mark {
+    transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.synkk-platform-mark:hover {
+    transform: translateY(-3px);
+    border-color: rgba(11, 108, 255, 0.35);
+    background: #fff;
+}
+
+details[open] summary svg {
+    transform: rotate(45deg);
+}
+
+@keyframes synkk-float {
+    0%, 100% {
+        transform: translate3d(0, 0, 0) rotate(-0.5deg);
+    }
+    50% {
+        transform: translate3d(0, -10px, 0) rotate(0.8deg);
+    }
+}
+
+@keyframes synkk-drift {
+    0%, 100% {
+        transform: translate3d(0, 0, 0);
+    }
+    50% {
+        transform: translate3d(0, -6px, 0);
+    }
+}
+
+@keyframes synkk-flow {
+    0% {
+        left: -35%;
+    }
+    72%, 100% {
+        left: 100%;
+    }
+}
+
+@keyframes synkk-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.38);
+    }
+    70%, 100% {
+        box-shadow: 0 0 0 9px rgba(34, 197, 94, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

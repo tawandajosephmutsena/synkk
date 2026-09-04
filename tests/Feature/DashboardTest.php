@@ -18,5 +18,17 @@ test('authenticated users can visit the dashboard', function () {
         ->actingAs($user)
         ->get(route('dashboard'));
 
-    $response->assertOk();
+    $response
+        ->assertOk()
+        ->assertSee('Dashboard - Synkk');
+});
+
+test('authenticated pages are not forced into dark mode', function () {
+    $user = User::factory()->create();
+
+    $this
+        ->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertDontSee('<html lang="en" class="dark">', escape: false);
 });
