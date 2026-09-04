@@ -640,7 +640,7 @@ new #[Title('Dashboard')] class extends Component {
                                 <span class="text-base">{{ $style[1] }}</span>
                             </div>
                             <div class="min-w-0 flex-1">
-                                <a href="{{ route('vaults.show', $v->slug) }}" wire:navigate class="block truncate text-xs font-extrabold text-gray-900 hover:text-[#0D3B29] dark:text-white dark:hover:text-emerald-400">
+                                <a href="{{ route('vaults.show', ['vault' => $v->slug, 'tab' => 'editor']) }}" wire:navigate class="block truncate text-xs font-extrabold text-gray-900 hover:text-[#0D3B29] dark:text-white dark:hover:text-emerald-400">
                                     {{ $v->name }}
                                 </a>
                                 <div class="text-[11px] text-gray-400 dark:text-zinc-500">
@@ -867,14 +867,26 @@ new #[Title('Dashboard')] class extends Component {
                                             @endif
                                         </div>
                                         <div class="min-w-0">
-                                            <span class="block truncate font-bold text-gray-900 dark:text-white max-w-xs">{{ $act->path }}</span>
+                                            @if ($act->vault)
+                                                <a href="{{ route('vaults.show', ['vault' => $act->vault->slug, 'tab' => 'editor', 'path' => $act->path]) }}" wire:navigate class="block truncate font-bold text-gray-900 hover:text-[#0D3B29] hover:underline dark:text-white dark:hover:text-emerald-400 max-w-xs transition-colors">
+                                                    {{ $act->path }}
+                                                </a>
+                                            @else
+                                                <span class="block truncate font-bold text-gray-900 dark:text-white max-w-xs">{{ $act->path }}</span>
+                                            @endif
                                             <span class="text-[10px] text-gray-400 dark:text-zinc-500">{{ $act->created_at->format('d M Y') }}</span>
                                         </div>
                                     </div>
                                 </td>
 
                                 <td class="py-3.5 px-3 font-semibold text-gray-700 dark:text-zinc-300">
-                                    {{ $act->vault?->name ?? __('Main Vault') }}
+                                    @if ($act->vault)
+                                        <a href="{{ route('vaults.show', ['vault' => $act->vault->slug, 'tab' => 'editor']) }}" wire:navigate class="hover:text-[#0D3B29] hover:underline dark:hover:text-emerald-400 transition-colors">
+                                            {{ $act->vault->name }}
+                                        </a>
+                                    @else
+                                        {{ __('Main Vault') }}
+                                    @endif
                                 </td>
 
                                 <td class="py-3.5 px-3">
