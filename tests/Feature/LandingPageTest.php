@@ -4,11 +4,12 @@ test('the landing page explains the complete Obsidian sync workflow', function (
     $response = $this->get(route('home'));
 
     $response
-        ->assertSee('Checked before it reaches the vault.')
+        ->assertSee('Every sync has a checkpoint.')
         ->assertSeeInOrder([
-            'Edit locally',
-            'Verify the change',
-            'Sync trusted devices',
+            'Prepare the change',
+            'Check the boundary',
+            'Fingerprint the file',
+            'Deliver to devices',
         ])
         ->assertSee('PATH RULES');
 });
@@ -25,7 +26,6 @@ test('the landing page presents every supported platform in a light experience',
         ->assertSee('Obsidian')
         ->assertSee('/images/synkk-logo.svg', escape: false)
         ->assertSee('Synkk — Obsidian everywhere')
-        ->assertSee('/videos/synkk-ui-reel.mp4', escape: false)
         ->assertSee('/images/showcase/dashboard-overview.webp', escape: false)
         ->assertSee('/images/showcase/editor-full.webp', escape: false)
         ->assertSee('/images/showcase/graph-full.webp', escape: false)
@@ -35,12 +35,13 @@ test('the landing page presents every supported platform in a light experience',
         ->assertDontSee('dark:');
 });
 
-test('the landing page presents real product captures with the supplied Synkk character', function () {
+test('the landing page presents real product captures without a mascot overlay', function () {
     $response = $this->get(route('home'));
 
     $response
         ->assertSee('Edit the note. Follow the graph.')
-        ->assertSee('Four working surfaces. One vault.')
+        ->assertSee('Four working surfaces.')
+        ->assertSee('One vault.')
         ->assertSee('Markdown Editor')
         ->assertSee('Graph View')
         ->assertSee('See the vault at a glance.')
@@ -48,8 +49,7 @@ test('the landing page presents real product captures with the supplied Synkk ch
         ->assertSee('data-product-view="markdown-editor"', escape: false)
         ->assertSee('data-product-view="graph"', escape: false)
         ->assertSee('Real product capture')
-        ->assertSee('/images/character/synkk-mascot-animated.svg', escape: false)
-        ->assertSee("Synkk's animated octopus explorer beside the real product capture", escape: false)
+        ->assertSee('Synkk dashboard showing vault health, connected devices, recent activity, and storage', escape: false)
         ->assertSee('/images/showcase/dashboard-overview.webp', escape: false)
         ->assertSee('/images/showcase/permissions-full.webp', escape: false)
         ->assertDontSee('/images/showcase/dashboard-full.png', escape: false)
@@ -59,13 +59,10 @@ test('the landing page presents real product captures with the supplied Synkk ch
 
     $publicAssets = [
         public_path('images/synkk-logo.svg'),
-        public_path('images/character/synkk-mascot-animated.svg'),
-        public_path('images/character/synkk-mascot-cutout.png'),
         public_path('images/showcase/dashboard-overview.webp'),
         public_path('images/showcase/editor-full.webp'),
         public_path('images/showcase/graph-full.webp'),
         public_path('images/showcase/permissions-full.webp'),
-        public_path('videos/synkk-ui-reel.mp4'),
     ];
 
     foreach ($publicAssets as $publicAsset) {
@@ -73,13 +70,8 @@ test('the landing page presents real product captures with the supplied Synkk ch
         $this->assertGreaterThan(0, filesize($publicAsset));
     }
 
-    $mascotSvg = file_get_contents(public_path('images/character/synkk-mascot-animated.svg'));
-
-    $this->assertIsString($mascotSvg);
-    $this->assertStringContainsString('The original supplied character artwork is preserved', $mascotSvg);
-    $this->assertStringContainsString('@keyframes synkk-float', $mascotSvg);
-    $this->assertStringContainsString('@media (prefers-reduced-motion: reduce)', $mascotSvg);
-    $this->assertStringNotContainsString('<rect', $mascotSvg);
+    $this->assertStringNotContainsString('synkk-logo-character-animated.svg', $response->getContent());
+    $this->assertStringNotContainsString('synkk-workflow-mascot', $response->getContent());
     $this->assertFileDoesNotExist(public_path('images/showcase/dashboard-full.png'));
     $this->assertFileDoesNotExist(public_path('images/showcase/devices-full.png'));
 });

@@ -28,7 +28,7 @@
     "src": "_instrument-sans-600-normal-B9e8oLYv.woff"
   },
   "resources/css/app.css": {
-    "file": "assets/app-DxVIvnbB.css",
+    "file": "assets/app-CDQkEQXu.css",
     "name": "app",
     "names": [
       "app.css"
@@ -37,7 +37,7 @@
     "isEntry": true
   },
   "resources/css/landing.css": {
-    "file": "assets/landing-DQTNpfss.css",
+    "file": "assets/landing-Bwq3FsZB.css",
     "name": "landing",
     "names": [
       "landing.css"
@@ -46,9 +46,15 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-Be27u03y.js",
+    "file": "assets/app-IfHk9yEs.js",
     "name": "app",
     "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/landing.js": {
+    "file": "assets/landing-DUHWQpXA.js",
+    "name": "landing",
+    "src": "resources/js/landing.js",
     "isEntry": true
   },
   "resources/js/passkeys.js": {

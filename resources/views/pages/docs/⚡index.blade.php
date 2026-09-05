@@ -164,6 +164,24 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                     </div>
                 </div>
 
+                <div class="grid gap-4 md:grid-cols-3">
+                    <div class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900/40">
+                        <flux:badge color="lime">Sync scope</flux:badge>
+                        <flux:heading size="sm" class="mt-3">Choose what each device carries</flux:heading>
+                        <flux:text size="sm" class="mt-2">Start with text notes and selected folders. Plugin state and community CSS can be enabled separately; device-specific layout caches should stay local.</flux:text>
+                    </div>
+                    <div class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900/40">
+                        <flux:badge color="zinc">Integrity</flux:badge>
+                        <flux:heading size="sm" class="mt-3">Every accepted file is fingerprinted</flux:heading>
+                        <flux:text size="sm" class="mt-2">Synkk compares SHA-256 content hashes and the client's base revision before writing. A stale upload is preserved as a conflict copy instead of silently replacing the current note.</flux:text>
+                    </div>
+                    <div class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900/40">
+                        <flux:badge color="zinc">Recovery</flux:badge>
+                        <flux:heading size="sm" class="mt-3">Keep a rollback path</flux:heading>
+                        <flux:text size="sm" class="mt-2">Before a remote mutation, review the change list and keep local snapshots available. Version restore creates a known-good current revision without rewriting unrelated files.</flux:text>
+                    </div>
+                </div>
+
                 <div class="p-4 rounded-xl border border-lime-500/30 bg-lime-500/10 flex items-start gap-3">
                     <span class="text-xl">💡</span>
                     <div>
@@ -216,6 +234,16 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                     </div>
                     <flux:text size="sm">
                         BRAT and an official Community Plugins listing are not configured for this repository structure yet. Use the tagged manual bundle above until a dedicated plugin distribution repository and release path are published.
+                    </flux:text>
+                </div>
+
+                <div class="p-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 space-y-3">
+                    <div class="flex items-center gap-2">
+                        <flux:badge color="amber">Mobile note</flux:badge>
+                        <flux:heading size="base">Background execution is not guaranteed</flux:heading>
+                    </div>
+                    <flux:text size="sm">
+                        The Foundation plugin syncs while Obsidian is open. iOS and Android may suspend background work, so confirm a recent revision after opening the app. Native bridges, QR pairing, and on-demand attachment hydration are roadmap work.
                     </flux:text>
                 </div>
             </flux:card>
@@ -312,6 +340,11 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                             If two devices upload a stale version of the same file, Synkk saves the conflicting upload as <code>note.sync-conflict-[timestamp].md</code>. CRDT character-level merging is future work.
                         </flux:text>
                     </div>
+                </div>
+
+                <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800/40">
+                    <flux:heading size="sm">How to review a conflict</flux:heading>
+                    <flux:text size="sm" class="mt-2">Open the current note and its <code>.sync-conflict-[timestamp].md</code> sibling, compare the headings and links, then copy the intended blocks into the canonical note. The current release preserves both files; it does not claim automatic character-level merging.</flux:text>
                 </div>
             </flux:card>
         @endif
@@ -452,6 +485,11 @@ services:
 volumes:
   synkk_database:
   synkk_storage:</code></pre>
+                </div>
+
+                <div class="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
+                    <flux:heading size="sm">Before calling the deployment production-ready</flux:heading>
+                    <flux:text size="sm" class="mt-2">Use HTTPS, set <code>APP_DEBUG=false</code>, rotate the application key through your secret manager, back up both the database and private storage volume, and verify that device tokens can be revoked. The example is a starting point, not a hosted service or an official container registry release.</flux:text>
                 </div>
             </flux:card>
         @endif

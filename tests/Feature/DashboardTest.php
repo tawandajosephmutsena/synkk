@@ -25,6 +25,26 @@ test('authenticated users can visit the dashboard', function () {
         ->assertSee('Dashboard - Synkk');
 });
 
+test('authenticated users can read the expanded documentation guidance', function () {
+    $user = User::factory()->create();
+
+    $this
+        ->actingAs($user)
+        ->get(route('docs', ['current_team' => $user->currentTeam->slug]))
+        ->assertOk()
+        ->assertSee('Choose what each device carries')
+        ->assertSee('images/synkk-logo.svg', escape: false);
+
+    Livewire::test('pages::docs.index')
+        ->assertSee('Choose what each device carries')
+        ->call('setSection', 'mobile')
+        ->assertSee('Background execution is not guaranteed')
+        ->call('setSection', 'conflict')
+        ->assertSee('How to review a conflict')
+        ->call('setSection', 'docker')
+        ->assertSee('Before calling the deployment production-ready');
+});
+
 test('dashboard copy describes the foundation sync capabilities accurately', function () {
     $user = User::factory()->create();
     $team = $user->currentTeam;
