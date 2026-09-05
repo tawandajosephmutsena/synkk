@@ -91,41 +91,55 @@ new class extends Component {
 <div class="px-2 py-1">
     @php
         $curr = $this->currentTeam();
+        $user = Auth::user();
     @endphp
     <flux:dropdown position="bottom" align="start">
-        <flux:button
-            variant="ghost"
-            class="group w-full justify-start rounded-xl border border-zinc-200/80 bg-white/70 p-2 shadow-xs transition-all hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 in-data-flux-sidebar-collapsed-desktop:justify-center"
+        <button
+            type="button"
+            class="group flex w-full items-center gap-2.5 rounded-2xl border border-zinc-200/80 bg-white/80 p-2 shadow-xs transition-all hover:bg-white dark:border-white/10 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 in-data-flux-sidebar-collapsed-desktop:justify-center cursor-pointer"
             data-test="team-switcher-trigger"
         >
-            <div class="flex items-center gap-2.5 min-w-0">
-                <div class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-[11px] font-bold text-white shadow-xs dark:bg-indigo-500">
-                    {{ $curr['initials'] ?? 'SY' }}
-                </div>
-                <div class="grid flex-1 text-start leading-tight in-data-flux-sidebar-collapsed-desktop:hidden min-w-0">
-                    <span class="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-100">{{ $curr['name'] ?? __('Select team') }}</span>
-                    <span class="truncate text-[10px] text-zinc-400 font-medium">{{ $curr['role'] ?? __('Workspace') }}</span>
-                </div>
+            <div class="relative shrink-0">
+                <flux:avatar :name="$user->name" :initials="$user->initials()" size="sm" />
+                <span class="absolute bottom-0 right-0 size-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900"></span>
             </div>
+
+            <div class="grid flex-1 text-start leading-tight in-data-flux-sidebar-collapsed-desktop:hidden min-w-0">
+                <span class="truncate text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-[#0D3B29] dark:group-hover:text-emerald-400 transition-colors">{{ $user->name }}</span>
+                <span class="truncate text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">{{ $curr['name'] ?? __('Workspace') }}</span>
+            </div>
+
             <flux:icon
                 name="chevrons-up-down"
                 variant="micro"
-                class="ms-auto size-4 text-zinc-400 in-data-flux-sidebar-collapsed-desktop:hidden"
+                class="ms-auto size-4 text-zinc-400 in-data-flux-sidebar-collapsed-desktop:hidden group-hover:text-zinc-700 dark:group-hover:text-zinc-200"
             />
-        </flux:button>
+        </button>
 
         <flux:menu class="min-w-64">
+            <!-- User Profile Header -->
+            <div class="flex items-center gap-2.5 px-3 py-2.5 text-start text-xs rounded-xl bg-zinc-50 dark:bg-zinc-800/60 mb-1">
+                <flux:avatar :name="$user->name" :initials="$user->initials()" size="sm" />
+                <div class="grid flex-1 text-start leading-tight min-w-0">
+                    <span class="truncate font-bold text-zinc-900 dark:text-zinc-100">{{ $user->name }}</span>
+                    <span class="truncate text-zinc-500 dark:text-zinc-400 text-[11px] font-medium">{{ $user->email }}</span>
+                </div>
+            </div>
+
+            <flux:menu.separator />
+
+            <!-- Teams & Workspaces -->
             <flux:menu.heading class="text-[10px] font-bold tracking-wider uppercase text-zinc-400">{{ __('Workspaces & Teams') }}</flux:menu.heading>
 
             @foreach ($this->teams() as $team)
                 <flux:menu.item
                     wire:click="switchTeam('{{ $team->slug }}')"
-                    class="cursor-pointer py-2"
+                    class="cursor-pointer py-1.5"
                     data-test="team-switcher-item"
                 >
                     <div class="flex w-full items-center justify-between gap-3">
                         <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="flex size-6 shrink-0 items-center justify-center rounded-md {{ $team->isCurrent ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300' }} text-[10px] font-bold">
+                            <div class="flex size-6 shrink-0 items-center justify-center rounded-md {{ $team->isCurrent ? 'bg-[#0D3B29] text-white' : 'bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300' }} text-[10px] font-bold">
                                 {{ strtoupper(substr($team->name, 0, 2)) }}
                             </div>
                             <div class="truncate text-xs font-medium text-zinc-800 dark:text-zinc-200">
@@ -134,19 +148,58 @@ new class extends Component {
                         </div>
 
                         @if ($team->isCurrent)
-                            <flux:icon name="check" class="size-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                            <flux:icon name="check" class="size-4 text-[#0D3B29] dark:text-emerald-400 shrink-0" />
                         @endif
                     </div>
                 </flux:menu.item>
             @endforeach
 
-            <flux:menu.separator />
-
             <flux:modal.trigger name="create-team-switcher">
-                <flux:menu.item icon="plus" class="cursor-pointer text-xs font-medium" data-test="team-switcher-new-team">
+                <flux:menu.item icon="plus" class="cursor-pointer text-xs font-medium text-emerald-600 dark:text-emerald-400" data-test="team-switcher-new-team">
                     {{ __('Create New Team') }}
                 </flux:menu.item>
             </flux:modal.trigger>
+
+            <flux:menu.separator />
+
+            <!-- Settings & Configuration -->
+            <flux:menu.heading class="text-[10px] font-bold tracking-wider uppercase text-zinc-400">{{ __('Settings & Preferences') }}</flux:menu.heading>
+
+            <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate class="text-xs font-medium cursor-pointer">
+                {{ __('Account Settings') }}
+            </flux:menu.item>
+            <flux:menu.item :href="route('security.edit')" icon="shield-check" wire:navigate class="text-xs font-medium cursor-pointer">
+                {{ __('Security & 2FA') }}
+            </flux:menu.item>
+            <flux:menu.item :href="route('teams.index')" icon="users" wire:navigate class="text-xs font-medium cursor-pointer">
+                {{ __('Team Members') }}
+            </flux:menu.item>
+            <flux:menu.item :href="route('appearance.edit')" icon="swatch" wire:navigate class="text-xs font-medium cursor-pointer">
+                {{ __('Appearance / Theme') }}
+            </flux:menu.item>
+
+            <flux:menu.separator />
+
+            <!-- Help & Docs -->
+            <flux:menu.item :href="route('docs')" icon="book-open-text" wire:navigate class="text-xs font-medium cursor-pointer">
+                {{ __('Documentation') }}
+            </flux:menu.item>
+
+            <flux:menu.separator />
+
+            <!-- Logout -->
+            <form method="POST" action="{{ route('logout') }}" class="w-full">
+                @csrf
+                <flux:menu.item
+                    as="button"
+                    type="submit"
+                    icon="arrow-right-start-on-rectangle"
+                    class="w-full cursor-pointer text-xs font-medium text-red-600 dark:text-red-400"
+                    data-test="logout-button"
+                >
+                    {{ __('Log Out') }}
+                </flux:menu.item>
+            </form>
         </flux:menu>
     </flux:dropdown>
 </div>

@@ -4,10 +4,10 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-[#F4F6F8] text-slate-900 dark:bg-[#0C0F12] dark:text-zinc-100 antialiased selection:bg-[#0D3B29] selection:text-white">
-        <flux:sidebar sticky collapsible="mobile" class="border-e border-gray-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <flux:sidebar.header class="pb-2">
+        <flux:sidebar sticky collapsible class="border-e border-gray-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+            <flux:sidebar.header class="pb-2 flex items-center justify-between">
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
-                <flux:sidebar.collapse class="lg:hidden" />
+                <flux:sidebar.collapse />
             </flux:sidebar.header>
 
             <livewire:team-switcher />
@@ -27,13 +27,9 @@
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
-                <flux:sidebar.group :heading="__('GENERAL')">
+                <flux:sidebar.group :heading="__('RESOURCES')">
                     <flux:sidebar.item icon="book-open-text" :href="route('docs')" :current="request()->routeIs('docs')" wire:navigate>
                         {{ __('Documentation') }}
-                    </flux:sidebar.item>
-
-                    <flux:sidebar.item icon="cog" :href="route('profile.edit')" :current="request()->routeIs('profile.edit')" wire:navigate>
-                        {{ __('Settings') }}
                     </flux:sidebar.item>
 
                     <flux:sidebar.item icon="folder-git-2" href="https://github.com/tawandajosephmutsena/synkk" target="_blank">
@@ -43,28 +39,6 @@
             </flux:sidebar.nav>
 
             <flux:spacer />
-
-            <!-- Donezo Style Plugin Promo Card in Sidebar -->
-            <div class="in-data-flux-sidebar-collapsed-desktop:hidden relative overflow-hidden rounded-2xl bg-[#0D3B29] p-4 text-white shadow-xs my-2 dark:bg-[#092B1E]">
-                <div class="flex items-center gap-2 mb-2">
-                    <div class="flex size-7 items-center justify-center rounded-lg bg-white/15 text-white">
-                        <flux:icon icon="bolt" class="size-4" />
-                    </div>
-                    <span class="text-xs font-bold tracking-tight text-white">{{ __('Obsidian Sync') }}</span>
-                </div>
-                <p class="text-[11px] text-emerald-100/80 leading-snug mb-3">
-                    {{ __('Sync your vault notes in real-time across all devices.') }}
-                </p>
-                <a
-                    href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin"
-                    target="_blank"
-                    class="block w-full rounded-full bg-white py-1.5 text-center text-xs font-bold text-[#0D3B29] hover:bg-gray-100 transition-colors"
-                >
-                    {{ __('Download Plugin') }}
-                </a>
-            </div>
-
-            <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
         </flux:sidebar>
 
         <!-- Mobile Header -->

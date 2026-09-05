@@ -66,3 +66,21 @@ test('dashboard links vaults and recent note activities directly to markdown edi
         ->assertSee(route('vaults.show', ['vault' => $vault->slug, 'tab' => 'editor', 'path' => 'Campaigns/Launch2026.md']))
         ->assertSee('Campaigns/Launch2026.md');
 });
+
+test('sidebar user card renders team and settings dropdown and removes bottom user menu', function () {
+    $user = User::factory()->create(['name' => 'Alice Walker']);
+    $team = $user->currentTeam;
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('dashboard', ['current_team' => $team->slug]));
+
+    $response
+        ->assertOk()
+        ->assertSee('Alice Walker')
+        ->assertSee(route('profile.edit'))
+        ->assertSee(route('security.edit'))
+        ->assertSee(route('teams.index'))
+        ->assertSee(route('appearance.edit'))
+        ->assertDontSee('data-test="sidebar-menu-button"', escape: false);
+});

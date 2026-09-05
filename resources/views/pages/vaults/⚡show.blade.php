@@ -480,32 +480,36 @@ new #[Title('Vault Details')] class extends Component {
 
         $content = $this->editorContent;
 
-        // Convert Obsidian-style callouts: > [!TIP], > [!NOTE], etc.
-        $content = preg_replace_callback('/^>\s*\[!(TIP|NOTE|WARNING|IMPORTANT|CAUTION)\]\s*(.*?)$(?:\n(>(?:.*))*)?/m', function ($matches) {
-            $type = strtoupper($matches[1]);
-            $title = ! empty(trim($matches[2])) ? trim($matches[2]) : ucfirst(strtolower($type));
+        // Convert Obsidian-style callouts: > [!TIP], > Tip:, etc.
+        $content = preg_replace_callback('/^>\s*(?:\[!(TIP|NOTE|WARNING|IMPORTANT|CAUTION)\]|Tip:)\s*(.*?)$(?:\n(>(?:.*))*)?/mi', function ($matches) {
+            $type = ! empty($matches[1]) ? strtoupper($matches[1]) : 'TIP';
+            $title = ! empty(trim($matches[2])) && $type !== 'TIP' ? trim($matches[2]) : ($type === 'TIP' ? 'Tip' : ucfirst(strtolower($type)));
+            $firstLineBody = ($type === 'TIP' && ! empty(trim($matches[2])) && trim($matches[2]) !== 'Tip') ? trim($matches[2]) : '';
             $body = '';
             if (! empty($matches[3])) {
                 $bodyLines = explode("\n", trim($matches[3]));
                 $cleanLines = array_map(fn ($line) => preg_replace('/^>\s?/', '', $line), $bodyLines);
                 $body = implode("\n", $cleanLines);
             }
+            if (! empty($firstLineBody)) {
+                $body = $firstLineBody.(! empty($body) ? "\n".$body : '');
+            }
 
             $containerClass = match ($type) {
-                'TIP' => 'border-purple-800/60 bg-[#1E192B] text-purple-200 dark:border-purple-500/40 dark:bg-purple-950/30',
-                'WARNING', 'CAUTION' => 'border-amber-800/60 bg-[#2B2319] text-amber-200 dark:border-amber-500/40 dark:bg-amber-950/30',
-                'IMPORTANT' => 'border-red-800/60 bg-[#2B1919] text-red-200 dark:border-red-500/40 dark:bg-red-950/30',
-                default => 'border-blue-800/60 bg-[#19232B] text-blue-200 dark:border-blue-500/40 dark:bg-blue-950/30',
+                'TIP' => 'border-purple-600/50 bg-[#1E1630] text-purple-200',
+                'WARNING', 'CAUTION' => 'border-amber-800/60 bg-[#2B2319] text-amber-200',
+                'IMPORTANT' => 'border-red-800/60 bg-[#2B1919] text-red-200',
+                default => 'border-blue-800/60 bg-[#19232B] text-blue-200',
             };
 
             $titleColor = match ($type) {
-                'TIP' => 'text-purple-300',
+                'TIP' => 'text-[#C084FC]',
                 'WARNING', 'CAUTION' => 'text-amber-300',
                 'IMPORTANT' => 'text-red-300',
                 default => 'text-blue-300',
             };
 
-            return "<div class=\"callout-box my-4 rounded-xl border p-4 {$containerClass}\"><div class=\"flex items-center gap-2 font-bold text-xs mb-1.5 {$titleColor}\"><span class=\"text-sm\">💡</span> <span>{$title}</span></div><div class=\"text-xs leading-relaxed text-zinc-300\">{$body}</div></div>";
+            return "<div class=\"callout-box my-5 rounded-2xl border p-5 {$containerClass} shadow-lg\"><div class=\"flex items-center gap-2 font-bold text-xs mb-2 {$titleColor}\"><span class=\"text-sm\">💡</span> <span class=\"tracking-wide\">{$title}</span></div><div class=\"text-xs leading-relaxed text-zinc-300\">{$body}</div></div>";
         }, $content);
 
         // Convert [[Wiki Links]]
@@ -654,12 +658,18 @@ new #[Title('Vault Details')] class extends Component {
             x-data="{
                 content: @entangle('editorContent').live,
                 viewMode: @entangle('editorViewMode'),
+                sidebarOpen: true,
                 lineCount: 1,
                 wordCount: 0,
                 charCount: 0,
                 headings: [],
+                lineTypes: [],
                 isDirty: false,
                 initialContent: '',
+                activeHeading: '',
+                copiedShareLink: false,
+                quickInsertOpen: true,
+
                 init() {
                     this.initialContent = this.content || '';
                     this.updateMetrics();
@@ -668,14 +678,33 @@ new #[Title('Vault Details')] class extends Component {
                         this.isDirty = (val !== this.initialContent);
                     });
                 },
+
                 updateMetrics() {
                     const text = this.content || '';
-                    this.lineCount = Math.max(1, text.split('\n').length);
+                    const lines = text.split('\n');
+                    this.lineCount = Math.max(1, lines.length);
                     this.charCount = text.length;
                     const words = text.trim().split(/\s+/).filter(Boolean);
                     this.wordCount = words.length;
+
+                    // Compute syntax categories for realistic Pandocs minimap strip
+                    this.lineTypes = lines.slice(0, 42).map(line => {
+                        const t = line.trim();
+                        if (t.startsWith('# ')) return 'h1';
+                        if (t.startsWith('## ')) return 'h2';
+                        if (t.startsWith('### ')) return 'h3';
+                        if (t.startsWith('```')) return 'code';
+                        if (t.startsWith('> [!TIP]') || t.startsWith('> Tip:')) return 'tip';
+                        if (t.startsWith('- ') || t.startsWith('1. ') || t.startsWith('* ')) return 'list';
+                        if (t.startsWith('> ')) return 'quote';
+                        if (t === '---' || t === '***') return 'hr';
+                        if (t.length === 0) return 'empty';
+                        return 'text';
+                    });
+
                     this.parseHeadings();
                 },
+
                 parseHeadings() {
                     const text = this.content || '';
                     const lines = text.split('\n');
@@ -691,7 +720,11 @@ new #[Title('Vault Details')] class extends Component {
                         }
                     });
                     this.headings = list;
+                    if (list.length > 0 && !this.activeHeading) {
+                        this.activeHeading = list[0].title;
+                    }
                 },
+
                 insertFormat(prefix, suffix = '', defaultText = '') {
                     const textarea = this.$refs.editorTextarea;
                     if (!textarea) return;
@@ -704,6 +737,7 @@ new #[Title('Vault Details')] class extends Component {
                     this.updateMetrics();
                     textarea.focus();
                 },
+
                 insertLinePrefix(prefix) {
                     const textarea = this.$refs.editorTextarea;
                     if (!textarea) return;
@@ -715,7 +749,14 @@ new #[Title('Vault Details')] class extends Component {
                     this.updateMetrics();
                     textarea.focus();
                 },
+
+                insertTable() {
+                    const tableTemplate = '\n| Header 1 | Header 2 | Header 3 |\n| --- | --- | --- |\n| Cell 1 | Cell 2 | Cell 3 |\n| Cell 4 | Cell 5 | Cell 6 |\n\n';
+                    this.insertFormat('', '', tableTemplate);
+                },
+
                 scrollToHeading(heading) {
+                    this.activeHeading = heading.title;
                     const preview = this.$refs.previewPane;
                     if (!preview) return;
                     const elements = preview.querySelectorAll('h1, h2, h3');
@@ -725,100 +766,166 @@ new #[Title('Vault Details')] class extends Component {
                             break;
                         }
                     }
+                },
+
+                handleEditorKeydown(e) {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        this.insertFormat('  ');
+                        return;
+                    }
+                    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+                        e.preventDefault();
+                        this.$wire.saveFile();
+                        return;
+                    }
+                    const pairs = { '(': ')', '[': ']', '{': '}', '`': '`', '"': '"', '\'': '\'' };
+                    if (pairs[e.key]) {
+                        const textarea = this.$refs.editorTextarea;
+                        if (!textarea) return;
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        if (start !== end) {
+                            e.preventDefault();
+                            const selected = textarea.value.substring(start, end);
+                            textarea.setRangeText(e.key + selected + pairs[e.key], start, end, 'select');
+                            this.content = textarea.value;
+                            this.updateMetrics();
+                        }
+                    }
                 }
             }"
-            class="flex flex-col rounded-3xl border border-zinc-800 bg-[#14171D] text-zinc-100 shadow-2xl overflow-hidden min-h-[720px]"
+            class="flex flex-col rounded-3xl border border-zinc-800 bg-[#12131A] text-zinc-100 shadow-2xl overflow-hidden min-h-[760px] relative"
         >
-            <!-- TOP HEADER (Pandocs style: Breadcrumb, Date, Collaborators, Save/Submit Button) -->
-            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800/90 bg-[#1A1E26] px-5 py-3.5">
+            <!-- TOP HEADER (Pandocs style: Dropdown Title, Date, Collaborators, Save/Submit Button) -->
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#252836] bg-[#181A22] px-5 py-3">
                 <div class="flex items-center gap-3 min-w-0">
-                    <div class="flex size-8 items-center justify-center rounded-lg bg-zinc-800 text-zinc-300">
-                        <flux:icon icon="document-text" class="size-4" />
-                    </div>
-
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2">
-                            <span class="font-extrabold text-sm text-white tracking-tight truncate max-w-sm">
+                    <!-- Note Selector Dropdown -->
+                    <flux:dropdown position="bottom" align="start">
+                        <button type="button" class="group flex items-center gap-2 hover:bg-zinc-800/90 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer text-left border border-transparent hover:border-zinc-700">
+                            <flux:icon icon="document-text" class="size-4 text-zinc-300 group-hover:text-emerald-400 transition-colors" />
+                            <span class="font-extrabold text-sm text-white tracking-tight truncate max-w-[180px] sm:max-w-xs">
                                 {{ $this->editorTitle ?: __('Select or Create a Note') }}
                             </span>
-                            @if ($this->activeFile)
-                                <span class="font-mono text-[10px] text-zinc-400">({{ $this->activeFile->path }})</span>
-                            @endif
-                        </div>
-                    </div>
+                            <flux:icon icon="chevron-down" class="size-3 text-zinc-400 group-hover:text-white transition-colors" />
+                        </button>
+                        <flux:menu class="min-w-64 max-h-72 overflow-y-auto">
+                            <flux:menu.heading class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{{ __('Vault Notes') }}</flux:menu.heading>
+                            @foreach ($this->accessibleMarkdownFiles as $f)
+                                <flux:menu.item wire:click="selectFile({{ $f->id }})" class="cursor-pointer py-1.5">
+                                    <div class="flex w-full items-center justify-between gap-3">
+                                        <span class="truncate text-xs {{ $this->activeFileId === $f->id ? 'font-bold text-emerald-400' : 'text-zinc-300' }}">{{ pathinfo($f->path, PATHINFO_FILENAME) }}</span>
+                                        <span class="font-mono text-[10px] text-zinc-500">v{{ $f->version }}</span>
+                                    </div>
+                                </flux:menu.item>
+                            @endforeach
+                        </flux:menu>
+                    </flux:dropdown>
 
                     @if ($this->activeFile)
-                        <!-- Last Updated Pill -->
-                        <div class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-zinc-800/90 px-2.5 py-1 text-[11px] text-zinc-300 border border-zinc-700/60">
+                        <!-- Last Modified Date Pill -->
+                        <div class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-zinc-800/90 px-3 py-1 text-[11px] text-zinc-300 border border-zinc-700/60 shadow-xs">
                             <flux:icon icon="calendar" class="size-3 text-zinc-400" />
                             <span>{{ $this->activeFile->updated_at?->format('M d, Y') }}</span>
                         </div>
-
-                        <!-- User Permission Status Pill -->
-                        @if ($this->canEditActiveFile)
-                            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-950/70 border border-emerald-600/40 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">
-                                <span class="size-1.5 rounded-full bg-emerald-400"></span>
-                                {{ __('Can Edit') }}
-                            </span>
-                        @else
-                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-950/70 border border-amber-600/40 px-2.5 py-0.5 text-[10px] font-bold text-amber-400">
-                                <flux:icon icon="lock-closed" class="size-3 text-amber-400" />
-                                {{ __('Read-Only') }}
-                            </span>
-                        @endif
                     @endif
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2.5">
                     <!-- Collaborators Stack -->
-                    <div class="flex items-center -space-x-1.5 overflow-hidden">
+                    <div class="hidden sm:flex items-center -space-x-1.5 overflow-hidden" title="{{ __('Collaborators') }}">
                         @foreach ($this->teamMembers->take(3) as $m)
-                            <span class="inline-flex size-6 items-center justify-center rounded-full bg-emerald-900 ring-2 ring-[#1A1E26] text-[10px] font-bold text-emerald-200" title="{{ $m->name }}">
+                            <span class="inline-flex size-6 items-center justify-center rounded-full bg-[#0D3B29] ring-2 ring-[#181A22] text-[10px] font-bold text-emerald-200" title="{{ $m->name }}">
                                 {{ $m->initials() }}
                             </span>
                         @endforeach
                         @if ($this->teamMembers->count() > 3)
-                            <span class="inline-flex size-6 items-center justify-center rounded-full bg-zinc-700 ring-2 ring-[#1A1E26] text-[9px] font-bold text-white">
+                            <span class="inline-flex size-6 items-center justify-center rounded-full bg-zinc-700 ring-2 ring-[#181A22] text-[9px] font-bold text-white">
                                 +{{ $this->teamMembers->count() - 3 }}
                             </span>
                         @endif
                     </div>
 
                     @if ($this->activeFile)
+                        <!-- Share Button -->
+                        <button
+                            type="button"
+                            @click="
+                                navigator.clipboard.writeText(window.location.href);
+                                copiedShareLink = true;
+                                setTimeout(() => copiedShareLink = false, 2500);
+                            "
+                            class="hidden md:flex items-center gap-1.5 rounded-full border border-zinc-700/80 bg-zinc-800/80 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer shadow-xs"
+                            title="{{ __('Copy share link') }}"
+                        >
+                            <flux:icon icon="share" class="size-3.5" />
+                            <span x-text="copiedShareLink ? '{{ __('Copied!') }}' : '{{ __('Share') }}'"></span>
+                        </button>
+
+                        <!-- Suggesting Changes / Permission Pill -->
+                        @if ($this->canEditActiveFile)
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/70 border border-emerald-600/40 px-2.5 py-1 text-[10px] font-bold text-emerald-400">
+                                <flux:icon icon="pencil-square" class="size-3 text-emerald-400" />
+                                <span>{{ __('Suggesting Changes') }}</span>
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-950/70 border border-amber-600/40 px-2.5 py-1 text-[10px] font-bold text-amber-400">
+                                <flux:icon icon="lock-closed" class="size-3 text-amber-400" />
+                                <span>{{ __('Read-Only') }}</span>
+                            </span>
+                        @endif
+
                         <!-- View Changes History Button -->
                         <button
                             type="button"
                             wire:click="showFileHistory({{ $this->activeFile->id }})"
-                            class="flex items-center gap-1.5 rounded-full border border-zinc-700/80 bg-zinc-800/80 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                            class="flex items-center gap-1.5 rounded-full border border-zinc-700/80 bg-zinc-800/80 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer shadow-xs"
                         >
                             <flux:icon icon="clock" class="size-3.5" />
                             <span>{{ __('View changes') }}</span>
                         </button>
 
-                        <!-- Primary Save Button (Donezo #0D3B29 pill) -->
+                        <!-- Primary Save Button -->
                         <button
                             type="button"
                             wire:click="saveFile"
                             @if (! $this->canEditActiveFile) disabled @endif
-                            class="{{ $this->canEditActiveFile ? 'bg-[#0D3B29] hover:bg-[#09261b] text-white shadow-xs active:scale-98 cursor-pointer' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700' }} flex items-center gap-2 rounded-full px-5 py-1.5 text-xs font-bold transition-all"
+                            class="{{ $this->canEditActiveFile ? 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-xs active:scale-98 cursor-pointer' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700' }} flex items-center gap-2 rounded-full px-4 sm:px-5 py-1.5 text-xs font-bold transition-all shadow-md"
                             title="{{ $this->canEditActiveFile ? __('Save Note (Cmd+S / Ctrl+S)') : __('You have read-only access to this file') }}"
                         >
                             <flux:icon icon="arrow-up-tray" class="size-3.5" />
                             <span>{{ __('Save Changes') }}</span>
                             <span x-show="isDirty" class="size-2 rounded-full bg-amber-400 animate-ping"></span>
                         </button>
+
+                        <!-- Close Button -->
+                        <button
+                            type="button"
+                            wire:click="$set('activeTab', 'files')"
+                            class="size-7 flex items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors cursor-pointer"
+                            title="{{ __('Close Editor') }}"
+                        >
+                            <flux:icon icon="x-mark" class="size-4" />
+                        </button>
                     @endif
                 </div>
             </div>
 
             <!-- FORMATTING TOOLBAR (Matching Pandocs) -->
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 bg-[#161A22] px-4 py-2">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#252836] bg-[#161821] px-4 py-2">
                 <div class="flex flex-wrap items-center gap-1 text-zinc-300">
                     <!-- Text Formatting -->
                     <button type="button" @click="insertFormat('**', '**', 'bold text')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 font-black text-xs" title="Bold (Ctrl+B)">B</button>
                     <button type="button" @click="insertFormat('*', '*', 'italic text')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 italic font-serif text-xs" title="Italic (Ctrl+I)">I</button>
                     <button type="button" @click="insertFormat('<u>', '</u>', 'underlined text')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 underline text-xs" title="Underline">U</button>
                     <button type="button" @click="insertFormat('~~', '~~', 'strikethrough text')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 line-through text-xs" title="Strikethrough">S</button>
+
+                    <span class="h-4 w-px bg-zinc-700 mx-1"></span>
+
+                    <!-- Alignment -->
+                    <button type="button" @click="insertLinePrefix('')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Left Align">≡</button>
+                    <button type="button" @click="insertFormat('<center>', '</center>')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Center Align">⩸</button>
+                    <button type="button" @click="insertFormat('<div align=\'right\'>', '</div>')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Right Align">⩹</button>
 
                     <span class="h-4 w-px bg-zinc-700 mx-1"></span>
 
@@ -839,6 +946,7 @@ new #[Title('Vault Details')] class extends Component {
                     <!-- Insert Links & Media -->
                     <button type="button" @click="insertFormat('[', '](https://)', 'Link Title')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Insert Link">🔗</button>
                     <button type="button" @click="insertFormat('![', '](image-url.png)', 'Alt Text')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Insert Image">🖼️</button>
+                    <button type="button" @click="insertFormat('[📎 ', '](attachment.pdf)', 'Document')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Attach File">📎</button>
                     <button type="button" @click="insertFormat('[[', ']]', 'Wiki Note Name')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs font-bold text-emerald-400" title="Wiki Link [[Note]]">[[ ]]</button>
 
                     <span class="h-4 w-px bg-zinc-700 mx-1"></span>
@@ -846,8 +954,8 @@ new #[Title('Vault Details')] class extends Component {
                     <!-- Code & Block elements -->
                     <button type="button" @click="insertFormat('`', '`', 'code')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs font-mono text-cyan-400" title="Inline Code">&lt;/&gt;</button>
                     <button type="button" @click="insertFormat('```javascript\n', '\n```', '// your code here')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs font-mono" title="Code Block">{ }</button>
-                    <button type="button" @click="insertLinePrefix('> ')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs font-serif" title="Blockquote">”</button>
-                    <button type="button" @click="insertLinePrefix('> [!TIP]\n> ')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs text-purple-400" title="Tip Callout Box">💡</button>
+                    <button type="button" @click="insertTable()" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Insert Table">⊞</button>
+                    <button type="button" @click="insertLinePrefix('> Tip: ')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs text-purple-400" title="Tip Callout Box">💡</button>
                     <button type="button" @click="insertFormat('\n---\n')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Horizontal Rule">—</button>
                 </div>
 
@@ -857,7 +965,7 @@ new #[Title('Vault Details')] class extends Component {
                         type="button"
                         @click="viewMode = 'split'"
                         :class="viewMode === 'split' ? 'bg-zinc-700 text-white font-bold' : 'text-zinc-400 hover:text-white'"
-                        class="px-2.5 py-1 text-[11px] rounded transition-colors"
+                        class="px-2.5 py-1 text-[11px] rounded transition-colors cursor-pointer"
                     >
                         {{ __('Split') }}
                     </button>
@@ -865,7 +973,7 @@ new #[Title('Vault Details')] class extends Component {
                         type="button"
                         @click="viewMode = 'source'"
                         :class="viewMode === 'source' ? 'bg-zinc-700 text-white font-bold' : 'text-zinc-400 hover:text-white'"
-                        class="px-2.5 py-1 text-[11px] rounded transition-colors"
+                        class="px-2.5 py-1 text-[11px] rounded transition-colors cursor-pointer"
                     >
                         {{ __('Source') }}
                     </button>
@@ -873,7 +981,7 @@ new #[Title('Vault Details')] class extends Component {
                         type="button"
                         @click="viewMode = 'preview'"
                         :class="viewMode === 'preview' ? 'bg-zinc-700 text-white font-bold' : 'text-zinc-400 hover:text-white'"
-                        class="px-2.5 py-1 text-[11px] rounded transition-colors"
+                        class="px-2.5 py-1 text-[11px] rounded transition-colors cursor-pointer"
                     >
                         {{ __('Preview') }}
                     </button>
@@ -888,24 +996,83 @@ new #[Title('Vault Details')] class extends Component {
                 </div>
             @endif
 
-            <!-- MAIN WORKSPACE: SIDEBAR + SPLIT EDITOR -->
-            <div class="flex flex-1 min-h-[560px] overflow-hidden">
-                <!-- LEFT SIDEBAR: Document Outline & Note Switcher -->
-                <div class="w-64 shrink-0 border-r border-zinc-800 bg-[#12151B] flex flex-col justify-between hidden md:flex">
-                    <div class="p-4 space-y-4 overflow-y-auto max-h-[580px]">
-                        <!-- Quick Search Notes -->
+            <!-- MAIN WORKSPACE -->
+            <div class="flex flex-1 min-h-[580px] overflow-hidden relative">
+                <!-- FLOATING EXPAND SIDEBAR BUTTON (Shown when outline sidebar is collapsed) -->
+                <button
+                    type="button"
+                    x-show="!sidebarOpen"
+                    @click="sidebarOpen = true"
+                    class="absolute top-3 left-3 z-30 flex items-center gap-1.5 rounded-xl bg-zinc-900/95 border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-300 hover:text-white hover:border-purple-500 shadow-xl backdrop-blur transition-all cursor-pointer"
+                    title="{{ __('Expand Outline & Notes') }}"
+                >
+                    <svg class="size-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.21 5.23a.75.75 0 011.06-.02l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.04-1.08L8.168 10 4.23 6.29a.75.75 0 01-.02-1.06zm6 0a.75.75 0 011.06-.02l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.04-1.08L14.168 10l-3.938-3.71a.75.75 0 01-.02-1.06z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="font-medium text-[11px]">{{ __('Outline') }}</span>
+                </button>
+
+                <!-- LEFT COLLAPSIBLE SIDEBAR: Back to Docs, Search, Outline, Notes -->
+                <div
+                    x-show="sidebarOpen"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="-translate-x-full opacity-0"
+                    x-transition:enter-end="translate-x-0 opacity-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="translate-x-0 opacity-100"
+                    x-transition:leave-end="-translate-x-full opacity-0"
+                    class="w-64 shrink-0 border-r border-[#252836] bg-[#12141C] flex flex-col justify-between hidden md:flex"
+                >
+                    <div class="p-3.5 space-y-3.5 overflow-y-auto max-h-[600px]">
+                        <!-- Back to All Documents -->
+                        <button
+                            type="button"
+                            wire:click="$set('activeTab', 'files')"
+                            class="flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer w-full text-left"
+                        >
+                            <span>←</span>
+                            <span>{{ __('Back to All Documents') }}</span>
+                        </button>
+
+                        <!-- Search Notes Input -->
                         <div class="relative">
+                            <flux:icon icon="magnifying-glass" class="size-3.5 text-zinc-500 absolute left-2.5 top-2.5" />
                             <input
                                 wire:model.live.debounce.250ms="editorSearch"
                                 type="text"
-                                placeholder="{{ __('Search notes...') }}"
-                                class="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-1.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#0D3B29]"
+                                placeholder="{{ __('Search...') }}"
+                                class="w-full rounded-xl bg-zinc-900/90 border border-zinc-800 pl-8 pr-8 py-1.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-purple-500"
                             />
+                            <span class="absolute right-2 top-2 text-[10px] font-mono text-zinc-500 bg-zinc-800 px-1 rounded">⌘K</span>
                         </div>
 
-                        <!-- Notes List in Vault -->
+                        <!-- LIVE DOCUMENT OUTLINE (Pandocs signature headings navigator) -->
                         <div>
-                            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                            <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                                <span>{{ __('Document Outline') }}</span>
+                                <span class="text-[9px] font-mono" x-text="headings.length"></span>
+                            </div>
+                            <div class="space-y-0.5">
+                                <template x-for="(h, idx) in headings" :key="idx">
+                                    <button
+                                        type="button"
+                                        @click="scrollToHeading(h)"
+                                        :class="activeHeading === h.title ? 'bg-purple-950/40 text-purple-300 font-bold border-l-2 border-purple-500 pl-2' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 pl-2.5 border-l-2 border-transparent'"
+                                        class="block w-full text-left truncate text-xs transition-colors py-1 rounded-r-md cursor-pointer"
+                                    >
+                                        <span class="text-zinc-600 mr-1 font-mono text-[10px]" x-text="'#'.repeat(h.level)"></span>
+                                        <span x-text="h.title"></span>
+                                    </button>
+                                </template>
+                                <div x-show="headings.length === 0" class="text-[11px] text-zinc-600 italic py-1 pl-2">
+                                    {{ __('Add headings (# H1, ## H2) to build outline') }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- VAULT NOTES LIST -->
+                        <div class="pt-3 border-t border-[#252836]">
+                            <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
                                 <span>{{ __('Vault Notes') }}</span>
                                 <span class="text-[10px]">{{ $this->filteredEditorNotes->count() }}</span>
                             </div>
@@ -914,7 +1081,7 @@ new #[Title('Vault Details')] class extends Component {
                                     <button
                                         type="button"
                                         wire:click="selectFile({{ $f->id }})"
-                                        class="{{ $this->activeFileId === $f->id ? 'bg-[#0D3B29]/40 text-emerald-300 font-bold border-emerald-600/40' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-white border-transparent' }} flex items-center justify-between w-full rounded-lg px-2.5 py-1.5 text-xs text-left border transition-all"
+                                        class="{{ $this->activeFileId === $f->id ? 'bg-[#0D3B29]/40 text-emerald-300 font-bold border-emerald-600/40' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-white border-transparent' }} flex items-center justify-between w-full rounded-lg px-2.5 py-1.5 text-xs text-left border transition-all cursor-pointer"
                                     >
                                         <div class="flex items-center gap-2 truncate">
                                             <flux:icon icon="document-text" class="size-3.5 shrink-0" />
@@ -923,39 +1090,31 @@ new #[Title('Vault Details')] class extends Component {
                                         <span class="text-[10px] text-zinc-600 shrink-0 font-mono">v{{ $f->version }}</span>
                                     </button>
                                 @empty
-                                    <div class="py-4 text-center text-xs text-zinc-500">
+                                    <div class="py-3 text-center text-xs text-zinc-500">
                                         {{ __('No notes found.') }}
                                     </div>
                                 @endforelse
                             </div>
                         </div>
-
-                        <!-- DOCUMENT OUTLINE (Headings parsed from active document) -->
-                        <div x-show="headings.length > 0" class="pt-3 border-t border-zinc-800/80">
-                            <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-                                {{ __('Document Outline') }}
-                            </div>
-                            <div class="space-y-1">
-                                <template x-for="(h, idx) in headings" :key="idx">
-                                    <button
-                                        type="button"
-                                        @click="scrollToHeading(h)"
-                                        :class="h.level === 1 ? 'font-bold text-zinc-200' : (h.level === 2 ? 'pl-3 text-zinc-400' : 'pl-6 text-zinc-500')"
-                                        class="block w-full text-left truncate text-xs hover:text-emerald-400 transition-colors py-0.5"
-                                    >
-                                        <span class="text-zinc-600 mr-1 font-mono" x-text="'#'.repeat(h.level)"></span>
-                                        <span x-text="h.title"></span>
-                                    </button>
-                                </template>
-                            </div>
-                        </div>
                     </div>
 
-                    <!-- Bottom New Note Action -->
-                    <div class="p-3 border-t border-zinc-800 bg-[#101318]">
+                    <!-- Bottom Bar: Collapse Button + New Note Action -->
+                    <div class="p-2.5 border-t border-[#252836] bg-[#0E1015] flex items-center justify-between gap-2">
+                        <!-- Collapse Sidebar Toggle (Matching ⇤ in screenshot) -->
+                        <button
+                            type="button"
+                            @click="sidebarOpen = false"
+                            class="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="{{ __('Collapse Outline Sidebar') }}"
+                        >
+                            <svg class="size-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M15.79 14.77a.75.75 0 01-1.06.02l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 111.04 1.08L11.832 10l3.938 3.71a.75.75 0 01.02 1.06zm-6 0a.75.75 0 01-1.06.02l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 111.04 1.08L5.832 10l3.938 3.71a.75.75 0 01.02 1.06z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+
                         <flux:modal.trigger name="new-note-modal">
-                            <button type="button" class="w-full flex items-center justify-center gap-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 py-2 text-xs font-bold text-white transition-colors">
-                                <flux:icon icon="plus" class="size-3.5" />
+                            <button type="button" class="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 py-1.5 px-3 text-xs font-bold text-white transition-colors cursor-pointer">
+                                <flux:icon icon="plus" class="size-3" />
                                 <span>{{ __('New Note') }}</span>
                             </button>
                         </flux:modal.trigger>
@@ -963,25 +1122,36 @@ new #[Title('Vault Details')] class extends Component {
                 </div>
 
                 <!-- SPLIT EDITOR CONTENT AREA -->
-                <div class="flex flex-1 overflow-hidden">
+                <div class="flex flex-1 overflow-hidden relative">
                     <!-- LEFT PANE: SOURCE CODE EDITOR -->
                     <div
                         x-show="viewMode === 'split' || viewMode === 'source'"
                         :class="viewMode === 'split' ? 'w-1/2' : 'w-full'"
-                        class="flex flex-1 border-r border-zinc-800/80 bg-[#0F1218] overflow-hidden"
+                        class="flex flex-1 border-r border-[#252836] bg-[#0E1015] overflow-hidden"
                     >
-                        <!-- Code Minimap Strip on Far Left (Pandocs design) -->
-                        <div class="w-8 shrink-0 border-r border-zinc-800/60 bg-[#0B0D12] py-3 px-1 flex flex-col gap-1 overflow-hidden opacity-70">
-                            <template x-for="i in Math.min(lineCount, 35)" :key="i">
+                        <!-- Code Minimap Strip on Far Left (Pandocs design with authentic syntax-colored bars) -->
+                        <div class="w-8 shrink-0 border-r border-zinc-800/60 bg-[#0B0D12] py-3 px-1 flex flex-col gap-0.5 overflow-hidden opacity-80">
+                            <template x-for="(type, idx) in lineTypes" :key="idx">
                                 <div
-                                    :class="(i % 5 === 0) ? 'bg-purple-400/60' : ((i % 3 === 0) ? 'bg-emerald-400/50' : 'bg-zinc-600/40')"
-                                    :style="`width: ${Math.max(30, (i * 17) % 100)}%; height: 2px; border-radius: 1px;`"
+                                    :class="{
+                                        'bg-rose-500/90 h-[3px]': type === 'h1',
+                                        'bg-sky-400/90 h-[3px]': type === 'h2',
+                                        'bg-indigo-400/80 h-[2.5px]': type === 'h3',
+                                        'bg-emerald-400/90 h-[2px]': type === 'code',
+                                        'bg-purple-400/90 h-[2.5px]': type === 'tip',
+                                        'bg-amber-400/70 h-[2px]': type === 'list',
+                                        'bg-zinc-500/40 h-[2px]': type === 'text',
+                                        'bg-transparent h-[2px]': type === 'empty',
+                                        'bg-zinc-600/60 h-[1px]': type === 'hr',
+                                        'bg-zinc-600/40 h-[2px]': type === 'quote'
+                                    }"
+                                    :style="`width: ${type === 'h1' ? '90%' : (type === 'h2' ? '75%' : (type === 'empty' ? '0%' : Math.max(30, (idx * 23) % 95) + '%'))}; border-radius: 1px; margin-bottom: 2px;`"
                                 ></div>
                             </template>
                         </div>
 
                         <!-- Line Numbers Gutter -->
-                        <div class="w-10 shrink-0 py-3 text-right pr-2 text-zinc-600 font-mono text-xs select-none border-r border-zinc-800/60 bg-[#0D1015]">
+                        <div class="w-10 shrink-0 py-3 text-right pr-2 text-zinc-600 font-mono text-xs select-none border-r border-zinc-800/60 bg-[#0C0E13]">
                             <template x-for="n in lineCount" :key="n">
                                 <div class="leading-relaxed text-[11px]" x-text="n"></div>
                             </template>
@@ -992,14 +1162,42 @@ new #[Title('Vault Details')] class extends Component {
                             <textarea
                                 x-ref="editorTextarea"
                                 x-model="content"
-                                @keydown.tab.prevent="insertFormat('  ')"
-                                @keydown.meta.s.prevent="$wire.saveFile()"
-                                @keydown.ctrl.s.prevent="$wire.saveFile()"
+                                @keydown="handleEditorKeydown($event)"
                                 @if (! $this->canEditActiveFile) readonly @endif
                                 placeholder="{{ __('Write your note in Markdown...') }}"
-                                class="w-full h-full min-h-[540px] bg-transparent p-3 font-mono text-xs leading-relaxed text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none"
+                                class="w-full h-full min-h-[580px] bg-transparent p-4 font-mono text-xs sm:text-sm leading-relaxed text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none selection:bg-purple-900/60"
                                 spellcheck="false"
                             >{{ $editorContent }}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- FLOATING QUICK-INSERT GUTTER (Iconic center strip in Pandocs) -->
+                    <div
+                        x-show="viewMode === 'split'"
+                        class="absolute left-1/2 -translate-x-1/2 top-16 z-20 hidden lg:flex flex-col items-center gap-2"
+                    >
+                        <!-- Purple Toggle Button -->
+                        <button
+                            type="button"
+                            @click="quickInsertOpen = !quickInsertOpen"
+                            class="size-6 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white flex items-center justify-center shadow-lg transition-transform cursor-pointer"
+                            :class="quickInsertOpen ? 'rotate-45' : ''"
+                            title="{{ __('Toggle quick insert tools') }}"
+                        >
+                            <flux:icon icon="plus" class="size-3" />
+                        </button>
+
+                        <div
+                            x-show="quickInsertOpen"
+                            x-transition
+                            class="flex flex-col items-center gap-1.5 rounded-2xl border border-zinc-700/80 bg-zinc-900/95 p-1.5 shadow-2xl backdrop-blur"
+                        >
+                            <button type="button" @click="insertFormat('[', '](https://)', 'Link Title')" class="size-7 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center justify-center text-xs" title="Link">🔗</button>
+                            <button type="button" @click="insertFormat('![', '](image.png)', 'Alt')" class="size-7 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center justify-center text-xs" title="Image">🖼️</button>
+                            <button type="button" @click="insertFormat('[📎 ', '](file.pdf)', 'File')" class="size-7 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center justify-center text-xs" title="Attachment">📎</button>
+                            <button type="button" @click="insertFormat('`', '`', 'code')" class="size-7 rounded-lg text-cyan-400 hover:bg-zinc-800 flex items-center justify-center text-xs font-mono" title="Code">&lt;&gt;</button>
+                            <button type="button" @click="insertTable()" class="size-7 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center justify-center text-xs" title="Table">⊞</button>
+                            <button type="button" @click="insertLinePrefix('> Tip: ')" class="size-7 rounded-lg text-purple-400 hover:bg-zinc-800 flex items-center justify-center text-xs" title="Tip Box">💡</button>
                         </div>
                     </div>
 
@@ -1008,8 +1206,11 @@ new #[Title('Vault Details')] class extends Component {
                         x-show="viewMode === 'split' || viewMode === 'preview'"
                         x-ref="previewPane"
                         :class="viewMode === 'split' ? 'w-1/2' : 'w-full'"
-                        class="flex-1 overflow-y-auto bg-[#14171D] p-6 lg:p-8"
+                        class="flex-1 overflow-y-auto bg-[#12131A] p-6 lg:p-10"
                     >
+                        <!-- Active block focus indicator line (matching Pandocs purple accent line) -->
+                        <div class="h-0.5 w-full bg-gradient-to-r from-purple-500/80 via-purple-500/30 to-transparent mb-6"></div>
+
                         <div class="prose prose-invert max-w-none text-zinc-200 text-xs sm:text-sm leading-relaxed">
                             {!! $this->renderedPreviewHtml !!}
                         </div>
@@ -1017,13 +1218,19 @@ new #[Title('Vault Details')] class extends Component {
                 </div>
             </div>
 
-            <!-- BOTTOM STATUS BAR -->
-            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 bg-[#12151B] px-5 py-2.5 text-[11px] text-zinc-400">
+            <!-- BOTTOM STATUS BAR (Matching Pandocs author avatar & date) -->
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[#252836] bg-[#101218] px-5 py-2.5 text-[11px] text-zinc-400">
                 <div class="flex items-center gap-3">
                     @if ($this->activeFile)
-                        <div class="flex items-center gap-1.5">
-                            <span class="inline-block size-1.5 rounded-full {{ $this->canEditActiveFile ? 'bg-emerald-400' : 'bg-amber-400' }}"></span>
-                            <span>{{ __('Last updated') }} {{ $this->activeFile->updated_at?->diffForHumans() }} {{ __('by') }} <strong class="text-white">{{ $this->activeFile->lastModifier?->name ?? 'Sync' }}</strong></span>
+                        <div class="flex items-center gap-2">
+                            <flux:icon icon="clock" class="size-3.5 text-zinc-500" />
+                            <span>{{ __('Last updated on') }} {{ $this->activeFile->updated_at?->format('M d, Y') }} {{ __('by') }}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="inline-flex size-4 items-center justify-center rounded-full bg-purple-900 text-[9px] font-bold text-purple-200">
+                                    {{ substr($this->activeFile->lastModifier?->name ?? 'S', 0, 1) }}
+                                </span>
+                                <strong class="text-white font-semibold">{{ $this->activeFile->lastModifier?->name ?? 'Sync' }}</strong>
+                            </div>
                         </div>
                     @else
                         <span>{{ __('No active file selected') }}</span>
