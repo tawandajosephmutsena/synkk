@@ -332,7 +332,7 @@ new #[Title('Dashboard')] class extends Component {
     }
 }; ?>
 
-<div class="flex h-full w-full flex-1 flex-col gap-7 font-sans text-slate-900 dark:text-slate-100">
+<div x-data="{ drawerOpen: false, drawerTab: 'notifications' }" class="flex h-full w-full flex-1 flex-col gap-7 font-sans text-slate-900 dark:text-slate-100">
     <!-- DONEZO & ACRU TOP HEADER BAR -->
     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <!-- Search Task / Note Pill -->
@@ -352,15 +352,25 @@ new #[Title('Dashboard')] class extends Component {
         <!-- Top Right Profile & Notification Controls -->
         <div class="flex items-center justify-end gap-3">
             <!-- Mail Button -->
-            <button type="button" class="flex size-10 items-center justify-center rounded-full border border-gray-200/90 bg-white text-gray-600 shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-colors hover:bg-gray-50 hover:text-gray-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+            <button
+                type="button"
+                @click="drawerOpen = true; drawerTab = 'messages'"
+                class="flex size-10 items-center justify-center rounded-full border border-gray-200/90 bg-white text-gray-600 shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-colors hover:bg-gray-50 hover:text-gray-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 cursor-pointer"
+                title="{{ __('Open Messages & Activity') }}"
+            >
                 <flux:icon icon="envelope" class="size-4" />
             </button>
 
             <!-- Notification Bell -->
-            <button type="button" class="relative flex size-10 items-center justify-center rounded-full border border-gray-200/90 bg-white text-gray-600 shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-colors hover:bg-gray-50 hover:text-gray-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+            <button
+                type="button"
+                @click="drawerOpen = true; drawerTab = 'notifications'"
+                class="relative flex size-10 items-center justify-center rounded-full border border-gray-200/90 bg-white text-gray-600 shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-colors hover:bg-gray-50 hover:text-gray-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 cursor-pointer"
+                title="{{ __('Open Notifications & Alerts') }}"
+            >
                 <flux:icon icon="bell" class="size-4" />
                 @if ($this->secretAlertsCount > 0)
-                    <span class="absolute top-2 right-2 size-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900"></span>
+                    <span class="absolute top-2 right-2 size-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900 animate-pulse"></span>
                 @else
                     <span class="absolute top-2 right-2 size-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900"></span>
                 @endif
@@ -544,7 +554,7 @@ new #[Title('Dashboard')] class extends Component {
                 <span class="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
                     <span class="font-bold">{{ $this->totalStorageFormatted }}</span>
                     <span class="text-slate-400">·</span>
-                    {{ __('encrypted disk') }}
+                    {{ __('tracked storage') }}
                 </span>
             </div>
         </div>
@@ -902,7 +912,7 @@ new #[Title('Dashboard')] class extends Component {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h3 class="text-base font-extrabold text-gray-900 dark:text-white">{{ __('Transaction History') }}</h3>
-                <p class="text-xs text-gray-400 dark:text-zinc-500 mt-0.5">{{ __('Real-time Obsidian note revisions and sync operations') }}</p>
+                <p class="text-xs text-gray-400 dark:text-zinc-500 mt-0.5">{{ __('Recent Obsidian note revisions and sync operations') }}</p>
             </div>
 
             <!-- Segmented Pill Filter Group (Donezo / ACRU) -->
@@ -1060,16 +1070,169 @@ new #[Title('Dashboard')] class extends Component {
                     <flux:select.option value="read_only">{{ __('Read-Only (Team can view, cannot modify)') }}</flux:select.option>
                     <flux:select.option value="hidden">{{ __('Restricted (Hidden unless specific rule granted)') }}</flux:select.option>
                 </flux:select>
-            </div>
-
-            <div class="flex justify-end gap-2">
+              <div class="flex justify-end gap-2">
                 <flux:modal.close>
                     <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
                 </flux:modal.close>
-                <button type="submit" class="rounded-full bg-[#0D3B29] px-5 py-2 text-sm font-semibold text-white hover:bg-[#09261b]">
-                    {{ __('Create Vault') }}
-                </button>
+                <flux:button type="submit" variant="primary">{{ __('Create Vault') }}</flux:button>
             </div>
         </form>
     </flux:modal>
+
+    <!-- SLIDE-OVER NOTIFICATIONS & MESSAGES DRAWER -->
+    <div
+        x-show="drawerOpen"
+        x-cloak
+        @keydown.window.escape="drawerOpen = false"
+        class="relative z-50"
+    >
+        <!-- Backdrop -->
+        <div
+            x-show="drawerOpen"
+            x-transition:enter="ease-in-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="ease-in-out duration-300"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click="drawerOpen = false"
+            class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+        ></div>
+
+        <!-- Slide Panel -->
+        <div class="fixed inset-y-0 right-0 flex max-w-full pl-10">
+            <div
+                x-show="drawerOpen"
+                x-transition:enter="transform transition ease-in-out duration-300"
+                x-transition:enter-start="translate-x-full"
+                x-transition:enter-end="translate-x-0"
+                x-transition:leave="transform transition ease-in-out duration-300"
+                x-transition:leave-start="translate-x-0"
+                x-transition:leave-end="translate-x-full"
+                class="w-screen max-w-md bg-white dark:bg-[#121622] text-slate-900 dark:text-zinc-100 shadow-2xl flex flex-col border-l border-slate-200 dark:border-zinc-800"
+            >
+                <!-- Drawer Header -->
+                <div class="p-5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
+                    <div class="flex items-center gap-2.5">
+                        <div class="flex size-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
+                            <flux:icon icon="bolt" class="size-4" />
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm tracking-tight text-slate-900 dark:text-white">{{ __('Activity & Alerts') }}</h3>
+                            <p class="text-[11px] text-slate-500 dark:text-zinc-400">{{ __('Activity notifications & team messages') }}</p>
+                        </div>
+                    </div>
+                    <button @click="drawerOpen = false" class="size-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+                        <flux:icon icon="x-mark" class="size-4" />
+                    </button>
+                </div>
+
+                <!-- Tabs Header -->
+                <div class="flex border-b border-slate-200 dark:border-zinc-800 bg-slate-100/60 dark:bg-zinc-900/80 p-1.5 gap-1.5">
+                    <button
+                        @click="drawerTab = 'notifications'"
+                        :class="drawerTab === 'notifications' ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'"
+                        class="flex-1 py-1.5 px-3 text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                        <flux:icon icon="bell" class="size-3.5 text-emerald-500" />
+                        <span>{{ __('Notifications') }}</span>
+                        <span class="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 text-[10px] font-bold">3</span>
+                    </button>
+                    <button
+                        @click="drawerTab = 'messages'"
+                        :class="drawerTab === 'messages' ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'"
+                        class="flex-1 py-1.5 px-3 text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                        <flux:icon icon="envelope" class="size-3.5 text-indigo-500" />
+                        <span>{{ __('Messages') }}</span>
+                        <span class="rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.2 text-[10px] font-bold">2</span>
+                    </button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                    <!-- Notifications Tab -->
+                    <div x-show="drawerTab === 'notifications'" class="space-y-3">
+                        <div class="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/10 flex items-start gap-3">
+                            <div class="size-8 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0 text-amber-600 dark:text-amber-400">
+                                <flux:icon icon="shield-exclamation" class="size-4" />
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-200">
+                                    <span>DLP Vault Security Alert</span>
+                                    <span class="text-[10px] text-slate-400 font-normal">10m ago</span>
+                                </div>
+                                <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5">Potential AWS Secret Access Key detected in note <code class="font-mono text-[11px] bg-amber-500/20 px-1 rounded">Config/env.md</code>.</p>
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 flex items-start gap-3">
+                            <div class="size-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                                <flux:icon icon="device-phone-mobile" class="size-4" />
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                                    <span>New Device Paired</span>
+                                    <span class="text-[10px] text-slate-400 font-normal">1h ago</span>
+                                </div>
+                                <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5">Obsidian Desktop (MacBook Pro) established an authenticated sync session with Demo Vault.</p>
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 flex items-start gap-3">
+                            <div class="size-8 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
+                                <flux:icon icon="arrow-path" class="size-4" />
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                                    <span>Vault Revision Snapshot</span>
+                                    <span class="text-[10px] text-slate-400 font-normal">3h ago</span>
+                                </div>
+                                <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5">76 markdown notes snapshot v76 backed up to team-managed storage.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Messages Tab -->
+                    <div x-show="drawerTab === 'messages'" class="space-y-3">
+                        <div class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 flex items-start gap-3">
+                            <div class="size-8 rounded-full bg-[#0D3B29] text-emerald-200 font-bold text-xs flex items-center justify-center shrink-0">
+                                {{ auth()->user()->initials() }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                                    <span>{{ auth()->user()->name }}</span>
+                                    <span class="text-[10px] text-slate-400 font-normal">Just now</span>
+                                </div>
+                                <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5">Updated <span class="font-medium text-emerald-600 dark:text-emerald-400">START HERE.md</span> with new architectural guidelines and graph view links.</p>
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 flex items-start gap-3">
+                            <div class="size-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                SY
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                                    <span>Synkk Engine</span>
+                                    <span class="text-[10px] text-slate-400 font-normal">25m ago</span>
+                                </div>
+                                <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5">All 76 vault files in sync across 1 device with 0 active conflicts.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Action -->
+                <div class="p-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-900/80 flex items-center justify-between">
+                    <button @click="drawerOpen = false" class="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300 cursor-pointer">
+                        {{ __('Close') }}
+                    </button>
+                    <button @click="drawerOpen = false" class="rounded-lg bg-[#0D3B29] dark:bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors cursor-pointer">
+                        {{ __('Mark All as Read') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

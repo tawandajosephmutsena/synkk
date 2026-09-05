@@ -93,7 +93,7 @@ class LicenseValidationService
 
             return [
                 'success' => false,
-                'message' => 'License verification server connection error: '.$e->getMessage(),
+                'message' => 'License verification is temporarily unavailable. Please try again later.',
             ];
         }
     }

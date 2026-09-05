@@ -1,6 +1,12 @@
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+const DEFAULT_SIMULATION_TICKS = 360;
+const INTERACTION_SIMULATION_TICKS = 120;
+const STABLE_SPEED_THRESHOLD = 0.025;
+const STABLE_FRAME_LIMIT = 24;
+
 export function createVaultGraph(data = {}) {
     return {
-        nodes: (data.nodes || []).map((node, i) => ({
+        nodes: (data.nodes || []).map((node) => ({
             ...node,
             x: node.x ?? 0,
             y: node.y ?? 0,
@@ -16,12 +22,41 @@ export function createVaultGraph(data = {}) {
         zoom: 1,
         panX: 0,
         panY: 0,
+        viewportWidth: 0,
+        viewportHeight: 0,
+        pixelRatio: 1,
         isDragging: false,
         dragNode: null,
+        pointerDownNode: null,
+        activePointerId: null,
+        pointerStartX: 0,
+        pointerStartY: 0,
+        dragOriginX: 0,
+        dragOriginY: 0,
         lastMouseX: 0,
         lastMouseY: 0,
+        hasDragged: false,
+        dragThreshold: 5,
         animId: null,
         resizeHandler: null,
+        resizeObserver: null,
+        eventHandlers: null,
+        canvasCleanupHandler: null,
+        motionQuery: null,
+        motionChangeHandler: null,
+        searchWatcherCleanup: null,
+        requestRenderHandler: null,
+        drawHandler: null,
+        frameHandler: null,
+        simulationStepHandler: null,
+        simulationActive: false,
+        simulationTicks: 0,
+        simulationTickLimit: DEFAULT_SIMULATION_TICKS,
+        stableFrameCount: 0,
+        prefersReducedMotion: false,
+        hasCenteredView: false,
+        destroyed: true,
+        previousTouchAction: null,
 
         init() {
             const canvas = this.$refs?.graphCanvas;
@@ -34,202 +69,55 @@ export function createVaultGraph(data = {}) {
                 return;
             }
 
-            this.resizeHandler = () => {
-                if (!canvas) return;
-                const rect = canvas.getBoundingClientRect();
-                canvas.width = rect.width;
-                canvas.height = rect.height;
-                if (this.panX === 0 && this.panY === 0) {
-                    this.panX = canvas.width / 2;
-                    this.panY = canvas.height / 2;
-                }
-            };
-
-            this.resizeHandler();
-            if (typeof window !== 'undefined') {
-                window.addEventListener('resize', this.resizeHandler);
+            this.destroyed = false;
+            this.previousTouchAction = canvas.style?.touchAction ?? null;
+            if (canvas.style) {
+                canvas.style.touchAction = 'none';
             }
 
-            const radius = Math.min(canvas.width || 600, canvas.height || 600) * 0.35;
-            this.nodes.forEach((node, i) => {
-                const angle = (i / Math.max(1, this.nodes.length)) * Math.PI * 2;
-                node.x = Math.cos(angle) * radius + (Math.random() - 0.5) * 40;
-                node.y = Math.sin(angle) * radius + (Math.random() - 0.5) * 40;
-                node.vx = 0;
-                node.vy = 0;
-            });
+            const browserWindow = typeof window !== 'undefined' ? window : null;
+            this.motionQuery = browserWindow?.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null;
+            this.prefersReducedMotion = this.motionQuery?.matches === true;
 
-            canvas.addEventListener('mousemove', (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const mx = e.clientX - rect.left;
-                const my = e.clientY - rect.top;
+            const requestFrame = browserWindow?.requestAnimationFrame?.bind(browserWindow);
+            const cancelFrame = browserWindow?.cancelAnimationFrame?.bind(browserWindow);
 
-                if (this.isDragging) {
-                    const dx = mx - this.lastMouseX;
-                    const dy = my - this.lastMouseY;
-                    if (this.dragNode) {
-                        this.dragNode.x += dx / this.zoom;
-                        this.dragNode.y += dy / this.zoom;
-                    } else {
-                        this.panX += dx;
-                        this.panY += dy;
-                    }
-                    this.lastMouseX = mx;
-                    this.lastMouseY = my;
+            this.drawHandler = () => {
+                if (this.destroyed) {
                     return;
                 }
 
-                const worldX = (mx - this.panX) / this.zoom;
-                const worldY = (my - this.panY) / this.zoom;
-                let found = null;
-
-                for (let node of this.nodes) {
-                    const dist = Math.hypot(node.x - worldX, node.y - worldY);
-                    if (dist < node.radius + 6) {
-                        found = node;
-                        break;
-                    }
-                }
-
-                this.hoveredNode = found;
-                this.tooltipX = mx;
-                this.tooltipY = my;
-                this.lastMouseX = mx;
-                this.lastMouseY = my;
-            });
-
-            canvas.addEventListener('mousedown', (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const mx = e.clientX - rect.left;
-                const my = e.clientY - rect.top;
-                const worldX = (mx - this.panX) / this.zoom;
-                const worldY = (my - this.panY) / this.zoom;
-
-                this.isDragging = true;
-                this.lastMouseX = mx;
-                this.lastMouseY = my;
-
-                for (let node of this.nodes) {
-                    const dist = Math.hypot(node.x - worldX, node.y - worldY);
-                    if (dist < node.radius + 6) {
-                        this.dragNode = node;
-                        return;
-                    }
-                }
-                this.dragNode = null;
-            });
-
-            canvas.addEventListener('mouseup', () => {
-                this.isDragging = false;
-                this.dragNode = null;
-            });
-
-            canvas.addEventListener('click', (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const mx = e.clientX - rect.left;
-                const my = e.clientY - rect.top;
-                const worldX = (mx - this.panX) / this.zoom;
-                const worldY = (my - this.panY) / this.zoom;
-
-                for (let node of this.nodes) {
-                    const dist = Math.hypot(node.x - worldX, node.y - worldY);
-                    if (dist < node.radius + 6) {
-                        if (this.$wire?.selectFile) {
-                            this.$wire.selectFile(node.id);
-                        }
-                        if (this.$wire) {
-                            this.$wire.activeTab = 'editor';
-                        }
-                        return;
-                    }
-                }
-            });
-
-            canvas.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-                this.zoom = Math.max(0.3, Math.min(3.0, this.zoom * zoomFactor));
-            }, { passive: false });
-
-            const tick = () => {
-                if (!canvas || !ctx) return;
-
-                const kRepulse = 1200;
-                for (let i = 0; i < this.nodes.length; i++) {
-                    for (let j = i + 1; j < this.nodes.length; j++) {
-                        const n1 = this.nodes[i];
-                        const n2 = this.nodes[j];
-                        const dx = n2.x - n1.x;
-                        const dy = n2.y - n1.y;
-                        const dist = Math.hypot(dx, dy) || 1;
-                        if (dist < 300) {
-                            const force = kRepulse / (dist * dist);
-                            const fx = (dx / dist) * force;
-                            const fy = (dy / dist) * force;
-                            n1.vx -= fx;
-                            n1.vy -= fy;
-                            n2.vx += fx;
-                            n2.vy += fy;
-                        }
-                    }
-                }
-
-                const kSpring = 0.04;
-                const restLength = 80;
-                for (let edge of this.edges) {
-                    const n1 = this.nodes[edge.source];
-                    const n2 = this.nodes[edge.target];
-                    if (!n1 || !n2) continue;
-                    const dx = n2.x - n1.x;
-                    const dy = n2.y - n1.y;
-                    const dist = Math.hypot(dx, dy) || 1;
-                    const force = (dist - restLength) * kSpring;
-                    const fx = (dx / dist) * force;
-                    const fy = (dy / dist) * force;
-                    n1.vx -= fx;
-                    n1.vy -= fy;
-                    n2.vx += fx;
-                    n2.vy += fy;
-                }
-
-                this.nodes.forEach(node => {
-                    if (node === this.dragNode) return;
-                    node.vx -= node.x * 0.005;
-                    node.vy -= node.y * 0.005;
-                    node.vx *= 0.88;
-                    node.vy *= 0.88;
-                    node.x += node.vx;
-                    node.y += node.vy;
-                });
-
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
                 ctx.save();
                 ctx.translate(this.panX, this.panY);
                 ctx.scale(this.zoom, this.zoom);
 
-                for (let edge of this.edges) {
-                    const n1 = this.nodes[edge.source];
-                    const n2 = this.nodes[edge.target];
-                    if (!n1 || !n2) continue;
+                for (const edge of this.edges) {
+                    const source = this.nodes[edge.source];
+                    const target = this.nodes[edge.target];
+                    if (!source || !target) {
+                        continue;
+                    }
 
-                    const isConnectedToHover = this.hoveredNode && (this.hoveredNode === n1 || this.hoveredNode === n2);
+                    const isConnectedToHover = this.hoveredNode
+                        && (this.hoveredNode === source || this.hoveredNode === target);
 
                     ctx.beginPath();
-                    ctx.moveTo(n1.x, n1.y);
-                    ctx.lineTo(n2.x, n2.y);
-                    if (isConnectedToHover) {
-                        ctx.strokeStyle = 'rgba(16, 185, 129, 0.7)';
-                        ctx.lineWidth = 2;
-                    } else {
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-                        ctx.lineWidth = 1;
-                    }
+                    ctx.moveTo(source.x, source.y);
+                    ctx.lineTo(target.x, target.y);
+                    ctx.strokeStyle = isConnectedToHover
+                        ? 'rgba(16, 185, 129, 0.7)'
+                        : 'rgba(255, 255, 255, 0.08)';
+                    ctx.lineWidth = isConnectedToHover ? 2 : 1;
                     ctx.stroke();
                 }
 
-                for (let node of this.nodes) {
-                    const isMatch = !this.search || (node.name && node.name.toLowerCase().includes(this.search.toLowerCase()));
-                    const isHovered = (this.hoveredNode === node);
+                for (const node of this.nodes) {
+                    const isMatch = !this.search
+                        || (node.name && node.name.toLowerCase().includes(this.search.toLowerCase()));
+                    const isHovered = this.hoveredNode === node;
 
                     ctx.beginPath();
                     ctx.arc(node.x, node.y, node.radius * (isHovered ? 1.3 : 1), 0, Math.PI * 2);
@@ -256,47 +144,520 @@ export function createVaultGraph(data = {}) {
                 }
 
                 ctx.restore();
-                if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-                    this.animId = window.requestAnimationFrame(tick);
+            };
+
+            this.simulationStepHandler = () => {
+                const repulsion = 1200;
+                for (let firstIndex = 0; firstIndex < this.nodes.length; firstIndex++) {
+                    for (let secondIndex = firstIndex + 1; secondIndex < this.nodes.length; secondIndex++) {
+                        const firstNode = this.nodes[firstIndex];
+                        const secondNode = this.nodes[secondIndex];
+                        const deltaX = secondNode.x - firstNode.x;
+                        const deltaY = secondNode.y - firstNode.y;
+                        const distance = Math.hypot(deltaX, deltaY) || 1;
+
+                        if (distance >= 300) {
+                            continue;
+                        }
+
+                        const force = repulsion / (distance * distance);
+                        const forceX = (deltaX / distance) * force;
+                        const forceY = (deltaY / distance) * force;
+                        firstNode.vx -= forceX;
+                        firstNode.vy -= forceY;
+                        secondNode.vx += forceX;
+                        secondNode.vy += forceY;
+                    }
+                }
+
+                const springStrength = 0.04;
+                const restLength = 80;
+                for (const edge of this.edges) {
+                    const source = this.nodes[edge.source];
+                    const target = this.nodes[edge.target];
+                    if (!source || !target) {
+                        continue;
+                    }
+
+                    const deltaX = target.x - source.x;
+                    const deltaY = target.y - source.y;
+                    const distance = Math.hypot(deltaX, deltaY) || 1;
+                    const force = (distance - restLength) * springStrength;
+                    const forceX = (deltaX / distance) * force;
+                    const forceY = (deltaY / distance) * force;
+                    source.vx += forceX;
+                    source.vy += forceY;
+                    target.vx -= forceX;
+                    target.vy -= forceY;
+                }
+
+                let fastestNodeSpeed = 0;
+                for (const node of this.nodes) {
+                    if (node === this.dragNode) {
+                        node.vx = 0;
+                        node.vy = 0;
+                        continue;
+                    }
+
+                    node.vx -= node.x * 0.005;
+                    node.vy -= node.y * 0.005;
+                    node.vx *= 0.88;
+                    node.vy *= 0.88;
+                    node.x += node.vx;
+                    node.y += node.vy;
+                    fastestNodeSpeed = Math.max(fastestNodeSpeed, Math.hypot(node.vx, node.vy));
+                }
+
+                return fastestNodeSpeed;
+            };
+
+            this.frameHandler = () => {
+                this.animId = null;
+                if (this.destroyed) {
+                    return;
+                }
+
+                if (this.simulationActive && !this.prefersReducedMotion) {
+                    const fastestNodeSpeed = this.simulationStepHandler();
+                    this.simulationTicks++;
+                    this.stableFrameCount = fastestNodeSpeed < STABLE_SPEED_THRESHOLD
+                        ? this.stableFrameCount + 1
+                        : 0;
+
+                    if (this.simulationTicks >= this.simulationTickLimit
+                        || this.stableFrameCount >= STABLE_FRAME_LIMIT) {
+                        this.simulationActive = false;
+                    }
+                } else {
+                    this.simulationActive = false;
+                }
+
+                this.drawHandler();
+
+                if (this.simulationActive) {
+                    this.requestRenderHandler();
                 }
             };
 
-            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-                this.animId = window.requestAnimationFrame(tick);
+            this.requestRenderHandler = () => {
+                if (this.destroyed || this.animId !== null) {
+                    return;
+                }
+
+                if (requestFrame) {
+                    this.animId = requestFrame(this.frameHandler);
+                } else {
+                    this.simulationActive = false;
+                    this.drawHandler();
+                }
+            };
+
+            this.resizeHandler = () => {
+                if (this.destroyed) {
+                    return;
+                }
+
+                const rect = canvas.getBoundingClientRect();
+                const width = Math.max(1, Math.round(rect.width || canvas.clientWidth || 600));
+                const height = Math.max(1, Math.round(rect.height || canvas.clientHeight || 600));
+                const nextPixelRatio = Math.max(1, Math.min(browserWindow?.devicePixelRatio || 1, 3));
+                const previousWidth = this.viewportWidth;
+                const previousHeight = this.viewportHeight;
+
+                this.viewportWidth = width;
+                this.viewportHeight = height;
+                this.pixelRatio = nextPixelRatio;
+                canvas.width = Math.round(width * nextPixelRatio);
+                canvas.height = Math.round(height * nextPixelRatio);
+
+                if (!this.hasCenteredView) {
+                    this.panX = width / 2;
+                    this.panY = height / 2;
+                    this.hasCenteredView = true;
+                } else if (previousWidth > 0 && previousHeight > 0) {
+                    this.panX += (width - previousWidth) / 2;
+                    this.panY += (height - previousHeight) / 2;
+                }
+
+                this.requestRenderHandler();
+            };
+
+            this.resizeHandler();
+
+            const layoutRadius = Math.min(this.viewportWidth, this.viewportHeight) * 0.34;
+            const orderedNodes = this.nodes
+                .map((node, index) => ({ node, index }))
+                .sort((first, second) => {
+                    const firstKey = String(first.node.path ?? first.node.id ?? first.index);
+                    const secondKey = String(second.node.path ?? second.node.id ?? second.index);
+
+                    if (firstKey === secondKey) {
+                        return first.index - second.index;
+                    }
+
+                    return firstKey < secondKey ? -1 : 1;
+                });
+
+            orderedNodes.forEach(({ node }, index) => {
+                if (orderedNodes.length === 1) {
+                    node.x = 0;
+                    node.y = 0;
+                } else {
+                    const distance = layoutRadius * Math.sqrt((index + 1) / orderedNodes.length);
+                    const angle = index * GOLDEN_ANGLE;
+                    node.x = Math.cos(angle) * distance;
+                    node.y = Math.sin(angle) * distance;
+                }
+                node.vx = 0;
+                node.vy = 0;
+            });
+
+            const canvasPoint = (event) => {
+                const rect = canvas.getBoundingClientRect();
+
+                return {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top,
+                };
+            };
+
+            const nodeAtPoint = (x, y) => {
+                const worldX = (x - this.panX) / this.zoom;
+                const worldY = (y - this.panY) / this.zoom;
+
+                return this.nodes.find((node) => (
+                    Math.hypot(node.x - worldX, node.y - worldY) < node.radius + 6
+                )) ?? null;
+            };
+
+            const releasePointer = (event) => {
+                if (typeof canvas.hasPointerCapture === 'function'
+                    && canvas.hasPointerCapture(event.pointerId)
+                    && typeof canvas.releasePointerCapture === 'function') {
+                    try {
+                        canvas.releasePointerCapture(event.pointerId);
+                    } catch {
+                        // Pointer capture may already have been released by the browser.
+                    }
+                }
+            };
+
+            const finishPointerInteraction = (event, shouldSelect) => {
+                if (this.activePointerId !== event.pointerId) {
+                    return;
+                }
+
+                const selectedNode = shouldSelect && !this.hasDragged ? this.pointerDownNode : null;
+                const dragged = this.hasDragged;
+                releasePointer(event);
+                this.isDragging = false;
+                this.dragNode = null;
+                this.pointerDownNode = null;
+                this.activePointerId = null;
+                this.hasDragged = false;
+
+                if (dragged) {
+                    this.startSimulation(INTERACTION_SIMULATION_TICKS);
+                } else {
+                    this.requestRender();
+                }
+
+                if (selectedNode) {
+                    void this.selectNode(selectedNode);
+                }
+            };
+
+            this.eventHandlers = {
+                pointermove: (event) => {
+                    const point = canvasPoint(event);
+
+                    if (this.activePointerId === event.pointerId && this.isDragging) {
+                        const totalDeltaX = point.x - this.pointerStartX;
+                        const totalDeltaY = point.y - this.pointerStartY;
+                        this.hasDragged = this.hasDragged
+                            || Math.hypot(totalDeltaX, totalDeltaY) >= this.dragThreshold;
+
+                        if (this.hasDragged) {
+                            if (this.dragNode) {
+                                this.dragNode.x = this.dragOriginX + totalDeltaX / this.zoom;
+                                this.dragNode.y = this.dragOriginY + totalDeltaY / this.zoom;
+                                this.dragNode.vx = 0;
+                                this.dragNode.vy = 0;
+                            } else {
+                                this.panX = this.dragOriginX + totalDeltaX;
+                                this.panY = this.dragOriginY + totalDeltaY;
+                            }
+                        }
+                    } else {
+                        this.hoveredNode = nodeAtPoint(point.x, point.y);
+                    }
+
+                    this.tooltipX = point.x;
+                    this.tooltipY = point.y;
+                    this.lastMouseX = point.x;
+                    this.lastMouseY = point.y;
+                    this.requestRender();
+                },
+                pointerdown: (event) => {
+                    if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) {
+                        return;
+                    }
+
+                    const point = canvasPoint(event);
+                    const node = nodeAtPoint(point.x, point.y);
+                    this.activePointerId = event.pointerId;
+                    this.isDragging = true;
+                    this.hasDragged = false;
+                    this.pointerDownNode = node;
+                    this.dragNode = node;
+                    this.pointerStartX = point.x;
+                    this.pointerStartY = point.y;
+                    this.lastMouseX = point.x;
+                    this.lastMouseY = point.y;
+                    this.dragOriginX = node ? node.x : this.panX;
+                    this.dragOriginY = node ? node.y : this.panY;
+
+                    if (typeof canvas.setPointerCapture === 'function') {
+                        try {
+                            canvas.setPointerCapture(event.pointerId);
+                        } catch {
+                            // Some synthetic events and older browsers cannot capture pointers.
+                        }
+                    }
+                },
+                pointerup: (event) => finishPointerInteraction(event, true),
+                pointercancel: (event) => finishPointerInteraction(event, false),
+                lostpointercapture: (event) => {
+                    if (this.activePointerId !== event.pointerId) {
+                        return;
+                    }
+
+                    this.isDragging = false;
+                    this.dragNode = null;
+                    this.pointerDownNode = null;
+                    this.activePointerId = null;
+                    this.hasDragged = false;
+                    this.requestRender();
+                },
+                pointerleave: () => {
+                    if (this.activePointerId === null) {
+                        this.hoveredNode = null;
+                        this.requestRender();
+                    }
+                },
+                wheel: (event) => {
+                    event.preventDefault();
+                    const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
+                    this.zoom = Math.max(0.3, Math.min(3, this.zoom * zoomFactor));
+                    this.requestRender();
+                },
+            };
+
+            for (const [eventName, handler] of Object.entries(this.eventHandlers)) {
+                canvas.addEventListener(eventName, handler, eventName === 'wheel' ? { passive: false } : undefined);
+            }
+
+            this.canvasCleanupHandler = () => {
+                for (const [eventName, handler] of Object.entries(this.eventHandlers || {})) {
+                    canvas.removeEventListener(eventName, handler);
+                }
+
+                if (this.activePointerId !== null
+                    && typeof canvas.hasPointerCapture === 'function'
+                    && canvas.hasPointerCapture(this.activePointerId)
+                    && typeof canvas.releasePointerCapture === 'function') {
+                    try {
+                        canvas.releasePointerCapture(this.activePointerId);
+                    } catch {
+                        // Pointer capture may already have been released during teardown.
+                    }
+                }
+
+                if (canvas.style && this.previousTouchAction !== null) {
+                    canvas.style.touchAction = this.previousTouchAction;
+                }
+            };
+
+            if (typeof browserWindow?.addEventListener === 'function') {
+                browserWindow.addEventListener('resize', this.resizeHandler);
+            }
+
+            const ResizeObserverClass = typeof ResizeObserver !== 'undefined'
+                ? ResizeObserver
+                : browserWindow?.ResizeObserver;
+            if (ResizeObserverClass) {
+                this.resizeObserver = new ResizeObserverClass(this.resizeHandler);
+                this.resizeObserver.observe(canvas);
+            }
+
+            if (this.motionQuery) {
+                this.motionChangeHandler = (event) => {
+                    this.prefersReducedMotion = event.matches;
+                    if (this.prefersReducedMotion) {
+                        this.simulationActive = false;
+                        if (this.animId !== null && cancelFrame) {
+                            cancelFrame(this.animId);
+                            this.animId = null;
+                        }
+                        this.requestRender();
+                    } else {
+                        this.startSimulation(DEFAULT_SIMULATION_TICKS);
+                    }
+                };
+
+                if (typeof this.motionQuery.addEventListener === 'function') {
+                    this.motionQuery.addEventListener('change', this.motionChangeHandler);
+                } else if (typeof this.motionQuery.addListener === 'function') {
+                    this.motionQuery.addListener(this.motionChangeHandler);
+                }
+            }
+
+            if (typeof this.$watch === 'function') {
+                const cleanup = this.$watch('search', () => this.requestRender());
+                if (typeof cleanup === 'function') {
+                    this.searchWatcherCleanup = cleanup;
+                }
+            }
+
+            if (this.prefersReducedMotion || this.nodes.length < 2) {
+                this.requestRender();
+            } else {
+                this.startSimulation(DEFAULT_SIMULATION_TICKS);
             }
         },
 
         destroy() {
-            if (this.animId && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
-                window.cancelAnimationFrame(this.animId);
-                this.animId = null;
+            this.destroyed = true;
+            this.simulationActive = false;
+
+            const browserWindow = typeof window !== 'undefined' ? window : null;
+            if (this.animId !== null && browserWindow?.cancelAnimationFrame) {
+                browserWindow.cancelAnimationFrame(this.animId);
+            }
+            this.animId = null;
+
+            if (this.resizeHandler && browserWindow?.removeEventListener) {
+                browserWindow.removeEventListener('resize', this.resizeHandler);
             }
 
-            if (this.resizeHandler && typeof window !== 'undefined') {
-                window.removeEventListener('resize', this.resizeHandler);
-                this.resizeHandler = null;
+            if (this.resizeObserver) {
+                this.resizeObserver.disconnect();
+                this.resizeObserver = null;
+            }
+
+            if (this.motionQuery && this.motionChangeHandler) {
+                if (typeof this.motionQuery.removeEventListener === 'function') {
+                    this.motionQuery.removeEventListener('change', this.motionChangeHandler);
+                } else if (typeof this.motionQuery.removeListener === 'function') {
+                    this.motionQuery.removeListener(this.motionChangeHandler);
+                }
+            }
+
+            this.canvasCleanupHandler?.();
+
+            if (typeof this.searchWatcherCleanup === 'function') {
+                this.searchWatcherCleanup();
+            }
+
+            this.resizeHandler = null;
+            this.eventHandlers = null;
+            this.canvasCleanupHandler = null;
+            this.motionQuery = null;
+            this.motionChangeHandler = null;
+            this.searchWatcherCleanup = null;
+            this.requestRenderHandler = null;
+            this.drawHandler = null;
+            this.frameHandler = null;
+            this.simulationStepHandler = null;
+            this.isDragging = false;
+            this.dragNode = null;
+            this.pointerDownNode = null;
+            this.activePointerId = null;
+            this.hasDragged = false;
+        },
+
+        requestRender() {
+            this.requestRenderHandler?.();
+        },
+
+        startSimulation(tickLimit = DEFAULT_SIMULATION_TICKS) {
+            this.simulationTicks = 0;
+            this.simulationTickLimit = tickLimit;
+            this.stableFrameCount = 0;
+            this.simulationActive = !this.prefersReducedMotion && this.nodes.length > 1;
+            this.requestRender();
+        },
+
+        async selectNode(nodeOrId) {
+            const node = typeof nodeOrId === 'object'
+                ? nodeOrId
+                : this.nodes.find((candidate) => String(candidate.id) === String(nodeOrId));
+
+            if (!node) {
+                return false;
+            }
+
+            try {
+                if (typeof this.$wire?.openFileInEditor === 'function') {
+                    await this.$wire.openFileInEditor(node.id);
+                } else if (typeof this.$wire?.selectFile === 'function') {
+                    await this.$wire.selectFile(node.id);
+                    this.$wire.activeTab = 'editor';
+                } else {
+                    return false;
+                }
+
+                const browserWindow = typeof window !== 'undefined' ? window : null;
+                const pageDocument = typeof document !== 'undefined' ? document : null;
+                browserWindow?.requestAnimationFrame?.(() => {
+                    pageDocument?.querySelector('[data-vault-editor]')?.scrollIntoView({
+                        behavior: browserWindow.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                        block: 'start',
+                    });
+                });
+
+                return true;
+            } catch {
+                return false;
             }
         },
 
+        async handleNodeKeydown(event, nodeOrId) {
+            if (!['Enter', ' '].includes(event.key)) {
+                return false;
+            }
+
+            event.preventDefault();
+
+            return this.selectNode(nodeOrId);
+        },
+
         zoomIn() {
-            this.zoom = Math.min(3.0, this.zoom * 1.2);
+            this.zoom = Math.min(3, this.zoom * 1.2);
+            this.requestRender();
         },
 
         zoomOut() {
             this.zoom = Math.max(0.3, this.zoom * 0.8);
+            this.requestRender();
         },
 
         resetView() {
             const canvas = this.$refs?.graphCanvas;
             this.zoom = 1;
             if (canvas) {
-                this.panX = canvas.width / 2;
-                this.panY = canvas.height / 2;
+                const width = this.viewportWidth || canvas.width / this.pixelRatio;
+                const height = this.viewportHeight || canvas.height / this.pixelRatio;
+                this.panX = width / 2;
+                this.panY = height / 2;
+                this.hasCenteredView = true;
             } else {
                 this.panX = 0;
                 this.panY = 0;
+                this.hasCenteredView = false;
             }
             this.search = '';
+            this.requestRender();
         },
     };
 }

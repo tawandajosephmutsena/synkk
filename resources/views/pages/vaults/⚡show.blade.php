@@ -22,7 +22,7 @@ use Livewire\Component;
 new #[Title('Vault Details')] class extends Component {
     public Vault $vault;
 
-    #[Url]
+    #[Url(as: 'tab')]
     public string $activeTab = 'editor';
 
     #[Url]
@@ -37,6 +37,8 @@ new #[Title('Vault Details')] class extends Component {
     public string $editorContent = '';
     public string $editorTitle = '';
     public string $editorViewMode = 'split'; // 'split', 'source', 'preview'
+    public ?int $editorBaseVersion = null;
+    public bool $editorIsDirty = false;
 
     // New Note Modal State
     public string $newNotePath = '';
@@ -105,11 +107,11 @@ new #[Title('Vault Details')] class extends Component {
         }
     }
 
-    public function selectFile(int $fileId): void
+    public function selectFile(int $fileId): bool
     {
         $file = $this->vault->files()->where('is_deleted', false)->find($fileId);
         if (! $file) {
-            return;
+            return false;
         }
 
         $user = Auth::user();
@@ -117,7 +119,7 @@ new #[Title('Vault Details')] class extends Component {
         if ($permission === 'hidden') {
             Flux::toast(variant: 'danger', text: __('You do not have permission to view this note.'));
 
-            return;
+            return false;
         }
 
         $this->activeFileId = $file->id;
@@ -126,16 +128,31 @@ new #[Title('Vault Details')] class extends Component {
         $this->path = $file->path;
         $this->editorContent = $file->getContents() ?? '';
         $this->editorTitle = pathinfo($file->path, PATHINFO_FILENAME);
+        $this->editorBaseVersion = $file->version;
+        $this->editorIsDirty = false;
+
+        return true;
+    }
+
+    public function openFileInEditor(int $fileId): void
+    {
+        if ($this->selectFile($fileId)) {
+            $this->activeTab = 'editor';
+        }
     }
 
     public function saveFile(SyncUploadAction $uploader): void
     {
-        if (! $this->activeFile) {
+        if (! $this->activeFileId) {
             return;
         }
 
+        $activeFile = $this->vault->files()
+            ->where('is_deleted', false)
+            ->findOrFail($this->activeFileId);
+
         $user = Auth::user();
-        $permission = $this->vault->permissionForPath($user, $this->activeFile->path);
+        $permission = $this->vault->permissionForPath($user, $activeFile->path);
 
         if ($permission !== 'read_write') {
             Flux::toast(variant: 'danger', text: __('You have read-only permissions for this note. Changes cannot be saved.'));
@@ -143,18 +160,41 @@ new #[Title('Vault Details')] class extends Component {
             return;
         }
 
-        $uploader->execute(
+        $result = $uploader->execute(
             vault: $this->vault,
             user: $user,
             deviceName: 'Web Editor',
-            path: $this->activeFile->path,
+            path: $activeFile->path,
             contents: $this->editorContent,
-            baseVersion: $this->activeFile->version,
+            baseVersion: $this->editorBaseVersion ?? $activeFile->version,
         );
 
-        $this->activeFile = $this->vault->files()->find($this->activeFile->id);
+        if ($result['status'] === 'conflict') {
+            $conflictFile = $this->vault->files()
+                ->where('is_deleted', false)
+                ->where('path', $result['path'])
+                ->first();
 
-        Flux::toast(variant: 'success', text: __('Note saved. Revision v:version snapshot created.', ['version' => $this->activeFile->version]));
+            if ($conflictFile) {
+                $this->selectFile($conflictFile->id);
+            }
+
+            Flux::toast(variant: 'warning', text: __('A newer revision already exists. Your edit was preserved as :path.', ['path' => $result['path']]));
+
+            return;
+        }
+
+        $this->activeFile = $this->vault->files()->findOrFail($activeFile->id);
+        $this->editorBaseVersion = $this->activeFile->version;
+        $this->editorIsDirty = false;
+
+        if ($result['status'] === 'identical') {
+            Flux::toast(variant: 'info', text: __('No changes to save. This note is already current.'));
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('Note saved as revision v:version.', ['version' => $this->activeFile->version]));
     }
 
     public function createNewNote(SyncUploadAction $uploader): void
@@ -163,9 +203,29 @@ new #[Title('Vault Details')] class extends Component {
             'newNotePath' => ['required', 'string', 'max:500'],
         ]);
 
-        $cleanPath = trim($this->newNotePath, '/');
+        $cleanPath = str_replace('\\', '/', trim($this->newNotePath, '/'));
         if (! str_ends_with(strtolower($cleanPath), '.md')) {
             $cleanPath .= '.md';
+        }
+
+        $pathSegments = explode('/', $cleanPath);
+        $hasUnsafeSegment = collect($pathSegments)->contains(fn (string $segment): bool => $segment === '' || $segment === '.' || $segment === '..');
+
+        if ($hasUnsafeSegment || preg_match('/[\x00-\x1F\x7F]/u', $cleanPath) === 1) {
+            $this->addError('newNotePath', __('Use a relative vault path without empty, dot, or parent-directory segments.'));
+
+            return;
+        }
+
+        $noteAlreadyExists = $this->vault->files()
+            ->where('is_deleted', false)
+            ->whereRaw('LOWER(path) = ?', [Str::lower($cleanPath)])
+            ->exists();
+
+        if ($noteAlreadyExists) {
+            $this->addError('newNotePath', __('A note already exists at this path. Open it from the note list instead.'));
+
+            return;
         }
 
         $user = Auth::user();
@@ -191,7 +251,8 @@ new #[Title('Vault Details')] class extends Component {
 
         $file = $this->vault->files()->where('path', $cleanPath)->first();
         $this->reset('newNotePath');
-        $this->dispatch('close-modal', name: 'new-note-modal');
+        $this->resetValidation('newNotePath');
+        $this->dispatch('modal-close', name: 'new-note-modal');
 
         if ($file) {
             $this->selectFile($file->id);
@@ -203,22 +264,38 @@ new #[Title('Vault Details')] class extends Component {
 
     public function showFileHistory(int $fileId): void
     {
+        $file = $this->vault->files()
+            ->where('is_deleted', false)
+            ->with(['versions.creator', 'lastModifier'])
+            ->find($fileId);
+
+        abort_unless($file && $this->vault->permissionForPath(Auth::user(), $file->path) !== 'hidden', 404);
+
         $this->selectedFileId = $fileId;
-        $this->selectedFile = VaultFile::with(['versions.creator', 'lastModifier'])->find($fileId);
-        $this->dispatch('open-modal', name: 'file-history');
+        $this->selectedFile = $file;
+        $this->dispatch('modal-show', name: 'file-history');
     }
 
     public function restoreVersion(int $versionId, RestoreFileVersionAction $restoreAction): void
     {
-        $versionRecord = VaultFileVersion::where('vault_id', $this->vault->id)->findOrFail($versionId);
+        $versionRecord = VaultFileVersion::query()
+            ->where('vault_id', $this->vault->id)
+            ->with('file')
+            ->findOrFail($versionId);
+
+        abort_unless($this->vault->permissionForPath(Auth::user(), $versionRecord->file->path) === 'read_write', 403);
 
         $restoreAction->execute($versionRecord, Auth::user());
 
-        $this->selectedFile = VaultFile::with(['versions.creator', 'lastModifier'])->find($this->selectedFileId);
+        $this->selectedFile = $this->selectedFileId
+            ? $this->vault->files()->with(['versions.creator', 'lastModifier'])->find($this->selectedFileId)
+            : null;
 
         if ($this->activeFileId === $this->selectedFileId) {
             $this->activeFile = $this->selectedFile;
             $this->editorContent = $this->selectedFile->getContents() ?? '';
+            $this->editorBaseVersion = $this->selectedFile->version;
+            $this->editorIsDirty = false;
         }
 
         Flux::toast(variant: 'success', text: __('Version v:version restored as current active note.', ['version' => $versionRecord->version]));
@@ -279,7 +356,7 @@ new #[Title('Vault Details')] class extends Component {
         $this->reset('rulePath', 'ruleUserId');
         $this->rulePermission = 'read_only';
         $this->ruleIsFolder = true;
-        $this->dispatch('close-modal', name: 'add-path-permission');
+        $this->dispatch('modal-close', name: 'add-path-permission');
     }
 
     public function deletePermission(int $permissionId): void
@@ -407,7 +484,8 @@ new #[Title('Vault Details')] class extends Component {
 
         $nodes = [];
         $edges = [];
-        $nodeMap = [];
+        $exactPathMap = [];
+        $basenameMap = [];
 
         foreach ($markdownFiles as $file) {
             $basename = pathinfo($file->path, PATHINFO_FILENAME);
@@ -421,9 +499,13 @@ new #[Title('Vault Details')] class extends Component {
                 'linksCount' => 0,
             ];
             $nodeIndex = count($nodes) - 1;
-            $nodeMap[strtolower($file->path)] = $nodeIndex;
-            $nodeMap[strtolower($basename)] = $nodeIndex;
-            $nodeMap[strtolower($basename.'.md')] = $nodeIndex;
+            $normalizedPath = $this->normalizeGraphPath($file->path);
+            $extensionlessPath = preg_replace('/\.md$/i', '', $normalizedPath) ?? $normalizedPath;
+            $normalizedBasename = Str::lower($basename);
+
+            $exactPathMap[$normalizedPath] = $nodeIndex;
+            $exactPathMap[$extensionlessPath] = $nodeIndex;
+            $basenameMap[$normalizedBasename][] = $nodeIndex;
         }
 
         $createdEdges = [];
@@ -437,40 +519,33 @@ new #[Title('Vault Details')] class extends Component {
             $targets = [];
             if (! empty($wikiMatches[1])) {
                 foreach ($wikiMatches[1] as $rawTarget) {
-                    $cleanTarget = trim(explode('|', $rawTarget)[0]);
-                    $cleanTarget = trim(explode('#', $cleanTarget)[0]);
-                    if (! empty($cleanTarget)) {
-                        $targets[] = strtolower($cleanTarget);
-                    }
+                    $targets[] = $rawTarget;
                 }
             }
 
-            preg_match_all('/\[.*?\]\((.*?\.md)\)/i', $content, $mdMatches);
+            preg_match_all('/\[[^\]]*\]\(([^)]+\.md(?:#[^)]*)?)\)/i', $content, $mdMatches);
             if (! empty($mdMatches[1])) {
                 foreach ($mdMatches[1] as $rawMdTarget) {
-                    $cleanMd = trim(urldecode($rawMdTarget));
-                    $cleanMd = pathinfo($cleanMd, PATHINFO_FILENAME);
-                    if (! empty($cleanMd)) {
-                        $targets[] = strtolower($cleanMd);
-                    }
+                    $targets[] = $rawMdTarget;
                 }
             }
 
-            foreach ($targets as $targetName) {
-                if (isset($nodeMap[$targetName])) {
-                    $targetIndex = $nodeMap[$targetName];
-                    if ($targetIndex !== $sourceIndex) {
-                        $edgeKey = min($sourceIndex, $targetIndex).'-'.max($sourceIndex, $targetIndex);
-                        if (! isset($createdEdges[$edgeKey])) {
-                            $createdEdges[$edgeKey] = true;
-                            $edges[] = [
-                                'source' => $sourceIndex,
-                                'target' => $targetIndex,
-                            ];
-                            $nodes[$sourceIndex]['linksCount']++;
-                            $nodes[$targetIndex]['linksCount']++;
-                        }
-                    }
+            foreach ($targets as $rawTarget) {
+                $targetIndex = $this->resolveGraphTarget($rawTarget, $file->path, $exactPathMap, $basenameMap);
+
+                if ($targetIndex === null || $targetIndex === $sourceIndex) {
+                    continue;
+                }
+
+                $edgeKey = $sourceIndex.'-'.$targetIndex;
+                if (! isset($createdEdges[$edgeKey])) {
+                    $createdEdges[$edgeKey] = true;
+                    $edges[] = [
+                        'source' => $sourceIndex,
+                        'target' => $targetIndex,
+                    ];
+                    $nodes[$sourceIndex]['linksCount']++;
+                    $nodes[$targetIndex]['linksCount']++;
                 }
             }
         }
@@ -479,6 +554,75 @@ new #[Title('Vault Details')] class extends Component {
             'nodes' => $nodes,
             'edges' => $edges,
         ];
+    }
+
+    protected function normalizeGraphPath(string $path): string
+    {
+        $segments = [];
+
+        foreach (explode('/', str_replace('\\', '/', urldecode(trim($path)))) as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+
+            if ($segment === '..') {
+                array_pop($segments);
+
+                continue;
+            }
+
+            $segments[] = $segment;
+        }
+
+        return Str::lower(implode('/', $segments));
+    }
+
+    /**
+     * @param  array<string, int>  $exactPathMap
+     * @param  array<string, list<int>>  $basenameMap
+     */
+    protected function resolveGraphTarget(string $rawTarget, string $sourcePath, array $exactPathMap, array $basenameMap): ?int
+    {
+        $target = trim(explode('|', $rawTarget, 2)[0]);
+        $target = trim(explode('#', $target, 2)[0]);
+        $target = trim(explode('?', $target, 2)[0]);
+
+        if ($target === '') {
+            return null;
+        }
+
+        $sourceDirectory = pathinfo(str_replace('\\', '/', $sourcePath), PATHINFO_DIRNAME);
+        $targetIsRelative = str_starts_with($target, './') || str_starts_with($target, '../');
+        $candidates = [];
+
+        if ($sourceDirectory !== '.' && ($targetIsRelative || ! str_contains($target, '/'))) {
+            $candidates[] = $this->normalizeGraphPath($sourceDirectory.'/'.$target);
+        }
+
+        $candidates[] = $this->normalizeGraphPath($target);
+
+        foreach (array_unique($candidates) as $candidate) {
+            $extensionlessCandidate = preg_replace('/\.md$/i', '', $candidate) ?? $candidate;
+
+            if (isset($exactPathMap[$candidate])) {
+                return $exactPathMap[$candidate];
+            }
+
+            if (isset($exactPathMap[$extensionlessCandidate])) {
+                return $exactPathMap[$extensionlessCandidate];
+            }
+        }
+
+        if (! str_contains($target, '/')) {
+            $basename = Str::lower(pathinfo($target, PATHINFO_FILENAME));
+            $matches = $basenameMap[$basename] ?? [];
+
+            if (count($matches) === 1) {
+                return $matches[0];
+            }
+        }
+
+        return null;
     }
 
     #[Computed]
@@ -684,147 +828,18 @@ new #[Title('Vault Details')] class extends Component {
     <!-- TAB 1: MARKDOWN EDITOR (Strictly matching user's Pandocs inspiration image) -->
     @if ($activeTab === 'editor')
         <div
-            x-data="{
-                content: @entangle('editorContent').live,
-                viewMode: @entangle('editorViewMode'),
-                sidebarOpen: true,
-                lineCount: 1,
-                wordCount: 0,
-                charCount: 0,
-                headings: [],
-                lineTypes: [],
-                isDirty: false,
-                initialContent: '',
-                activeHeading: '',
-                copiedShareLink: false,
-                quickInsertOpen: true,
-
-                init() {
-                    this.initialContent = this.content || '';
-                    this.updateMetrics();
-                    this.$watch('content', (val) => {
-                        this.updateMetrics();
-                        this.isDirty = (val !== this.initialContent);
-                    });
-                },
-
-                updateMetrics() {
-                    const text = this.content || '';
-                    const lines = text.split('\n');
-                    this.lineCount = Math.max(1, lines.length);
-                    this.charCount = text.length;
-                    const words = text.trim().split(/\s+/).filter(Boolean);
-                    this.wordCount = words.length;
-
-                    // Compute syntax categories for realistic Pandocs minimap strip
-                    this.lineTypes = lines.slice(0, 42).map(line => {
-                        const t = line.trim();
-                        if (t.startsWith('# ')) return 'h1';
-                        if (t.startsWith('## ')) return 'h2';
-                        if (t.startsWith('### ')) return 'h3';
-                        if (t.startsWith('```')) return 'code';
-                        if (t.startsWith('> [!TIP]') || t.startsWith('> Tip:')) return 'tip';
-                        if (t.startsWith('- ') || t.startsWith('1. ') || t.startsWith('* ')) return 'list';
-                        if (t.startsWith('> ')) return 'quote';
-                        if (t === '---' || t === '***') return 'hr';
-                        if (t.length === 0) return 'empty';
-                        return 'text';
-                    });
-
-                    this.parseHeadings();
-                },
-
-                parseHeadings() {
-                    const text = this.content || '';
-                    const lines = text.split('\n');
-                    const list = [];
-                    lines.forEach((line, idx) => {
-                        const match = line.match(/^(#{1,3})\s+(.+)$/);
-                        if (match) {
-                            list.push({
-                                level: match[1].length,
-                                title: match[2].trim(),
-                                line: idx + 1
-                            });
-                        }
-                    });
-                    this.headings = list;
-                    if (list.length > 0 && !this.activeHeading) {
-                        this.activeHeading = list[0].title;
-                    }
-                },
-
-                insertFormat(prefix, suffix = '', defaultText = '') {
-                    const textarea = this.$refs.editorTextarea;
-                    if (!textarea) return;
-                    const start = textarea.selectionStart;
-                    const end = textarea.selectionEnd;
-                    const selected = textarea.value.substring(start, end) || defaultText;
-                    const replacement = prefix + selected + suffix;
-                    textarea.setRangeText(replacement, start, end, 'select');
-                    this.content = textarea.value;
-                    this.updateMetrics();
-                    textarea.focus();
-                },
-
-                insertLinePrefix(prefix) {
-                    const textarea = this.$refs.editorTextarea;
-                    if (!textarea) return;
-                    const start = textarea.selectionStart;
-                    const text = textarea.value;
-                    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-                    textarea.setRangeText(prefix, lineStart, lineStart, 'end');
-                    this.content = textarea.value;
-                    this.updateMetrics();
-                    textarea.focus();
-                },
-
-                insertTable() {
-                    const tableTemplate = '\n| Header 1 | Header 2 | Header 3 |\n| --- | --- | --- |\n| Cell 1 | Cell 2 | Cell 3 |\n| Cell 4 | Cell 5 | Cell 6 |\n\n';
-                    this.insertFormat('', '', tableTemplate);
-                },
-
-                scrollToHeading(heading) {
-                    this.activeHeading = heading.title;
-                    const preview = this.$refs.previewPane;
-                    if (!preview) return;
-                    const elements = preview.querySelectorAll('h1, h2, h3');
-                    for (let el of elements) {
-                        if (el.textContent.includes(heading.title)) {
-                            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            break;
-                        }
-                    }
-                },
-
-                handleEditorKeydown(e) {
-                    if (e.key === 'Tab') {
-                        e.preventDefault();
-                        this.insertFormat('  ');
-                        return;
-                    }
-                    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
-                        e.preventDefault();
-                        this.$wire.saveFile();
-                        return;
-                    }
-                    const pairs = { '(': ')', '[': ']', '{': '}', '`': '`', '"': '"', '\'': '\'' };
-                    if (pairs[e.key]) {
-                        const textarea = this.$refs.editorTextarea;
-                        if (!textarea) return;
-                        const start = textarea.selectionStart;
-                        const end = textarea.selectionEnd;
-                        if (start !== end) {
-                            e.preventDefault();
-                            const selected = textarea.value.substring(start, end);
-                            textarea.setRangeText(e.key + selected + pairs[e.key], start, end, 'select');
-                            this.content = textarea.value;
-                            this.updateMetrics();
-                        }
-                    }
-                }
-            }"
-            class="flex flex-col rounded-3xl border border-zinc-800 bg-[#12131A] text-zinc-100 shadow-2xl overflow-hidden min-h-[760px] relative"
+            x-data="markdownEditor({
+                content: {{ Js::from($editorContent) }},
+                activeFileId: {{ Js::from($this->activeFileId) }},
+                viewMode: {{ Js::from($editorViewMode) }},
+                canEdit: {{ Js::from($this->canEditActiveFile) }},
+                initiallyDirty: {{ Js::from($editorIsDirty) }},
+                unsavedPrompt: {{ Js::from(__('Discard unsaved changes to this note?')) }}
+            })"
+            wire:key="vault-editor-{{ $this->activeFileId ?? 'empty' }}"
+            data-vault-editor
+            @keydown.window="handleWindowKeydown($event)"
+            class="relative flex min-h-[680px] flex-col overflow-hidden rounded-[1.75rem] border border-[#303543] bg-[#12151d] text-zinc-100 shadow-2xl sm:min-h-[760px]"
         >
             <!-- TOP HEADER (Pandocs style: Dropdown Title, Date, Collaborators, Save/Submit Button) -->
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#252836] bg-[#181A22] px-5 py-3">
@@ -841,9 +856,12 @@ new #[Title('Vault Details')] class extends Component {
                         <flux:menu class="min-w-64 max-h-72 overflow-y-auto">
                             <flux:menu.heading class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{{ __('Vault Notes') }}</flux:menu.heading>
                             @foreach ($this->accessibleMarkdownFiles as $f)
-                                <flux:menu.item wire:click="selectFile({{ $f->id }})" class="cursor-pointer py-1.5">
-                                    <div class="flex w-full items-center justify-between gap-3">
-                                        <span class="truncate text-xs {{ $this->activeFileId === $f->id ? 'font-bold text-emerald-400' : 'text-zinc-300' }}">{{ pathinfo($f->path, PATHINFO_FILENAME) }}</span>
+                                <flux:menu.item @click="openFile({{ $f->id }})" class="cursor-pointer py-1.5">
+                                    <div class="flex w-full items-center justify-between gap-3 text-left">
+                                        <span class="min-w-0">
+                                            <span class="block truncate text-xs {{ $this->activeFileId === $f->id ? 'font-bold text-sky-300' : 'text-zinc-200' }}">{{ pathinfo($f->path, PATHINFO_FILENAME) }}</span>
+                                            <span class="block truncate font-mono text-[9px] text-zinc-500">{{ $f->path }}</span>
+                                        </span>
                                         <span class="font-mono text-[10px] text-zinc-500">v{{ $f->version }}</span>
                                     </div>
                                 </flux:menu.item>
@@ -879,23 +897,19 @@ new #[Title('Vault Details')] class extends Component {
                         <!-- Share Button -->
                         <button
                             type="button"
-                            @click="
-                                navigator.clipboard.writeText(window.location.href);
-                                copiedShareLink = true;
-                                setTimeout(() => copiedShareLink = false, 2500);
-                            "
+                            @click="copyShareLink()"
                             class="hidden md:flex items-center gap-1.5 rounded-full border border-zinc-700/80 bg-zinc-800/80 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer shadow-xs"
                             title="{{ __('Copy share link') }}"
                         >
                             <flux:icon icon="share" class="size-3.5" />
-                            <span x-text="copiedShareLink ? '{{ __('Copied!') }}' : '{{ __('Share') }}'"></span>
+                            <span x-text="shareStatus === 'copied' ? '{{ __('Copied!') }}' : (shareStatus === 'failed' ? '{{ __('Copy failed') }}' : '{{ __('Share') }}')"></span>
                         </button>
 
                         <!-- Suggesting Changes / Permission Pill -->
                         @if ($this->canEditActiveFile)
                             <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/70 border border-emerald-600/40 px-2.5 py-1 text-[10px] font-bold text-emerald-400">
                                 <flux:icon icon="pencil-square" class="size-3 text-emerald-400" />
-                                <span>{{ __('Suggesting Changes') }}</span>
+                                <span>{{ __('Editing enabled') }}</span>
                             </span>
                         @else
                             <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-950/70 border border-amber-600/40 px-2.5 py-1 text-[10px] font-bold text-amber-400">
@@ -917,20 +931,21 @@ new #[Title('Vault Details')] class extends Component {
                         <!-- Primary Save Button -->
                         <button
                             type="button"
-                            wire:click="saveFile"
-                            @if (! $this->canEditActiveFile) disabled @endif
-                            class="{{ $this->canEditActiveFile ? 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-xs active:scale-98 cursor-pointer' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700' }} flex items-center gap-2 rounded-full px-4 sm:px-5 py-1.5 text-xs font-bold transition-all shadow-md"
+                            @click="saveEditor()"
+                            :disabled="!canEdit || !isDirty || isSaving"
+                            class="flex items-center gap-2 rounded-full bg-sky-500 px-4 py-1.5 text-xs font-bold text-slate-950 shadow-md transition-all hover:bg-sky-400 active:scale-98 disabled:cursor-not-allowed disabled:border disabled:border-zinc-700 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none sm:px-5"
                             title="{{ $this->canEditActiveFile ? __('Save Note (Cmd+S / Ctrl+S)') : __('You have read-only access to this file') }}"
                         >
                             <flux:icon icon="arrow-up-tray" class="size-3.5" />
-                            <span>{{ __('Save Changes') }}</span>
-                            <span x-show="isDirty" class="size-2 rounded-full bg-amber-400 animate-ping"></span>
+                            <span x-show="!isSaving">{{ __('Save changes') }}</span>
+                            <span x-show="isSaving" x-cloak>{{ __('Saving…') }}</span>
+                            <span x-show="isDirty && !isSaving" class="size-2 rounded-full bg-amber-300"></span>
                         </button>
 
                         <!-- Close Button -->
                         <button
                             type="button"
-                            wire:click="$set('activeTab', 'files')"
+                            @click="closeEditor()"
                             class="size-7 flex items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors cursor-pointer"
                             title="{{ __('Close Editor') }}"
                         >
@@ -941,20 +956,13 @@ new #[Title('Vault Details')] class extends Component {
             </div>
 
             <!-- FORMATTING TOOLBAR (Matching Pandocs) -->
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#252836] bg-[#161821] px-4 py-2">
-                <div class="flex flex-wrap items-center gap-1 text-zinc-300">
+            <div class="flex flex-col gap-2 border-b border-[#252836] bg-[#161821] px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+                <div class="overflow-x-auto pb-1 sm:pb-0">
+                <fieldset :disabled="!canEdit" class="flex min-w-max items-center gap-1 text-zinc-300 disabled:opacity-45">
                     <!-- Text Formatting -->
                     <button type="button" @click="insertFormat('**', '**', 'bold text')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 font-black text-xs" title="Bold (Ctrl+B)">B</button>
                     <button type="button" @click="insertFormat('*', '*', 'italic text')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 italic font-serif text-xs" title="Italic (Ctrl+I)">I</button>
-                    <button type="button" @click="insertFormat('<u>', '</u>', 'underlined text')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 underline text-xs" title="Underline">U</button>
                     <button type="button" @click="insertFormat('~~', '~~', 'strikethrough text')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 line-through text-xs" title="Strikethrough">S</button>
-
-                    <span class="h-4 w-px bg-zinc-700 mx-1"></span>
-
-                    <!-- Alignment -->
-                    <button type="button" @click="insertLinePrefix('')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Left Align">≡</button>
-                    <button type="button" @click="insertFormat('<center>', '</center>')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Center Align">⩸</button>
-                    <button type="button" @click="insertFormat('<div align=\'right\'>', '</div>')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Right Align">⩹</button>
 
                     <span class="h-4 w-px bg-zinc-700 mx-1"></span>
 
@@ -984,8 +992,9 @@ new #[Title('Vault Details')] class extends Component {
                     <button type="button" @click="insertFormat('`', '`', 'code')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs font-mono text-cyan-400" title="Inline Code">&lt;/&gt;</button>
                     <button type="button" @click="insertFormat('```javascript\n', '\n```', '// your code here')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs font-mono" title="Code Block">{ }</button>
                     <button type="button" @click="insertTable()" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Insert Table">⊞</button>
-                    <button type="button" @click="insertLinePrefix('> Tip: ')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs text-purple-400" title="Tip Callout Box">💡</button>
+                    <button type="button" @click="insertFormat('> [!TIP]\n> ', '', 'Add a useful tip')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs text-sky-300" title="Tip Callout Box">💡</button>
                     <button type="button" @click="insertFormat('\n---\n')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Horizontal Rule">—</button>
+                </fieldset>
                 </div>
 
                 <!-- View Mode Switcher -->
@@ -1067,6 +1076,7 @@ new #[Title('Vault Details')] class extends Component {
                         <div class="relative">
                             <flux:icon icon="magnifying-glass" class="size-3.5 text-zinc-500 absolute left-2.5 top-2.5" />
                             <input
+                                x-ref="editorSearch"
                                 wire:model.live.debounce.250ms="editorSearch"
                                 type="text"
                                 placeholder="{{ __('Search...') }}"
@@ -1109,7 +1119,7 @@ new #[Title('Vault Details')] class extends Component {
                                 @forelse ($this->filteredEditorNotes as $f)
                                     <button
                                         type="button"
-                                        wire:click="selectFile({{ $f->id }})"
+                                        @click="openFile({{ $f->id }})"
                                         class="{{ $this->activeFileId === $f->id ? 'bg-[#0D3B29]/40 text-emerald-300 font-bold border-emerald-600/40' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-white border-transparent' }} flex items-center justify-between w-full rounded-lg px-2.5 py-1.5 text-xs text-left border transition-all cursor-pointer"
                                     >
                                         <div class="flex items-center gap-2 truncate">
@@ -1155,7 +1165,7 @@ new #[Title('Vault Details')] class extends Component {
                     <!-- LEFT PANE: SOURCE CODE EDITOR -->
                     <div
                         x-show="viewMode === 'split' || viewMode === 'source'"
-                        :class="viewMode === 'split' ? 'w-1/2' : 'w-full'"
+                        :class="viewMode === 'split' ? 'w-full lg:w-1/2' : 'w-full'"
                         class="flex flex-1 border-r border-[#252836] bg-[#0E1015] overflow-hidden"
                     >
                         <!-- Code Minimap Strip on Far Left (Pandocs design with authentic syntax-colored bars) -->
@@ -1202,7 +1212,7 @@ new #[Title('Vault Details')] class extends Component {
 
                     <!-- FLOATING QUICK-INSERT GUTTER (Iconic center strip in Pandocs) -->
                     <div
-                        x-show="viewMode === 'split'"
+                        x-show="canEdit && viewMode === 'split'"
                         class="absolute left-1/2 -translate-x-1/2 top-16 z-20 hidden lg:flex flex-col items-center gap-2"
                     >
                         <!-- Purple Toggle Button -->
@@ -1226,7 +1236,7 @@ new #[Title('Vault Details')] class extends Component {
                             <button type="button" @click="insertFormat('[📎 ', '](file.pdf)', 'File')" class="size-7 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center justify-center text-xs" title="Attachment">📎</button>
                             <button type="button" @click="insertFormat('`', '`', 'code')" class="size-7 rounded-lg text-cyan-400 hover:bg-zinc-800 flex items-center justify-center text-xs font-mono" title="Code">&lt;&gt;</button>
                             <button type="button" @click="insertTable()" class="size-7 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center justify-center text-xs" title="Table">⊞</button>
-                            <button type="button" @click="insertLinePrefix('> Tip: ')" class="size-7 rounded-lg text-purple-400 hover:bg-zinc-800 flex items-center justify-center text-xs" title="Tip Box">💡</button>
+                            <button type="button" @click="insertFormat('> [!TIP]\n> ', '', 'Add a useful tip')" class="size-7 rounded-lg text-sky-300 hover:bg-zinc-800 flex items-center justify-center text-xs" title="Tip Box">💡</button>
                         </div>
                     </div>
 
@@ -1234,13 +1244,13 @@ new #[Title('Vault Details')] class extends Component {
                     <div
                         x-show="viewMode === 'split' || viewMode === 'preview'"
                         x-ref="previewPane"
-                        :class="viewMode === 'split' ? 'w-1/2' : 'w-full'"
+                        :class="viewMode === 'split' ? 'hidden w-full lg:block lg:w-1/2' : 'w-full'"
                         class="flex-1 overflow-y-auto bg-[#12131A] p-6 lg:p-10"
                     >
                         <!-- Active block focus indicator line (matching Pandocs purple accent line) -->
                         <div class="h-0.5 w-full bg-gradient-to-r from-purple-500/80 via-purple-500/30 to-transparent mb-6"></div>
 
-                        <div class="prose prose-invert max-w-none text-zinc-200 text-xs sm:text-sm leading-relaxed">
+                        <div class="synkk-markdown-preview max-w-none text-zinc-200" x-html="previewHtml">
                             {!! $this->renderedPreviewHtml !!}
                         </div>
                     </div>
@@ -1273,8 +1283,9 @@ new #[Title('Vault Details')] class extends Component {
                     <span class="text-zinc-600">•</span>
                     <span x-text="`${charCount} {{ __('characters') }}`"></span>
                     <span class="text-zinc-600">•</span>
-                    <span x-show="!isDirty" class="text-emerald-400 flex items-center gap-1">✓ {{ __('Synced') }}</span>
+                    <span x-show="!isDirty" class="text-emerald-400 flex items-center gap-1">✓ {{ __('Saved') }}</span>
                     <span x-show="isDirty" class="text-amber-400 flex items-center gap-1">● {{ __('Unsaved') }}</span>
+                    <span x-show="saveFailed" x-cloak class="text-rose-400 flex items-center gap-1">! {{ __('Save failed') }}</span>
                 </div>
             </div>
         </div>
@@ -1287,59 +1298,205 @@ new #[Title('Vault Details')] class extends Component {
                 nodes: {{ Js::from($this->graphData['nodes']) }},
                 edges: {{ Js::from($this->graphData['edges']) }}
             })"
-            class="relative w-full h-[660px] rounded-3xl border border-zinc-800 bg-[#0C0F12] overflow-hidden shadow-2xl"
+            wire:key="vault-graph-{{ $vault->id }}"
+            class="w-full overflow-hidden rounded-[1.75rem] border border-zinc-800 bg-[#0c0f12] shadow-2xl shadow-black/20"
+            aria-labelledby="vault-graph-title"
         >
-            <!-- Canvas -->
-            <canvas x-ref="graphCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+            <header class="border-b border-white/10 bg-gradient-to-r from-emerald-500/[0.08] via-transparent to-cyan-500/[0.06] px-5 py-5 sm:px-7 sm:py-6">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="max-w-2xl">
+                        <div class="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
+                            <span class="size-1.5 rounded-full bg-emerald-400"></span>
+                            {{ __('Vault knowledge map') }}
+                        </div>
+                        <h2 id="vault-graph-title" class="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                            {{ __('Explore how your notes connect') }}
+                        </h2>
+                        <p id="vault-graph-instructions" class="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
+                            {{ __('Drag nodes to reorganize the map, scroll to zoom, or choose any note from the accessible index to open it in the Markdown Editor.') }}
+                        </p>
+                    </div>
 
-            <!-- Top Left Search & Stats Controls -->
-            <div class="absolute top-4 left-4 flex flex-wrap items-center gap-3 z-20">
-                <div class="flex items-center rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3.5 py-1.5 shadow-lg backdrop-blur-md">
-                    <flux:icon icon="magnifying-glass" class="size-3.5 text-zinc-400 mr-2" />
-                    <input
-                        x-model="search"
-                        type="text"
-                        placeholder="{{ __('Filter graph nodes...') }}"
-                        class="bg-transparent text-xs text-white placeholder:text-zinc-500 focus:outline-none w-44"
-                    />
-                    <button x-show="search" @click="search = ''" class="text-zinc-400 hover:text-white text-xs ml-1">×</button>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-300" aria-live="polite">
+                        <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5">
+                            <span class="size-1.5 rounded-full bg-emerald-400"></span>
+                            <span x-text="`${nodes.length} {{ __('notes') }}`"></span>
+                        </span>
+                        <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5">
+                            <flux:icon icon="link" class="size-3.5 text-cyan-400" />
+                            <span x-text="`${edges.length} {{ __('connections') }}`"></span>
+                        </span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="grid xl:h-[660px] xl:grid-cols-[minmax(0,1fr)_19rem]">
+                <div class="relative min-h-[500px] overflow-hidden bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_55%)] sm:min-h-[600px] xl:h-full xl:min-h-0">
+                    <canvas
+                        x-ref="graphCanvas"
+                        role="img"
+                        aria-label="{{ __('Interactive vault graph showing notes as nodes and wiki links as connections.') }}"
+                        aria-describedby="vault-graph-instructions"
+                        class="absolute inset-0 size-full cursor-grab active:cursor-grabbing"
+                    >
+                        {{ __('Your browser cannot render the interactive vault graph. Use the accessible note index beside the graph to open a note.') }}
+                    </canvas>
+
+                    <!-- Search and graph status -->
+                    <div class="absolute inset-x-3 top-3 z-20 flex flex-col gap-2 sm:inset-x-4 sm:top-4 sm:flex-row sm:items-center sm:justify-between">
+                        <label class="flex min-h-10 items-center rounded-xl border border-white/10 bg-zinc-950/90 px-3 shadow-xl shadow-black/20 backdrop-blur-md sm:w-64">
+                            <span class="sr-only">{{ __('Filter graph nodes') }}</span>
+                            <flux:icon icon="magnifying-glass" class="mr-2 size-4 shrink-0 text-zinc-400" />
+                            <input
+                                x-model="search"
+                                type="search"
+                                autocomplete="off"
+                                placeholder="{{ __('Filter graph nodes...') }}"
+                                class="min-w-0 flex-1 bg-transparent text-xs text-white placeholder:text-zinc-500 focus:outline-none"
+                            />
+                            <button
+                                x-show="search"
+                                x-cloak
+                                @click="search = ''"
+                                type="button"
+                                class="ml-2 rounded-md px-1.5 py-0.5 text-sm text-zinc-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                                aria-label="{{ __('Clear graph filter') }}"
+                            >
+                                ×
+                            </button>
+                        </label>
+
+                        <div class="self-start rounded-xl border border-white/10 bg-zinc-950/85 px-3 py-2 text-[11px] text-zinc-400 shadow-lg backdrop-blur-md sm:self-auto">
+                            {{ __('Select a node to edit its note') }}
+                        </div>
+                    </div>
+
+                    <!-- Empty states remain useful even when canvas cannot draw a match. -->
+                    <div
+                        x-show="nodes.length === 0"
+                        x-cloak
+                        class="absolute inset-0 z-10 grid place-items-center px-6 text-center"
+                    >
+                        <div class="max-w-sm rounded-2xl border border-white/10 bg-zinc-950/90 p-6 shadow-2xl backdrop-blur-md">
+                            <div class="mx-auto grid size-11 place-items-center rounded-full bg-emerald-400/10 text-emerald-400">
+                                <flux:icon icon="document-plus" class="size-5" />
+                            </div>
+                            <h3 class="mt-3 font-semibold text-white">{{ __('Your graph is ready for its first connection') }}</h3>
+                            <p class="mt-1 text-xs leading-5 text-zinc-400">{{ __('Add Markdown notes and connect them with wiki links to build this map.') }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Floating hover tooltip -->
+                    <div
+                        x-show="hoveredNode"
+                        x-cloak
+                        :style="`left: ${tooltipX + 15}px; top: ${tooltipY + 15}px;`"
+                        class="pointer-events-none absolute z-30 hidden max-w-xs rounded-2xl border border-zinc-700/80 bg-zinc-950/95 p-3.5 text-xs text-white shadow-2xl backdrop-blur-md sm:block"
+                    >
+                        <div class="text-sm font-extrabold text-emerald-400" x-text="hoveredNode?.name"></div>
+                        <div class="mt-0.5 truncate font-mono text-[10px] text-zinc-400" x-text="hoveredNode?.path"></div>
+                        <div class="mt-2.5 flex items-center gap-3 text-[11px] text-zinc-300">
+                            <span>{{ __('Connections') }}: <strong class="font-bold text-white" x-text="hoveredNode?.linksCount"></strong></span>
+                            <span>{{ __('Revision') }}: <strong class="font-bold text-white" x-text="`v${hoveredNode?.version}`"></strong></span>
+                        </div>
+                        <div class="mt-1.5 text-[10px] font-medium text-emerald-400/90">
+                            {{ __('Select to open in Markdown Editor ↗') }}
+                        </div>
+                    </div>
+
+                    <!-- Navigation and zoom controls -->
+                    <div class="absolute bottom-4 right-4 z-20 flex items-center gap-1 rounded-xl border border-white/10 bg-zinc-950/90 p-1.5 shadow-xl shadow-black/20 backdrop-blur-md">
+                        <button
+                            @click="zoomIn()"
+                            type="button"
+                            class="rounded-lg p-2 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                            title="{{ __('Zoom In') }}"
+                            aria-label="{{ __('Zoom in graph') }}"
+                        >
+                            <flux:icon icon="plus" class="size-4" />
+                        </button>
+                        <button
+                            @click="zoomOut()"
+                            type="button"
+                            class="rounded-lg p-2 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                            title="{{ __('Zoom Out') }}"
+                            aria-label="{{ __('Zoom out graph') }}"
+                        >
+                            <flux:icon icon="minus" class="size-4" />
+                        </button>
+                        <button
+                            @click="resetView()"
+                            type="button"
+                            class="rounded-lg p-2 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                            title="{{ __('Reset View') }}"
+                            aria-label="{{ __('Reset graph view') }}"
+                        >
+                            <flux:icon icon="arrow-path" class="size-4" />
+                        </button>
+                    </div>
                 </div>
 
-                <div class="rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3.5 py-1.5 text-xs text-zinc-300 shadow-lg backdrop-blur-md flex items-center gap-2">
-                    <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span x-text="`${nodes.length} {{ __('Notes') }} • ${edges.length} {{ __('Wiki Connections') }}`"></span>
-                </div>
-            </div>
+                <!-- Keyboard and assistive-technology equivalent for the canvas. -->
+                <aside class="flex min-h-0 flex-col border-t border-white/10 bg-zinc-950/60 xl:h-full xl:border-l xl:border-t-0" aria-labelledby="vault-graph-index-title">
+                    <div class="border-b border-white/10 px-5 py-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">{{ __('Accessible note index') }}</p>
+                                <h3 id="vault-graph-index-title" class="mt-1 text-sm font-semibold text-white">{{ __('Open a connected note') }}</h3>
+                            </div>
+                            <kbd class="hidden rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono text-[10px] text-zinc-400 sm:inline">Enter</kbd>
+                        </div>
+                    </div>
 
-            <!-- Bottom Right Navigation & Zoom Controls -->
-            <div class="absolute bottom-4 right-4 flex items-center gap-1.5 rounded-full border border-zinc-700/80 bg-zinc-900/90 p-1.5 shadow-lg backdrop-blur-md z-20">
-                <button @click="zoomIn()" class="p-2 rounded-full text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors" title="{{ __('Zoom In') }}">
-                    <flux:icon icon="plus" class="size-4" />
-                </button>
-                <button @click="zoomOut()" class="p-2 rounded-full text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors" title="{{ __('Zoom Out') }}">
-                    <flux:icon icon="minus" class="size-4" />
-                </button>
-                <button @click="resetView()" class="p-2 rounded-full text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors" title="{{ __('Reset View') }}">
-                    <flux:icon icon="arrow-path" class="size-4" />
-                </button>
-            </div>
+                    <div class="max-h-72 min-h-0 overflow-y-auto p-3 xl:max-h-none xl:flex-1" role="region" aria-label="{{ __('Graph notes') }}" tabindex="0">
+                        <ul class="space-y-1" role="list">
+                            <template
+                                x-for="node in nodes.filter((candidate) => !search || (candidate.name || '').toLowerCase().includes(search.toLowerCase()))"
+                                :key="node.id"
+                            >
+                                <li>
+                                    <button
+                                        type="button"
+                                        @click="selectNode(node)"
+                                        @keydown="handleNodeKeydown($event, node)"
+                                        class="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                                        :aria-label="`{{ __('Open') }} ${node.name} {{ __('in the Markdown Editor') }}`"
+                                    >
+                                        <span class="relative flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-400 transition group-hover:border-emerald-400/30 group-hover:bg-emerald-400/10 group-hover:text-emerald-400">
+                                            <flux:icon icon="document-text" class="size-4" />
+                                            <span
+                                                class="absolute -right-1 -top-1 size-2 rounded-full border-2 border-zinc-950"
+                                                :class="(node.linksCount || 0) > 0 ? 'bg-emerald-400' : 'bg-zinc-600'"
+                                            ></span>
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate text-xs font-medium text-zinc-200 group-hover:text-white" x-text="node.name"></span>
+                                            <span class="mt-0.5 block truncate font-mono text-[10px] text-zinc-500" x-text="node.path"></span>
+                                        </span>
+                                        <span class="shrink-0 rounded-full bg-white/5 px-2 py-1 text-[9px] font-medium text-zinc-500" x-text="`${node.linksCount || 0} {{ __('links') }}`"></span>
+                                    </button>
+                                </li>
+                            </template>
+                        </ul>
 
-            <!-- Floating Hover Tooltip -->
-            <div
-                x-show="hoveredNode"
-                x-cloak
-                :style="`left: ${tooltipX + 15}px; top: ${tooltipY + 15}px;`"
-                class="pointer-events-none absolute z-30 max-w-xs rounded-2xl border border-zinc-700/80 bg-zinc-900/95 p-3.5 text-xs text-white shadow-2xl backdrop-blur-md"
-            >
-                <div class="font-extrabold text-sm text-emerald-400" x-text="hoveredNode?.name"></div>
-                <div class="font-mono text-[10px] text-zinc-400 mt-0.5 truncate" x-text="hoveredNode?.path"></div>
-                <div class="mt-2.5 flex items-center gap-3 text-[11px] text-zinc-300">
-                    <span>{{ __('Connections') }}: <strong class="text-white font-bold" x-text="hoveredNode?.linksCount"></strong></span>
-                    <span>{{ __('Revision') }}: <strong class="text-white font-bold" x-text="`v${hoveredNode?.version}`"></strong></span>
-                </div>
-                <div class="mt-1.5 text-[10px] text-emerald-400/90 font-medium">
-                    {{ __('Click node to open in Markdown Editor ↗') }}
-                </div>
+                        <div
+                            x-show="nodes.length > 0 && nodes.filter((candidate) => !search || (candidate.name || '').toLowerCase().includes(search.toLowerCase())).length === 0"
+                            x-cloak
+                            class="px-4 py-8 text-center"
+                            role="status"
+                        >
+                            <flux:icon icon="magnifying-glass" class="mx-auto size-5 text-zinc-600" />
+                            <p class="mt-2 text-xs font-medium text-zinc-300">{{ __('No notes match this filter') }}</p>
+                            <button @click="search = ''" type="button" class="mt-2 text-[11px] font-medium text-emerald-400 hover:text-emerald-300 focus-visible:outline-none focus-visible:underline">
+                                {{ __('Clear filter') }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-white/10 px-5 py-4 text-[11px] leading-5 text-zinc-500">
+                        {{ __('The list mirrors the visual graph so every note remains reachable without a mouse or canvas support.') }}
+                    </div>
+                </aside>
             </div>
         </div>
     @endif

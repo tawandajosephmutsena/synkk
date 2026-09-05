@@ -91,7 +91,6 @@ new class extends Component {
 <div class="px-2 py-1">
     @php
         $curr = $this->currentTeam();
-        $user = Auth::user();
     @endphp
     <flux:dropdown position="bottom" align="start">
         <button
@@ -99,14 +98,13 @@ new class extends Component {
             class="group flex w-full items-center gap-2.5 rounded-2xl border border-zinc-200/80 bg-white/80 p-2 shadow-xs transition-all hover:bg-white dark:border-white/10 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 in-data-flux-sidebar-collapsed-desktop:justify-center cursor-pointer"
             data-test="team-switcher-trigger"
         >
-            <div class="relative shrink-0">
-                <flux:avatar :name="$user->name" :initials="$user->initials()" size="sm" />
-                <span class="absolute bottom-0 right-0 size-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900"></span>
+            <div class="flex size-7 shrink-0 items-center justify-center rounded-xl bg-[#0D3B29] text-white dark:bg-emerald-600 shadow-xs font-bold text-[11px] tracking-tight">
+                {{ $curr['initials'] ?? 'SY' }}
             </div>
 
             <div class="grid flex-1 text-start leading-tight in-data-flux-sidebar-collapsed-desktop:hidden min-w-0">
-                <span class="truncate text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-[#0D3B29] dark:group-hover:text-emerald-400 transition-colors">{{ $user->name }}</span>
-                <span class="truncate text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">{{ $curr['name'] ?? __('Workspace') }}</span>
+                <span class="truncate text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-[#0D3B29] dark:group-hover:text-emerald-400 transition-colors">{{ $curr['name'] ?? __('Personal Workspace') }}</span>
+                <span class="truncate text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">{{ $curr['role'] ?? __('Owner') }} · {{ __('Workspace') }}</span>
             </div>
 
             <flux:icon
@@ -117,19 +115,8 @@ new class extends Component {
         </button>
 
         <flux:menu class="min-w-64">
-            <!-- User Profile Header -->
-            <div class="flex items-center gap-2.5 px-3 py-2.5 text-start text-xs rounded-xl bg-zinc-50 dark:bg-zinc-800/60 mb-1">
-                <flux:avatar :name="$user->name" :initials="$user->initials()" size="sm" />
-                <div class="grid flex-1 text-start leading-tight min-w-0">
-                    <span class="truncate font-bold text-zinc-900 dark:text-zinc-100">{{ $user->name }}</span>
-                    <span class="truncate text-zinc-500 dark:text-zinc-400 text-[11px] font-medium">{{ $user->email }}</span>
-                </div>
-            </div>
-
-            <flux:menu.separator />
-
             <!-- Teams & Workspaces -->
-            <flux:menu.heading class="text-[10px] font-bold tracking-wider uppercase text-zinc-400">{{ __('Workspaces & Teams') }}</flux:menu.heading>
+            <flux:menu.heading class="text-[10px] font-bold tracking-wider uppercase text-zinc-400 px-2 py-1">{{ __('Switch Workspace') }}</flux:menu.heading>
 
             @foreach ($this->teams() as $team)
                 <flux:menu.item

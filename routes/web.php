@@ -5,6 +5,16 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 
+if (app()->environment('local')) {
+    Route::get('dev-login', function () {
+        auth()->loginUsingId(1);
+
+        $team = auth()->user()->currentTeam ?? auth()->user()->teams->first();
+
+        return redirect()->route('dashboard', ['current_team' => $team->slug]);
+    });
+}
+
 Route::get('dashboard', function () {
     if (auth()->check()) {
         $team = auth()->user()->currentTeam ?? auth()->user()->personalTeam() ?? auth()->user()->teams->first();

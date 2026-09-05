@@ -41,7 +41,7 @@ return [
     |
     */
     'lemon_squeezy' => [
-        'store_url' => env('LEMON_SQUEEZY_STORE_URL', 'https://synkk.lemonsqueezy.com'),
+        'store_url' => env('LEMON_SQUEEZY_STORE_URL', ''),
         'store_id' => env('LEMON_SQUEEZY_STORE_ID', ''),
         'product_id' => env('LEMON_SQUEEZY_PRODUCT_ID', ''),
         'api_url' => 'https://api.lemonsqueezy.com/v1/licenses/activate',

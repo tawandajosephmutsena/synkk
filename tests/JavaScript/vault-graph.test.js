@@ -38,6 +38,22 @@ test('handles zoom in, zoom out, and resetView', () => {
     assert.equal(graph.search, '');
 });
 
+test('opens a graph node in the editor through one server action', async () => {
+    const graph = createVaultGraph({
+        nodes: [{ id: 17, name: 'Launch.md', path: 'Launch.md' }],
+    });
+    let openedFileId = null;
+
+    graph.$wire = {
+        async openFileInEditor(fileId) {
+            openedFileId = fileId;
+        },
+    };
+
+    assert.equal(await graph.selectNode(17), true);
+    assert.equal(openedFileId, 17);
+});
+
 test('cleans up animation and listeners on destroy', () => {
     const graph = createVaultGraph();
     let cancelledId = null;

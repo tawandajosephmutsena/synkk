@@ -18,8 +18,8 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-700">
         <div>
             <div class="flex items-center gap-2 mb-1">
-                <flux:badge color="lime" size="sm">v1.0 Guide</flux:badge>
-                <flux:badge color="zinc" size="sm">Self-Hosted & Cloud</flux:badge>
+                <flux:badge color="lime" size="sm">v1.1 Foundation</flux:badge>
+                <flux:badge color="zinc" size="sm">GitHub Public Beta</flux:badge>
             </div>
             <flux:heading size="xl" level="1">Synkk Documentation</flux:heading>
             <flux:subheading>
@@ -92,6 +92,15 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
         >
             Docker & Self-Hosting
         </flux:button>
+
+        <flux:button
+            wire:click="setSection('roadmap')"
+            :variant="$activeSection === 'roadmap' ? 'filled' : 'subtle'"
+            size="sm"
+            icon="map"
+        >
+            Safety & Roadmap
+        </flux:button>
     </div>
 
     <!-- Content Sections -->
@@ -139,7 +148,7 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                             <flux:heading size="sm">Install Obsidian Plugin</flux:heading>
                         </div>
                         <flux:text size="sm">
-                            In Obsidian, open <strong>Settings → Community plugins → Browse</strong>, search for <strong>"Synkk Team Vault Sync"</strong> and click Install, then Enable.
+                            Install the current GitHub public beta from its tagged manual release bundle. An official Obsidian Community Plugins listing and BRAT distribution are planned, not yet available.
                         </flux:text>
                     </div>
 
@@ -158,9 +167,9 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                 <div class="p-4 rounded-xl border border-lime-500/30 bg-lime-500/10 flex items-start gap-3">
                     <span class="text-xl">💡</span>
                     <div>
-                        <flux:heading size="sm" class="text-zinc-900 dark:text-white font-bold">Automatic Background Sync</flux:heading>
+                        <flux:heading size="sm" class="text-zinc-900 dark:text-white font-bold">Scheduled Sync While Obsidian Runs</flux:heading>
                         <flux:text size="sm" class="text-zinc-700 dark:text-zinc-300">
-                            By default, Synkk automatically checks for local and remote changes every 5 minutes and on startup. You can adjust the sync interval from 1 to 30 minutes in the plugin settings.
+                            By default, Synkk checks for local and remote changes every 5 minutes and on startup while Obsidian is running. You can adjust the sync interval from 1 to 30 minutes in plugin settings. Native mobile background execution is roadmap work.
                         </flux:text>
                     </div>
                 </div>
@@ -175,7 +184,7 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                 <div>
                     <flux:heading size="lg">Mobile Installation (iOS & Android)</flux:heading>
                     <flux:text class="mt-1">
-                        How to deploy Synkk to your team's phones and tablets with zero manual file access.
+                        How to install the Foundation release on your team's phones and tablets from a tagged GitHub bundle.
                     </flux:text>
                 </div>
 
@@ -184,39 +193,30 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <flux:badge color="lime">Recommended</flux:badge>
-                            <flux:heading size="base">Method 1: Official Community Plugins Store</flux:heading>
+                            <flux:heading size="base">Method 1: GitHub Public Beta</flux:heading>
                         </div>
                     </div>
                     <flux:text size="sm">
-                        Team members do not need computer connections, cables, or file manager access on their phones:
+                        Use the tagged GitHub release when you need a stable manual installation bundle:
                     </flux:text>
                     <ol class="list-decimal list-inside space-y-1 text-sm text-zinc-700 dark:text-zinc-300 font-mono">
-                        <li>Open Obsidian on iPhone, iPad, or Android.</li>
-                        <li>Tap <strong>Settings (gear icon) → Community plugins</strong>.</li>
-                        <li>Turn off <strong>Restricted mode</strong> if prompted.</li>
-                        <li>Tap <strong>Browse</strong>, search for <strong>Synkk Team Vault Sync</strong>.</li>
-                        <li>Tap <strong>Install</strong>, then tap <strong>Enable</strong>.</li>
+                        <li>Download <code>main.js</code>, <code>manifest.json</code>, and <code>styles.css</code> from the tagged release.</li>
+                        <li>Place them in <code>&lt;vault&gt;/.obsidian/plugins/synkk-sync/</code>.</li>
+                        <li>Open <strong>Settings → Community plugins</strong> and enable Synkk Team Vault Sync.</li>
+                        <li>Configure the plugin with an HTTPS Synkk server URL and a device token.</li>
                     </ol>
                 </div>
 
-                <!-- Method B -->
                 <div class="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-3">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <flux:badge color="zinc">Private Builds</flux:badge>
-                            <flux:heading size="base">Method 2: Via Obsidian42 - BRAT (Beta Tester Plugin)</flux:heading>
+                            <flux:badge color="zinc">Planned distribution</flux:badge>
+                            <flux:heading size="base">BRAT & Community Plugins</flux:heading>
                         </div>
                     </div>
                     <flux:text size="sm">
-                        For internal organizational builds or private repository deployments:
+                        BRAT and an official Community Plugins listing are not configured for this repository structure yet. Use the tagged manual bundle above until a dedicated plugin distribution repository and release path are published.
                     </flux:text>
-                    <ol class="list-decimal list-inside space-y-1 text-sm text-zinc-700 dark:text-zinc-300 font-mono">
-                        <li>Install <strong>BRAT</strong> from Obsidian Community Plugins.</li>
-                        <li>In Obsidian Settings, open <strong>BRAT</strong>.</li>
-                        <li>Tap <strong>Add Beta plugin</strong>.</li>
-                        <li>Enter your organization's plugin repository URL (e.g. <code>https://ottomate.space</code> or GitHub).</li>
-                        <li>BRAT downloads and automatically updates the plugin on their mobile devices over-the-air.</li>
-                    </ol>
                 </div>
             </flux:card>
         @endif
@@ -285,9 +285,9 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
         @if ($activeSection === 'conflict')
             <flux:card class="space-y-6">
                 <div>
-                    <flux:heading size="lg">Cryptographic Hashing & Conflict Resolution</flux:heading>
+                    <flux:heading size="lg">File Hashing, Safety & Conflict Copies</flux:heading>
                     <flux:text class="mt-1">
-                        How Synkk guarantees deterministic, zero-data-loss synchronization.
+                        How the Foundation release tracks whole-file changes and preserves conflicts without claiming automatic text merging.
                     </flux:text>
                 </div>
 
@@ -300,16 +300,16 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                     </div>
 
                     <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
-                        <flux:heading size="sm">2. Atomic Manifests</flux:heading>
+                        <flux:heading size="sm">2. Versioned Manifests</flux:heading>
                         <flux:text size="sm">
-                            The server maintains an immutable revision ledger. Each sync exchange checks the client's parent revision against the server state.
+                            The server records file versions and checks a client's base version before accepting an update. The dashboard can restore a historical file version as a new current revision.
                         </flux:text>
                     </div>
 
                     <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
                         <flux:heading size="sm">3. Safe Conflict Forks</flux:heading>
                         <flux:text size="sm">
-                            If two users edit the exact same paragraph simultaneously while offline, Synkk saves the conflicting edit as <code>note.sync-conflict-[timestamp].md</code>.
+                            If two devices upload a stale version of the same file, Synkk saves the conflicting upload as <code>note.sync-conflict-[timestamp].md</code>. CRDT character-level merging is future work.
                         </flux:text>
                     </div>
                 </div>
@@ -335,7 +335,7 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                             <span class="px-2 py-0.5 rounded bg-emerald-500 text-white font-bold text-[10px]">GET</span>
                             <span class="font-bold text-zinc-900 dark:text-white">/auth/verify</span>
                         </div>
-                        <flux:text size="sm">Validates the <code>X-Device-Token</code> header and returns the user, team, and device info.</flux:text>
+                        <flux:text size="sm">Validates the <code>Authorization: Bearer synkk_...</code> header and returns the user, team, and device info.</flux:text>
                     </div>
 
                     <!-- Endpoint 2 -->
@@ -423,7 +423,7 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
   -p 8080:80 \
   -v synkk_storage:/var/www/html/storage/app/private \
   -v synkk_database:/var/www/html/database \
-  -e APP_KEY=base64:{{ base64_encode('synkk-production-secret-key-32b') }} \
+  -e APP_KEY="$(php artisan key:generate --show)" \
   -e DB_CONNECTION=sqlite \
   synkk/synkk:latest</code></pre>
                 </div>
@@ -452,6 +452,36 @@ services:
 volumes:
   synkk_database:
   synkk_storage:</code></pre>
+                </div>
+            </flux:card>
+        @endif
+
+        <!-- ============================================================= -->
+        <!-- SECTION 7: SAFETY & ROADMAP                                  -->
+        <!-- ============================================================= -->
+        @if ($activeSection === 'roadmap')
+            <flux:card class="space-y-6">
+                <div>
+                    <flux:heading size="lg">Foundation Safety & Public Roadmap</flux:heading>
+                    <flux:text class="mt-1">What is available in the GitHub public beta today, and what remains intentionally deferred.</flux:text>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-3">
+                    <div class="rounded-2xl border border-lime-500/30 bg-lime-500/10 p-5">
+                        <flux:badge color="lime">Available now</flux:badge>
+                        <flux:heading size="sm" class="mt-3">Atomic Safety Shield</flux:heading>
+                        <flux:text size="sm" class="mt-2">Selective folders, optional plugin/config categories, a configurable deletion threshold, one-time confirmation, and local snapshots before remote mutations.</flux:text>
+                    </div>
+                    <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800/40">
+                        <flux:badge color="zinc">Next</flux:badge>
+                        <flux:heading size="sm" class="mt-3">Pairing & encrypted transport</flux:heading>
+                        <flux:text size="sm" class="mt-2">QR pairing, client-side encryption research, and relay architecture validation are planned private-preview work.</flux:text>
+                    </div>
+                    <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800/40">
+                        <flux:badge color="zinc">Future research</flux:badge>
+                        <flux:heading size="sm" class="mt-3">CRDT collaboration</flux:heading>
+                        <flux:text size="sm" class="mt-2">Character-level merging, peer-assisted transport, delta attachments, virtual files, and a conflict sandbox are not part of this release.</flux:text>
+                    </div>
                 </div>
             </flux:card>
         @endif

@@ -25,6 +25,21 @@ test('authenticated users can visit the dashboard', function () {
         ->assertSee('Dashboard - Synkk');
 });
 
+test('dashboard copy describes the foundation sync capabilities accurately', function () {
+    $user = User::factory()->create();
+    $team = $user->currentTeam;
+
+    $this
+        ->actingAs($user)
+        ->get(route('dashboard', ['current_team' => $team->slug]))
+        ->assertOk()
+        ->assertSee('Sync your vault notes across trusted devices.')
+        ->assertSee('Recent Obsidian note revisions and sync operations')
+        ->assertDontSee('real-time', escape: false)
+        ->assertDontSee('zero-knowledge', escape: false)
+        ->assertDontSee('encrypted disk', escape: false);
+});
+
 test('authenticated pages are not forced into dark mode', function () {
     $user = User::factory()->create();
 

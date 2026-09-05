@@ -4,417 +4,414 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>Synkk — Self-hosted Obsidian vault sync for teams</title>
-        <meta name="description" content="Keep shared Obsidian vaults synchronized across macOS, Windows, Linux, iOS, and Android with revocable device tokens and path-aware team permissions.">
-        <meta name="theme-color" content="#f7f5ed">
+        <title>Synkk — Obsidian everywhere</title>
+        <meta name="description" content="Self-hosted Obsidian sync with a real Markdown workspace, a visual vault graph, trusted devices, path permissions, verified changes, and recoverable versions.">
+        <meta name="theme-color" content="#f4f2ec">
 
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         @fonts
-        @vite('resources/css/landing.css')
+        @vite(['resources/css/landing.css', 'resources/js/app.js'])
     </head>
-    <body class="synkk-surface font-sans text-[#14213d] antialiased">
-        <a href="#main-content" class="sr-only z-[100] rounded-full bg-[#14213d] px-5 py-3 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
-            Skip to content
-        </a>
+    <body class="synkk-site font-sans antialiased">
+        @php
+            $pluginUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin';
+            $pluginReleaseUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/tag/1.0.0';
+            $storeUrl = config('synkk.lemon_squeezy.store_url');
+            $storeReady = filled($storeUrl)
+                && filled(config('synkk.lemon_squeezy.store_id'))
+                && filled(config('synkk.lemon_squeezy.product_id'));
+            $userTeam = auth()->check()
+                ? (auth()->user()->currentTeam ?? auth()->user()->personalTeam() ?? auth()->user()->teams->first())
+                : null;
+            $dashboardUrl = $userTeam
+                ? route('dashboard', ['current_team' => $userTeam->slug])
+                : route('home');
+        @endphp
 
-        <div class="synkk-grid pointer-events-none fixed inset-0 z-0 opacity-50" aria-hidden="true"></div>
+        <a href="#main-content" class="synkk-skip-link">Skip to content</a>
 
-        <header class="sticky top-0 z-50 border-b border-[#14213d]/8 bg-[#fbfaf5]/90 backdrop-blur-xl">
-            <div class="mx-auto flex h-18 max-w-7xl items-center justify-between gap-6 px-5 sm:px-8 lg:px-10">
-                <a href="{{ route('home') }}" class="group flex items-center gap-3" aria-label="Synkk home">
-                    <span class="grid size-10 place-items-center rounded-2xl bg-[#d7ff3f] text-[#14213d] shadow-[inset_0_0_0_1px_rgba(20,33,61,.12)] transition-transform group-hover:-rotate-3">
-                        <svg class="size-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="m13.4 2.8-8 11h6.2l-1 7.4 8-11h-6.2l1-7.4Z" fill="currentColor"/>
-                        </svg>
-                    </span>
-                    <span>
-                        <span class="block text-lg font-semibold tracking-[-0.03em]">synkk</span>
-                        <span class="block text-[10px] font-semibold uppercase tracking-[0.18em] text-[#566078]">Obsidian vault sync</span>
-                    </span>
+        <header class="synkk-header">
+            <div class="synkk-shell synkk-header__inner">
+                <a href="{{ route('home') }}" class="synkk-brand" aria-label="Synkk home">
+                    <img src="/images/synkk-logo.svg" alt="Synkk — Obsidian everywhere" width="689" height="270" fetchpriority="high">
                 </a>
 
-                <nav class="hidden items-center gap-7 text-sm font-medium text-[#4a5570] md:flex" aria-label="Primary navigation">
-                    <a href="#workflow" class="transition-colors hover:text-[#0b6cff]">Workflow</a>
-                    <a href="#trust" class="transition-colors hover:text-[#0b6cff]">Trust & control</a>
-                    <a href="#setup" class="transition-colors hover:text-[#0b6cff]">Setup</a>
-                    <a href="{{ route('docs.redirect') }}" class="transition-colors hover:text-[#0b6cff]">Docs</a>
+                <nav class="synkk-nav" aria-label="Primary navigation">
+                    <a href="#product">Product</a>
+                    <a href="#workflow">How it works</a>
+                    <a href="#safety">Safety</a>
+                    <a href="#pricing">Pricing</a>
+                    <a href="#roadmap">Roadmap</a>
+                    <a href="{{ route('docs.redirect') }}">Docs</a>
                 </nav>
 
-                <div class="flex items-center gap-2 sm:gap-3">
+                <div class="synkk-header__actions">
                     @auth
-                        @php
-                            $userTeam = auth()->user()->currentTeam ?? auth()->user()->personalTeam() ?? auth()->user()->teams->first();
-                            $dashboardUrl = $userTeam ? route('dashboard', ['current_team' => $userTeam->slug]) : route('home');
-                        @endphp
-                        <a href="{{ $dashboardUrl }}" class="synkk-primary-action inline-flex min-h-11 items-center justify-center rounded-full bg-[#0b6cff] px-5 text-sm font-semibold text-white">
-                            Open dashboard
-                        </a>
+                        <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--ink">Open dashboard <span aria-hidden="true">↗</span></a>
                     @else
-                        <a href="{{ route('login') }}" class="hidden min-h-11 items-center px-3 text-sm font-semibold text-[#33405d] transition-colors hover:text-[#0b6cff] sm:inline-flex">
-                            Log in
-                        </a>
+                        <a href="{{ route('login') }}" class="synkk-login">Log in</a>
                         @if (Route::has('register'))
-                            <a href="{{ route('register') }}" class="synkk-primary-action inline-flex min-h-11 items-center justify-center rounded-full bg-[#0b6cff] px-5 text-sm font-semibold text-white">
-                                Create workspace
-                            </a>
+                            <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Create workspace <span aria-hidden="true">↗</span></a>
                         @endif
                     @endauth
                 </div>
             </div>
         </header>
 
-        <main id="main-content" class="relative z-10">
-            <section class="mx-auto grid min-h-[calc(100svh-4.5rem)] max-w-7xl items-center gap-12 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1.02fr_.98fr] lg:px-10 lg:py-24">
-                <div class="max-w-2xl">
-                    <div class="mb-7 inline-flex items-center gap-2 rounded-full border border-[#14213d]/10 bg-white/70 px-3 py-1.5 text-xs font-semibold text-[#47536e] shadow-sm">
-                        <span class="synkk-device-dot size-2 rounded-full bg-emerald-500" aria-hidden="true"></span>
-                        Self-hosted sync, shaped for Obsidian
+        <div class="synkk-announcement">
+            <div class="synkk-shell synkk-announcement__inner">
+                <p><span class="synkk-status-dot" aria-hidden="true"></span> Obsidian plugin v1.0.0 is live on GitHub</p>
+                <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer">View the release <span aria-hidden="true">↗</span></a>
+            </div>
+        </div>
+
+        <main id="main-content">
+            <section class="synkk-hero synkk-shell" aria-labelledby="hero-heading">
+                <div class="synkk-hero__frame">
+                    <div class="synkk-data-rail synkk-data-rail--hero" aria-hidden="true">
+                        <span class="synkk-data-rail__line synkk-data-rail__line--horizontal"></span>
+                        <span class="synkk-data-rail__line synkk-data-rail__line--vertical"></span>
+                        <i class="synkk-data-packet synkk-data-packet--one"></i>
+                        <i class="synkk-data-packet synkk-data-packet--two"></i>
+                        <i class="synkk-data-packet synkk-data-packet--three"></i>
                     </div>
-
-                    <h1 class="text-[clamp(3.5rem,8vw,7rem)] font-semibold leading-[0.88] tracking-[-0.07em] text-[#14213d]">
-                        Your vault,<br>
-                        <span class="text-[#0b6cff]">in step.</span>
-                    </h1>
-
-                    <p class="mt-8 max-w-xl text-lg leading-8 text-[#4b5771] sm:text-xl">
-                        Keep a team Obsidian vault synchronized across every trusted device—without handing the workflow to someone else’s cloud.
-                    </p>
-
-                    <div class="mt-9 flex flex-col gap-3 sm:flex-row">
-                        @auth
-                            <a href="{{ $dashboardUrl }}" class="synkk-primary-action inline-flex min-h-13 items-center justify-center gap-2 rounded-full bg-[#0b6cff] px-7 text-sm font-semibold text-white">
-                                Go to your vaults
-                                <span aria-hidden="true">→</span>
-                            </a>
-                        @else
-                            @if (Route::has('register'))
-                                <a href="{{ route('register') }}" class="synkk-primary-action inline-flex min-h-13 items-center justify-center gap-2 rounded-full bg-[#0b6cff] px-7 text-sm font-semibold text-white">
-                                    Start your workspace
-                                    <span aria-hidden="true">→</span>
-                                </a>
-                            @endif
-                        @endauth
-                        <a href="#workflow" class="inline-flex min-h-13 items-center justify-center rounded-full border border-[#14213d]/15 bg-white/70 px-7 text-sm font-semibold text-[#14213d] transition-colors hover:border-[#14213d]/30 hover:bg-white">
-                            See the workflow
-                        </a>
-                    </div>
-
-                    <ul class="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-[#59647b]" aria-label="Product highlights">
-                        <li class="flex items-center gap-2"><span class="size-1.5 rounded-full bg-[#0b6cff]"></span>Revocable device tokens</li>
-                        <li class="flex items-center gap-2"><span class="size-1.5 rounded-full bg-[#0b6cff]"></span>Path-aware permissions</li>
-                        <li class="flex items-center gap-2"><span class="size-1.5 rounded-full bg-[#0b6cff]"></span>Conflict copies preserved</li>
-                    </ul>
-                </div>
-
-                <div class="relative mx-auto w-full max-w-[650px] lg:mx-0">
-                    <div class="synkk-mascot-stage relative aspect-[1.04/1] overflow-hidden rounded-[2.5rem] p-4 sm:rounded-[3.25rem] sm:p-8">
-                        <div class="absolute inset-x-10 top-8 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-white/75 sm:top-10">
-                            <span>Vault current</span>
-                            <span class="flex items-center gap-2"><span class="size-1.5 rounded-full bg-[#d7ff3f]"></span>3 devices</span>
+                    <div class="synkk-hero__copy">
+                        <p class="synkk-eyebrow synkk-reveal synkk-reveal--one">Self-hosted sync for Obsidian</p>
+                        <h1 id="hero-heading" class="synkk-reveal synkk-reveal--two"><span class="synkk-hero__line">Your vault.</span><span class="synkk-hero__line synkk-hero__line--accent">On every device.</span></h1>
+                        <p class="synkk-hero__lede synkk-reveal synkk-reveal--three">Synkk keeps Markdown, permissions, versions, and trusted devices together on infrastructure you control.</p>
+                        <div class="synkk-hero__actions synkk-reveal synkk-reveal--four">
+                            @auth
+                                <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--accent">Open your vaults <span aria-hidden="true">→</span></a>
+                            @else
+                                @if (Route::has('register'))
+                                    <a href="{{ route('register') }}" class="synkk-button synkk-button--accent">Start your workspace <span aria-hidden="true">→</span></a>
+                                @endif
+                            @endauth
+                            <a href="#product" class="synkk-button synkk-button--quiet">See the product <span aria-hidden="true">↓</span></a>
                         </div>
-
-                        <img
-                            src="/images/character/synkk-diver-premium.webp"
-                            alt="Synkk’s blue octopus diver guiding a vault between devices"
-                            width="1536"
-                            height="1024"
-                            fetchpriority="high"
-                            decoding="async"
-                            class="synkk-mascot absolute -bottom-[3%] left-1/2 z-10 w-[118%] max-w-none -translate-x-1/2 sm:w-[112%]"
-                        >
-
-                        <div class="synkk-status-card synkk-glass absolute left-4 top-[22%] z-20 rounded-2xl border border-white/60 px-4 py-3 shadow-lg shadow-[#13275b]/15 sm:left-7">
-                            <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#68728a]">Obsidian</p>
-                            <p class="mt-1 flex items-center gap-2 text-sm font-semibold text-[#14213d]"><span class="size-2 rounded-full bg-emerald-500"></span>Note verified</p>
-                        </div>
-
-                        <div class="synkk-status-card synkk-glass absolute bottom-6 right-4 z-20 rounded-2xl border border-white/60 px-4 py-3 shadow-lg shadow-[#13275b]/15 sm:bottom-9 sm:right-7">
-                            <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#68728a]">Trusted device</p>
-                            <p class="mt-1 text-sm font-semibold text-[#14213d]">Ready to pull <span class="text-[#0b6cff]">v28</span></p>
-                        </div>
-
-                        <span class="absolute bottom-10 left-12 size-3 rounded-full bg-[#d7ff3f] shadow-[0_0_0_8px_rgba(215,255,63,.16)]" aria-hidden="true"></span>
-                        <span class="absolute right-16 top-20 size-2 rounded-full bg-white shadow-[0_0_0_7px_rgba(255,255,255,.14)]" aria-hidden="true"></span>
-                    </div>
-
-                    <p class="mt-4 text-center text-xs leading-5 text-[#68728a]">
-                        Sync happens on startup, on your schedule, or whenever you choose.
-                    </p>
-                </div>
-            </section>
-
-            <section class="border-y border-[#14213d]/8 bg-white/55" aria-labelledby="platform-heading">
-                <div class="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-10">
-                    <div class="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
-                        <div class="max-w-sm">
-                            <h2 id="platform-heading" class="text-lg font-semibold tracking-[-0.02em] text-[#14213d]">One Obsidian workflow. Every daily device.</h2>
-                            <p class="mt-1 text-sm leading-6 text-[#647087]">The same vault model across desktop and mobile.</p>
-                        </div>
-
-                        <ul class="grid grid-cols-3 gap-2 sm:grid-cols-6" aria-label="Supported platforms">
-                            @foreach ([
-                                ['obsidian', 'Obsidian'],
-                                ['macos', 'macOS'],
-                                ['windows', 'Windows'],
-                                ['linux', 'Linux'],
-                                ['ios', 'iOS'],
-                                ['android', 'Android'],
-                            ] as [$icon, $platform])
-                                <li class="synkk-platform-mark flex min-w-24 flex-col items-center justify-center gap-2 rounded-2xl border border-[#14213d]/8 bg-white/65 px-3 py-4">
-                                    <img src="/images/platforms/{{ $icon }}.svg" alt="" width="24" height="24" class="size-6" loading="eager" decoding="async">
-                                    <span class="text-xs font-semibold text-[#38445f]">{{ $platform }}</span>
-                                </li>
-                            @endforeach
+                        <ul class="synkk-hero__proof synkk-reveal synkk-reveal--four" aria-label="Synkk product principles">
+                            <li>Plain Markdown</li>
+                            <li>Self-hostable</li>
+                            <li>Recoverable history</li>
                         </ul>
                     </div>
-                </div>
-            </section>
 
-            <section id="workflow" class="synkk-deferred mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32 lg:px-10">
-                <div class="mx-auto max-w-3xl text-center">
-                    <h2 class="text-4xl font-semibold tracking-[-0.045em] text-[#14213d] sm:text-6xl">From local note to every trusted device</h2>
-                    <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-[#59657d]">
-                        Synkk keeps the familiar local-first Obsidian experience, then adds a controlled route for team changes.
-                    </p>
-                </div>
-
-                <ol class="relative mt-16 grid gap-5 lg:grid-cols-3" aria-label="Obsidian synchronization workflow">
-                    <li class="relative flex min-h-[440px] flex-col rounded-[2rem] border border-[#14213d]/10 bg-white p-5 shadow-[0_24px_70px_-48px_rgba(20,33,61,.45)] sm:p-7">
-                        <span class="synkk-step-number absolute -top-3 left-7 grid size-8 place-items-center rounded-full bg-[#14213d] text-xs font-semibold text-white">1</span>
-                        <div class="mt-5 overflow-hidden rounded-2xl border border-[#14213d]/10 bg-[#f4f1e9]">
-                            <div class="flex items-center gap-1.5 border-b border-[#14213d]/8 bg-white px-3 py-2.5">
-                                <span class="size-2 rounded-full bg-[#ff7b72]"></span>
-                                <span class="size-2 rounded-full bg-[#f2cc60]"></span>
-                                <span class="size-2 rounded-full bg-[#56d364]"></span>
-                                <span class="ml-2 text-[10px] font-semibold text-[#737d91]">Obsidian · Product vault</span>
+                    <div class="synkk-hero__media synkk-reveal synkk-reveal--three">
+                        <div class="synkk-hero-window">
+                            <div class="synkk-hero-window__bar">
+                                <span><i aria-hidden="true"></i> Real product capture</span>
+                                <strong>Editor → Graph</strong>
                             </div>
-                            <div class="grid min-h-56 grid-cols-[76px_1fr]">
-                                <div class="border-r border-[#14213d]/8 bg-[#ece8df] p-3">
-                                    <div class="h-2 rounded bg-[#6c31e3]/25"></div>
-                                    <div class="mt-3 h-2 w-4/5 rounded bg-[#14213d]/10"></div>
-                                    <div class="mt-2 h-2 w-3/5 rounded bg-[#14213d]/10"></div>
-                                </div>
-                                <div class="p-4">
-                                    <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6c31e3]">Launch notes.md</p>
-                                    <p class="mt-4 text-sm font-semibold text-[#26334f]">Release checklist</p>
-                                    <div class="mt-4 space-y-3 text-xs text-[#647087]">
-                                        <p>✓ Confirm navigation</p>
-                                        <p>✓ Review mobile layout</p>
-                                        <p class="rounded-md bg-[#d7ff3f]/55 px-2 py-1.5 text-[#26334f]">• Share final notes</p>
-                                    </div>
-                                </div>
-                            </div>
+                            <video autoplay muted loop playsinline preload="metadata" poster="/images/showcase/editor-full.webp" aria-label="A moving tour of the real Synkk Markdown Editor and Graph View">
+                                <source src="/videos/synkk-ui-reel.mp4" type="video/mp4">
+                            </video>
                         </div>
-                        <h3 class="mt-6 text-xl font-semibold tracking-[-0.025em] text-[#14213d]">Work in Obsidian</h3>
-                        <p class="mt-2 text-sm leading-6 text-[#606c83]">Edit Markdown, Canvas, and supporting files inside the vault you already know.</p>
-                    </li>
-
-                    <li class="relative flex min-h-[440px] flex-col rounded-[2rem] border border-[#14213d]/10 bg-[#14213d] p-5 text-white shadow-[0_28px_80px_-45px_rgba(20,33,61,.75)] sm:p-7">
-                        <span class="synkk-step-number absolute -top-3 left-7 grid size-8 place-items-center rounded-full bg-[#d7ff3f] text-xs font-semibold text-[#14213d]">2</span>
-                        <div class="mt-5 rounded-2xl border border-white/12 bg-white/6 p-5">
-                            <div class="flex items-center justify-between">
-                                <span class="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/55">Change gate</span>
-                                <span class="rounded-full bg-[#d7ff3f] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.1em] text-[#14213d]">accepted</span>
-                            </div>
-                            <div class="mt-6 space-y-3">
-                                <div class="flex items-center justify-between rounded-xl bg-white/7 px-3 py-3">
-                                    <span class="text-xs text-white/65">Device token</span>
-                                    <span class="text-xs font-semibold text-white">verified</span>
-                                </div>
-                                <div class="flex items-center justify-between rounded-xl bg-white/7 px-3 py-3">
-                                    <span class="text-xs text-white/65">Path access</span>
-                                    <span class="text-xs font-semibold text-white">read + write</span>
-                                </div>
-                                <div class="rounded-xl bg-white/7 px-3 py-3">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs text-white/65">SHA-256</span>
-                                        <span class="text-[10px] font-semibold text-[#8bdcff]">change detected</span>
-                                    </div>
-                                    <div class="synkk-flow-line mt-3 h-1.5 rounded-full bg-gradient-to-r from-[#0b6cff] via-[#65dbff] to-[#d7ff3f]"></div>
-                                </div>
-                            </div>
+                        <div class="synkk-hero-status" aria-label="Revision status shown in the product capture">
+                            <span>Current revision</span>
+                            <strong><i aria-hidden="true"></i> v78</strong>
+                            <small>Latest sync state</small>
                         </div>
-                        <h3 class="mt-6 text-xl font-semibold tracking-[-0.025em]">Synkk verifies the change</h3>
-                        <p class="mt-2 text-sm leading-6 text-white/68">The server authenticates the device, applies vault permissions, compares the content hash, and records the accepted change.</p>
-                    </li>
-
-                    <li class="relative flex min-h-[440px] flex-col rounded-[2rem] border border-[#14213d]/10 bg-white p-5 shadow-[0_24px_70px_-48px_rgba(20,33,61,.45)] sm:p-7">
-                        <span class="synkk-step-number absolute -top-3 left-7 grid size-8 place-items-center rounded-full bg-[#0b6cff] text-xs font-semibold text-white">3</span>
-                        <div class="mt-5 grid min-h-56 grid-cols-2 gap-3 rounded-2xl bg-[#f1f6ff] p-4">
-                            <div class="col-span-2 flex items-center justify-between rounded-xl border border-[#0b6cff]/12 bg-white px-4 py-3">
-                                <div class="flex items-center gap-3">
-                                    <img src="/images/platforms/obsidian.svg" alt="" class="size-6" width="24" height="24">
-                                    <div>
-                                        <p class="text-xs font-semibold text-[#26334f]">Product vault</p>
-                                        <p class="text-[10px] text-[#738098]">Version 28 available</p>
-                                    </div>
-                                </div>
-                                <span class="synkk-device-dot size-2 rounded-full bg-emerald-500"></span>
-                            </div>
-                            <div class="rounded-xl border border-[#14213d]/8 bg-white p-4">
-                                <img src="/images/platforms/macos.svg" alt="" class="size-5" width="20" height="20">
-                                <p class="mt-8 text-xs font-semibold text-[#26334f]">Studio Mac</p>
-                                <p class="mt-1 text-[10px] text-emerald-700">Ready to pull</p>
-                            </div>
-                            <div class="rounded-xl border border-[#14213d]/8 bg-white p-4">
-                                <img src="/images/platforms/ios.svg" alt="" class="size-5" width="20" height="20">
-                                <p class="mt-8 text-xs font-semibold text-[#26334f]">Travel phone</p>
-                                <p class="mt-1 text-[10px] text-emerald-700">Ready to pull</p>
-                            </div>
-                        </div>
-                        <h3 class="mt-6 text-xl font-semibold tracking-[-0.025em] text-[#14213d]">Your team receives the update</h3>
-                        <p class="mt-2 text-sm leading-6 text-[#606c83]">Trusted devices fetch the latest allowed changes at startup, on schedule, or after a manual sync.</p>
-                    </li>
-                </ol>
-
-                <div class="mt-6 flex flex-col items-start justify-between gap-4 rounded-2xl border border-[#0b6cff]/15 bg-[#eaf3ff] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
-                    <p class="text-sm font-semibold text-[#263a63]">Role and path rules stay attached to the vault</p>
-                    <p class="text-sm text-[#536681]">If edits collide, Synkk keeps a conflict copy for a human decision.</p>
-                </div>
-            </section>
-
-            <section id="trust" class="synkk-deferred bg-[#14213d] text-white">
-                <div class="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-28 lg:px-10">
-                    <div class="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-end">
-                        <div>
-                            <h2 class="max-w-lg text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">Control that feels calm, not complicated.</h2>
-                        </div>
-                        <p class="max-w-2xl text-lg leading-8 text-white/65 lg:justify-self-end">
-                            Synkk gives owners a readable record of devices, permissions, and vault activity while keeping the everyday work inside Obsidian.
-                        </p>
-                    </div>
-
-                    <div class="mt-14 grid gap-4 lg:grid-cols-3">
-                        <article class="rounded-[1.75rem] border border-white/12 bg-white/6 p-7">
-                            <div class="grid size-11 place-items-center rounded-2xl bg-[#d7ff3f] text-[#14213d]">
-                                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 5 6v5c0 4.7 2.9 8.2 7 10 4.1-1.8 7-5.3 7-10V6l-7-3Z"/><path d="m9.4 12 1.7 1.7 3.7-4"/></svg>
-                            </div>
-                            <h3 class="mt-7 text-xl font-semibold">One-time device secrets</h3>
-                            <p class="mt-3 text-sm leading-6 text-white/62">The full token is shown once. Synkk stores its SHA-256 hash and lets an owner revoke the device later.</p>
-                        </article>
-
-                        <article class="rounded-[1.75rem] border border-white/12 bg-white/6 p-7">
-                            <div class="grid size-11 place-items-center rounded-2xl bg-[#6ddcff] text-[#14213d]">
-                                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6.5h6l1.5 2H20v9H4v-11Z"/><path d="M8 13h8M8 16h5"/></svg>
-                            </div>
-                            <h3 class="mt-7 text-xl font-semibold">Permissions down to a path</h3>
-                            <p class="mt-3 text-sm leading-6 text-white/62">Set vault defaults, then make a folder or file read-write, read-only, or hidden for the people who need it.</p>
-                        </article>
-
-                        <article class="rounded-[1.75rem] border border-white/12 bg-white/6 p-7">
-                            <div class="grid size-11 place-items-center rounded-2xl bg-[#9f8cff] text-white">
-                                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 7h11a3 3 0 0 1 3 3v7"/><path d="m16 14 3 3 3-3M19 17H8a3 3 0 0 1-3-3V7"/><path d="m8 10-3-3-3 3"/></svg>
-                            </div>
-                            <h3 class="mt-7 text-xl font-semibold">A recoverable conflict path</h3>
-                            <p class="mt-3 text-sm leading-6 text-white/62">When two edits cannot safely become one, the server creates a separate conflict file instead of pretending it merged them.</p>
-                        </article>
+                        <img src="/images/character/synkk-mascot-animated.svg" alt="Synkk's animated octopus explorer beside the real product capture" width="800" height="700" class="synkk-hero-character" fetchpriority="high" decoding="async">
                     </div>
                 </div>
             </section>
 
-            <section id="setup" class="synkk-deferred mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32 lg:px-10">
-                <div class="grid gap-14 lg:grid-cols-[.8fr_1.2fr]">
-                    <div class="lg:sticky lg:top-28 lg:self-start">
-                        <h2 class="text-4xl font-semibold tracking-[-0.045em] text-[#14213d] sm:text-5xl">Connect once. Keep writing.</h2>
-                        <p class="mt-5 max-w-md text-lg leading-8 text-[#5c6880]">A deliberate setup creates the boundary between your server, your vault, and each trusted device.</p>
-                        <a href="{{ route('docs.redirect') }}" class="mt-7 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#14213d]/15 bg-white px-5 text-sm font-semibold text-[#14213d] transition-colors hover:border-[#0b6cff]/40 hover:text-[#0b6cff]">
-                            Open setup guide <span aria-hidden="true">→</span>
-                        </a>
-                    </div>
-
-                    <ol class="space-y-3" aria-label="Setup steps">
+            <section class="synkk-platforms" aria-label="Supported platforms">
+                <div class="synkk-shell synkk-platforms__inner">
+                    <p>One vault across the devices you already use.</p>
+                    <ul>
                         @foreach ([
-                            ['01', 'Host the Synkk server', 'Deploy this Laravel application at an HTTPS address your devices can reach. Your chosen infrastructure stores the vault files.'],
-                            ['02', 'Create the team vault', 'Name the vault, invite teammates, and set the default and path-specific permissions that fit the work.'],
-                            ['03', 'Connect each device', 'Generate a dedicated token, then paste the Server API URL and Device Sync Token into Synkk Vault Sync in Obsidian.'],
-                            ['04', 'Choose the sync rhythm', 'Verify and load vaults, select the Target Vault, then sync manually, at startup, or on a schedule.'],
-                        ] as [$number, $title, $description])
-                            <li class="grid gap-4 rounded-[1.5rem] border border-[#14213d]/10 bg-white/75 p-5 sm:grid-cols-[64px_1fr] sm:p-6">
-                                <span class="text-sm font-semibold text-[#0b6cff]">{{ $number }}</span>
-                                <div>
-                                    <h3 class="text-lg font-semibold tracking-[-0.02em] text-[#14213d]">{{ $title }}</h3>
-                                    <p class="mt-2 text-sm leading-6 text-[#626e85]">{{ $description }}</p>
-                                </div>
-                            </li>
+                            ['obsidian', 'Obsidian'],
+                            ['macos', 'macOS'],
+                            ['windows', 'Windows'],
+                            ['linux', 'Linux'],
+                            ['ios', 'iOS'],
+                            ['android', 'Android'],
+                        ] as [$icon, $platform])
+                            <li><img src="/images/platforms/{{ $icon }}.svg" alt="" width="24" height="24" loading="lazy"><span>{{ $platform }}</span></li>
                         @endforeach
+                    </ul>
+                </div>
+            </section>
+
+            <section id="product" class="synkk-product synkk-viewport-section synkk-shell" aria-labelledby="product-heading">
+                <header class="synkk-section-heading">
+                    <div>
+                        <p class="synkk-eyebrow">Inside Synkk</p>
+                        <h2 id="product-heading">Edit the note. Follow the graph.</h2>
+                    </div>
+                    <p>The same vault opens as a full Markdown workspace or a live map of the notes and links you can access.</p>
+                </header>
+
+                <div class="synkk-product-viewer" data-product-workbench>
+                    <div class="synkk-product-tabs" role="tablist" aria-label="Real Synkk product views">
+                        <button type="button" role="tab" data-product-tab="markdown-editor" aria-selected="true" tabindex="0"><span>01</span> Markdown Editor</button>
+                        <button type="button" role="tab" data-product-tab="graph" aria-selected="false" tabindex="-1"><span>02</span> Graph View</button>
+                        <p><i aria-hidden="true"></i> Real product capture</p>
+                    </div>
+
+                    <div class="synkk-product-screen">
+                        <figure data-product-view="markdown-editor" role="tabpanel" aria-label="Markdown Editor">
+                            <img src="/images/showcase/editor-full.webp" alt="The actual Synkk vault page showing the Markdown editor, note navigator, source with line numbers, and split preview" width="1280" height="720" loading="eager" decoding="async">
+                            <figcaption><strong>A complete writing workspace.</strong><span>Formatting tools, document outline, minimap, split preview, sharing, versions, and save state.</span></figcaption>
+                        </figure>
+                        <figure data-product-view="graph" role="tabpanel" aria-label="Graph View" hidden>
+                            <img src="/images/showcase/graph-full.webp" alt="The actual Synkk vault graph showing connected notes, filtering, and an accessible note index" width="1280" height="720" loading="lazy" decoding="async">
+                            <figcaption><strong>The same vault, mapped.</strong><span>Search, zoom, inspect links, and open any accessible note directly in the editor.</span></figcaption>
+                        </figure>
+                    </div>
+                </div>
+            </section>
+
+            <section id="product-proof" class="synkk-product-proof synkk-viewport-section" aria-labelledby="product-proof-heading">
+                <div class="synkk-data-rail synkk-data-rail--proof" aria-hidden="true">
+                    <span class="synkk-data-rail__line synkk-data-rail__line--horizontal"></span>
+                    <span class="synkk-data-rail__line synkk-data-rail__line--vertical"></span>
+                    <i class="synkk-data-packet synkk-data-packet--one"></i>
+                    <i class="synkk-data-packet synkk-data-packet--two"></i>
+                    <i class="synkk-data-packet synkk-data-packet--three"></i>
+                </div>
+                <div class="synkk-shell">
+                    <header class="synkk-section-heading">
+                        <div>
+                            <p class="synkk-eyebrow">Real working surfaces</p>
+                            <h2 id="product-proof-heading">Four working surfaces. One vault.</h2>
+                        </div>
+                        <p>These are real Synkk views: monitor vault health, write Markdown, trace the graph, and manage the trusted devices around it.</p>
+                    </header>
+
+                    <div class="synkk-product-proof__grid">
+                        <article>
+                            <figure><img src="/images/showcase/dashboard-overview.webp" alt="The real Synkk dashboard showing vaults, sync events, notes, and activity" width="2300" height="1294" loading="lazy" decoding="async"></figure>
+                            <div><span>01 · OVERVIEW</span><h3>See the vault at a glance.</h3><p>Vault health, recent sync activity, notes, and the connected fleet in one place.</p></div>
+                        </article>
+                        <article>
+                            <figure><img src="/images/showcase/editor-full.webp" alt="The real Synkk Markdown editor showing note navigation, source, outline, and split preview" width="1280" height="720" loading="lazy" decoding="async"></figure>
+                            <div><span>02 · WRITE</span><h3>Stay in the note.</h3><p>Use the Markdown workspace for outline, preview, version awareness, and focused editing.</p></div>
+                        </article>
+                        <article>
+                            <figure><img src="/images/showcase/graph-full.webp" alt="The real Synkk Graph View showing connected notes and an accessible note index" width="1280" height="720" loading="lazy" decoding="async"></figure>
+                            <div><span>03 · CONNECT</span><h3>Follow the thinking.</h3><p>Inspect linked notes, search the graph, then open an accessible note in context.</p></div>
+                        </article>
+                        <article>
+                            <figure><img src="/images/showcase/permissions-full.webp" alt="The real Synkk Permissions Matrix showing default access, path-rule inheritance, hidden paths, and Add Path Rule controls" width="1280" height="720" loading="lazy" decoding="async"></figure>
+                            <div><span>04 · CONTROL</span><h3>Set the boundary before you share.</h3><p>Use member defaults and granular path rules to decide what stays read-only or hidden.</p></div>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section id="workflow" class="synkk-workflow synkk-viewport-section" aria-labelledby="workflow-heading">
+                <div class="synkk-data-rail synkk-data-rail--dark synkk-data-rail--workflow" aria-hidden="true">
+                    <span class="synkk-data-rail__line synkk-data-rail__line--horizontal"></span>
+                    <span class="synkk-data-rail__line synkk-data-rail__line--vertical"></span>
+                    <i class="synkk-data-packet synkk-data-packet--one"></i>
+                    <i class="synkk-data-packet synkk-data-packet--two"></i>
+                    <i class="synkk-data-packet synkk-data-packet--three"></i>
+                </div>
+                <div class="synkk-shell">
+                    <header class="synkk-section-heading synkk-section-heading--inverse">
+                        <div>
+                            <p class="synkk-eyebrow">A change, end to end</p>
+                            <h2 id="workflow-heading">Checked before it reaches the vault.</h2>
+                        </div>
+                        <p>Synkk authenticates the device and path, fingerprints uploaded content, and uses the supplied loaded revision to detect stale edits.</p>
+                    </header>
+
+                    <ol class="synkk-workflow-grid">
+                        <li>
+                            <span class="synkk-step-number">01</span>
+                            <div class="synkk-step-icon" aria-hidden="true">MD</div>
+                            <h3>Edit locally</h3>
+                            <p>Work in Obsidian or the web editor. Your vault stays a folder of portable Markdown files.</p>
+                            <small>Local-first authoring</small>
+                        </li>
+                        <li>
+                            <span class="synkk-step-number">02</span>
+                            <div class="synkk-step-icon" aria-hidden="true">✓</div>
+                            <h3>Verify the change</h3>
+                            <p>Device access is checked, content gets a SHA-256 fingerprint, and a supplied base revision can reject stale edits.</p>
+                            <small>Guarded updates</small>
+                        </li>
+                        <li>
+                            <span class="synkk-step-number">03</span>
+                            <div class="synkk-step-icon" aria-hidden="true">↗</div>
+                            <img src="/images/character/synkk-mascot-animated.svg" alt="" width="800" height="700" class="synkk-workflow-mascot" loading="lazy" decoding="async">
+                            <h3>Sync trusted devices</h3>
+                            <p>Devices pull on startup, on their configured interval, or whenever you run a manual sync.</p>
+                            <small>Predictable delivery</small>
+                        </li>
                     </ol>
                 </div>
             </section>
 
-            <section class="synkk-deferred mx-auto max-w-7xl px-5 pb-24 sm:px-8 sm:pb-32 lg:px-10">
-                <div class="relative overflow-hidden rounded-[2.5rem] bg-[#0b6cff] px-6 py-16 text-center text-white shadow-[0_34px_90px_-50px_rgba(11,108,255,.85)] sm:px-12 sm:py-20">
-                    <div class="pointer-events-none absolute -left-24 -top-28 size-72 rounded-full border border-white/15" aria-hidden="true"></div>
-                    <div class="pointer-events-none absolute -bottom-32 -right-20 size-80 rounded-full border border-white/15" aria-hidden="true"></div>
-                    <h2 class="relative mx-auto max-w-3xl text-4xl font-semibold tracking-[-0.05em] sm:text-6xl">Make the vault feel shared—not rented.</h2>
-                    <p class="relative mx-auto mt-5 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">Give the team a clear route between local notes and the devices you trust.</p>
-                    <div class="relative mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-                        @auth
-                            <a href="{{ $dashboardUrl }}" class="inline-flex min-h-12 items-center justify-center rounded-full bg-[#d7ff3f] px-7 text-sm font-semibold text-[#14213d] transition-transform hover:-translate-y-0.5">Open dashboard</a>
-                        @else
-                            @if (Route::has('register'))
-                                <a href="{{ route('register') }}" class="inline-flex min-h-12 items-center justify-center rounded-full bg-[#d7ff3f] px-7 text-sm font-semibold text-[#14213d] transition-transform hover:-translate-y-0.5">Create workspace</a>
-                            @endif
-                            <a href="{{ route('login') }}" class="inline-flex min-h-12 items-center justify-center rounded-full border border-white/25 bg-white/10 px-7 text-sm font-semibold text-white transition-colors hover:bg-white/16">Log in</a>
-                        @endauth
+            <section id="safety" class="synkk-safety synkk-viewport-section synkk-shell" aria-labelledby="safety-heading">
+                <header class="synkk-section-heading">
+                    <div>
+                        <p class="synkk-eyebrow">Access and recovery</p>
+                        <h2 id="safety-heading">Keep access narrow. Keep every version.</h2>
                     </div>
+                    <p>Synkk scopes vault paths by member, fingerprints stored content, and keeps note versions available for restore.</p>
+                </header>
+
+                <div class="synkk-safety-grid">
+                    <article class="synkk-safety-card synkk-safety-card--primary">
+                        <div class="synkk-safety-card__top"><span>CONTENT INTEGRITY</span><strong>SHA-256</strong></div>
+                        <h3>Every accepted upload gets a fingerprint.</h3>
+                        <p>Synkk computes a content checksum before storing the current file and its version record.</p>
+                        <div class="synkk-hash-readout" aria-label="Example SHA-256 content fingerprint">
+                            <span>CONTENT HASH</span>
+                            <code>f2a8c1d7…9b6e</code>
+                            <small>Recorded with the version</small>
+                        </div>
+                    </article>
+
+                    <article class="synkk-safety-card">
+                        <div class="synkk-safety-card__top"><span>PATH RULES</span><strong>Per member</strong></div>
+                        <h3>Share a folder, not the whole vault.</h3>
+                        <div class="synkk-rule-list">
+                            <p><span>00-Inbox/**</span><strong>Read + write</strong></p>
+                            <p><span>Client/**</span><strong>Read only</strong></p>
+                            <p><span>Private/**</span><strong>Hidden</strong></p>
+                        </div>
+                    </article>
+
+                    <article class="synkk-safety-card">
+                        <div class="synkk-safety-card__top"><span>VERSION HISTORY</span><strong>Recoverable</strong></div>
+                        <h3>Restore a note without learning Git.</h3>
+                        <ol class="synkk-version-list">
+                            <li><i></i><span><strong>v78 · current</strong><small>Verified and available</small></span></li>
+                            <li><i></i><span><strong>v77 · 42m</strong><small>One-click restore</small></span></li>
+                            <li><i></i><span><strong>v76 · 2h</strong><small>Content retained</small></span></li>
+                        </ol>
+                    </article>
                 </div>
             </section>
 
-            <section class="synkk-deferred border-t border-[#14213d]/8 bg-white/55">
-                <div class="mx-auto grid max-w-7xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[.72fr_1.28fr] lg:px-10">
+            <section id="pricing" class="synkk-pricing synkk-viewport-section" aria-labelledby="pricing-heading">
+                <div class="synkk-shell">
+                    <header class="synkk-section-heading">
+                        <div>
+                            <p class="synkk-eyebrow">Simple pricing</p>
+                        <h2 id="pricing-heading">Get the plugin free. Pro follows at $49.</h2>
+                    </div>
+                        <p>Plugin v1.0.0 is public on GitHub. Pro checkout opens after the server release and license flow pass their launch checks.</p>
+                    </header>
+
+                    <div class="synkk-pricing-grid">
+                        <article>
+                            <div class="synkk-price-heading"><span>OBSIDIAN PLUGIN</span><p><strong>$0</strong><small>public release</small></p></div>
+                            <h3>Install the public plugin today.</h3>
+                            <ul><li>Version 1.0.0 on GitHub</li><li>Startup, scheduled, and manual sync</li><li>Selective folder and config rules</li><li>Community release notes</li></ul>
+                            <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--quiet">Download v1.0.0 <span aria-hidden="true">↗</span></a>
+                        </article>
+
+                        <article class="is-featured">
+                            <div class="synkk-price-heading"><span>PRO · LAUNCH LICENSE</span><p><strong>$49</strong><small>one-time</small></p></div>
+                            <h3>Own the commercial server release.</h3>
+                            <ul><li>Perpetual access to the purchased version</li><li>One year of product updates</li><li>One year of direct support</li><li>License delivery through Lemon Squeezy</li></ul>
+                            @if ($storeReady)
+                                <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Get Synkk Pro <span aria-hidden="true">↗</span></a>
+                            @else
+                                <button type="button" class="synkk-button synkk-button--pending" disabled>Checkout opens after launch checks</button>
+                            @endif
+                        </article>
+
+                        <article class="synkk-pricing-grid__team">
+                            <div class="synkk-price-heading"><span>SELF-HOSTED TEAM</span><p><strong>Team</strong><small>self-hosted</small></p></div>
+                            <h3>Plan the server rollout around your team.</h3>
+                            <ul><li>Run Synkk in your own environment</li><li>Review member and path access</li><li>Follow the deployment documentation</li><li>Track launch gates in public</li></ul>
+                            <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Read setup docs <span aria-hidden="true">→</span></a>
+                        </article>
+                    </div>
+
+                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public plugin. Lemon Squeezy opens after checkout verification. AppSumo follows the full public launch.</p>
+                </div>
+            </section>
+
+            <section id="roadmap" class="synkk-roadmap synkk-viewport-section" aria-labelledby="roadmap-heading">
+                <div class="synkk-data-rail synkk-data-rail--dark synkk-data-rail--roadmap" aria-hidden="true">
+                    <span class="synkk-data-rail__line synkk-data-rail__line--horizontal"></span>
+                    <span class="synkk-data-rail__line synkk-data-rail__line--vertical"></span>
+                    <i class="synkk-data-packet synkk-data-packet--one"></i>
+                    <i class="synkk-data-packet synkk-data-packet--two"></i>
+                    <i class="synkk-data-packet synkk-data-packet--three"></i>
+                </div>
+                <div class="synkk-shell synkk-roadmap__grid">
+                    <header class="synkk-roadmap__intro">
+                        <p class="synkk-eyebrow">Public roadmap</p>
+                        <h2 id="roadmap-heading">Plugin now. Server release next.</h2>
+                        <p>The public plugin is downloadable today. The rows separate what is live, what must clear launch, and what follows.</p>
+                        <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--paper">See the public repository <span aria-hidden="true">↗</span></a>
+                        <img src="/images/character/synkk-mascot-animated.svg" alt="" width="800" height="700" class="synkk-roadmap-mascot" loading="lazy" decoding="async">
+                    </header>
+
+                    <ol class="synkk-roadmap-list">
+                        <li class="is-live"><span>LIVE</span><div><strong>Obsidian plugin v1.0.0</strong><p>The installable plugin release is public on GitHub now.</p></div></li>
+                        <li><span>LAUNCH GATE</span><div><strong>Foundation server release</strong><p>Public packaging, clean-install proof, verified checkout, and license activation UI.</p></div></li>
+                        <li><span>NEXT</span><div><strong>Safety and collaboration</strong><p>Deletion guard release, local snapshots, CRDT convergence, and a visual conflict sandbox.</p></div></li>
+                        <li><span>PLANNED</span><div><strong>Selective and private transport</strong><p>Ghost files, folder profiles, QR pairing, client-side encryption, relays, and background sync.</p></div></li>
+                    </ol>
+                </div>
+            </section>
+
+            <section id="faq" class="synkk-faq synkk-viewport-section synkk-shell" aria-labelledby="faq-heading">
+                <header class="synkk-section-heading">
                     <div>
-                        <h2 class="text-3xl font-semibold tracking-[-0.04em] text-[#14213d]">A few honest answers.</h2>
-                        <p class="mt-3 text-sm leading-6 text-[#647087]">The important details, without the fog machine.</p>
+                        <p class="synkk-eyebrow">Before you install</p>
+                        <h2 id="faq-heading">What is public today.</h2>
                     </div>
-                    <div class="divide-y divide-[#14213d]/10 border-y border-[#14213d]/10">
-                        <details class="group py-5">
-                            <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-5 text-base font-semibold text-[#14213d]">
-                                Is Synkk end-to-end encrypted?
-                                <svg class="size-5 shrink-0 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                            </summary>
-                            <p class="max-w-2xl pb-2 pr-9 text-sm leading-6 text-[#626e85]">No. Synkk authenticates devices and stores files on the server you operate. Use HTTPS in production and secure that server as you would any private team system.</p>
-                        </details>
-                        <details class="group py-5">
-                            <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-5 text-base font-semibold text-[#14213d]">
-                                Does it merge two edits automatically?
-                                <svg class="size-5 shrink-0 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                            </summary>
-                            <p class="max-w-2xl pb-2 pr-9 text-sm leading-6 text-[#626e85]">It does not claim to be a semantic merge engine. When Synkk detects a collision, it creates a conflict copy so a person can compare the edits.</p>
-                        </details>
-                        <details class="group py-5">
-                            <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-5 text-base font-semibold text-[#14213d]">
-                                Which devices can connect?
-                                <svg class="size-5 shrink-0 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                            </summary>
-                            <p class="max-w-2xl pb-2 pr-9 text-sm leading-6 text-[#626e85]">The plugin and token model support Obsidian on macOS, Windows, Linux, iOS, and Android. Each device receives its own revocable token.</p>
-                        </details>
-                    </div>
+                    <p>The public plugin, current product, and future roadmap are labelled separately.</p>
+                </header>
+
+                <div class="synkk-faq-list">
+                    <details open>
+                        <summary><span>01</span>What can I install today?</summary>
+                        <p>The Obsidian plugin v1.0.0 is public on GitHub. The Synkk web product currently provides authenticated sync, the editor, Graph View, member path permissions, versions, and restores.</p>
+                    </details>
+                    <details>
+                        <summary><span>02</span>Does Synkk replace my Markdown files?</summary>
+                        <p>No. Your vault remains portable files and folders. Synkk adds controlled sync, access, and recovery around the notes you own.</p>
+                    </details>
+                    <details>
+                        <summary><span>03</span>Is character-level CRDT sync available?</summary>
+                        <p>Not yet. CRDT collaboration and the visual conflict sandbox are the next public milestone after launch.</p>
+                    </details>
+                    <details>
+                        <summary><span>04</span>When does the $49 Pro license launch?</summary>
+                        <p>After the public server package, Lemon Squeezy checkout, and license activation screen are verified end to end. Until then, the page does not accept payment.</p>
+                    </details>
+                </div>
+            </section>
+
+            <section class="synkk-final-cta synkk-shell" aria-labelledby="final-heading">
+                <div class="synkk-data-rail synkk-data-rail--dark synkk-data-rail--final" aria-hidden="true">
+                    <span class="synkk-data-rail__line synkk-data-rail__line--horizontal"></span>
+                    <span class="synkk-data-rail__line synkk-data-rail__line--vertical"></span>
+                    <i class="synkk-data-packet synkk-data-packet--one"></i>
+                    <i class="synkk-data-packet synkk-data-packet--two"></i>
+                </div>
+                <div>
+                    <p class="synkk-eyebrow">Get the beta</p>
+                    <h2 id="final-heading">Install the Obsidian plugin.</h2>
+                    <p>Download v1.0.0 from GitHub, then follow the setup guide to connect it to Synkk.</p>
+                </div>
+                <div class="synkk-final-cta__actions">
+                    <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Download v1.0.0 <span aria-hidden="true">↗</span></a>
+                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--paper">Read the docs <span aria-hidden="true">→</span></a>
                 </div>
             </section>
         </main>
 
-        <footer class="relative z-10 border-t border-[#14213d]/8 bg-[#f7f5ed]">
-            <div class="mx-auto flex max-w-7xl flex-col gap-8 px-5 py-10 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-10">
-                <div class="flex items-center gap-3">
-                    <span class="grid size-9 place-items-center rounded-xl bg-[#d7ff3f] text-[#14213d]">
-                        <svg class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m13.4 2.8-8 11h6.2l-1 7.4 8-11h-6.2l1-7.4Z"/></svg>
-                    </span>
-                    <div>
-                        <p class="text-sm font-semibold text-[#14213d]">synkk</p>
-                        <p class="text-xs text-[#6a758b]">Local notes. Trusted routes.</p>
-                    </div>
-                </div>
-                <div class="flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-[#5c6880]">
-                    <a href="#workflow" class="hover:text-[#0b6cff]">Workflow</a>
-                    <a href="#trust" class="hover:text-[#0b6cff]">Trust & control</a>
-                    <a href="{{ route('docs.redirect') }}" class="hover:text-[#0b6cff]">Documentation</a>
-                    <a href="{{ route('login') }}" class="hover:text-[#0b6cff]">Log in</a>
-                </div>
-                <p class="text-xs text-[#7a8498]">© {{ date('Y') }} Synkk</p>
+        <footer class="synkk-footer">
+            <div class="synkk-shell synkk-footer__top">
+                <div><img src="/images/synkk-logo.svg" alt="Synkk — Obsidian everywhere" width="689" height="270" loading="lazy"><p>Portable notes. Visible safety. Infrastructure you control.</p></div>
+                <nav aria-label="Footer navigation"><a href="#product">Product</a><a href="#workflow">How it works</a><a href="#pricing">Pricing</a><a href="#roadmap">Roadmap</a><a href="#faq">FAQ</a><a href="{{ route('docs.redirect') }}">Documentation</a><a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer">GitHub ↗</a></nav>
             </div>
+            <div class="synkk-shell synkk-footer__bottom"><span>© {{ now()->year }} Synkk</span><span>Obsidian everywhere</span><span>Built in public</span></div>
         </footer>
     </body>
 </html>

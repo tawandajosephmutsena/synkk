@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          submodules: true
 
       - name: Setup PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
@@ -33,6 +34,13 @@ jobs:
 
       - name: Setup Application
         run: composer setup
+
+      - name: Validate Obsidian plugin
+        run: |
+          npm ci --prefix obsidian-plugin
+          npm --prefix obsidian-plugin run build
+          npx --prefix obsidian-plugin tsc --project obsidian-plugin/tsconfig.json --noEmit --skipLibCheck
+          npm run test:js
 
       - name: Run CI Checks
         run: composer ci:check
