@@ -76,13 +76,17 @@ test('the landing page presents real product captures without a mascot overlay',
     $this->assertFileDoesNotExist(public_path('images/showcase/devices-full.png'));
 });
 
-test('the landing page retains a documentation-first self-hosted team option', function () {
+test('the landing page presents the 1-year, lifetime, and enterprise meeting pricing options', function () {
     $response = $this->get(route('home'));
 
     $response
-        ->assertSee('SELF-HOSTED TEAM')
-        ->assertSee('Plan the server rollout around your team.')
-        ->assertSee('Read setup docs');
+        ->assertSee('$45')
+        ->assertSee('1-year update license')
+        ->assertSee('$65')
+        ->assertSee('LIFETIME LICENSE')
+        ->assertSee('ENTERPRISE & TEAMS')
+        ->assertSee('book-it.ottomate.space', escape: false)
+        ->assertSee('Book a meeting');
 });
 
 test('the landing page clearly separates the public plugin from the server launch roadmap', function () {
@@ -115,7 +119,7 @@ test('the landing page withholds checkout until Lemon Squeezy is fully configure
         ->assertOk()
         ->assertSee('Checkout opens after launch checks')
         ->assertDontSee('href="https://synkk.lemonsqueezy.com"', escape: false)
-        ->assertDontSee('Get Synkk Pro');
+        ->assertDontSee('Get Lifetime License');
 });
 
 test('the landing page links to checkout only when every Lemon Squeezy value is configured', function () {
@@ -126,6 +130,6 @@ test('the landing page links to checkout only when every Lemon Squeezy value is 
     $this->get(route('home'))
         ->assertOk()
         ->assertSee('href="https://store.example.test/synkk-pro"', escape: false)
-        ->assertSee('Get Synkk Pro')
+        ->assertSee('Get Lifetime License')
         ->assertDontSee('Checkout opens after launch checks');
 });

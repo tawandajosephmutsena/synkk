@@ -180,69 +180,247 @@
                 </div>
             </section>
 
-            <section id="product-proof" class="synkk-product-proof synkk-viewport-section" aria-labelledby="product-proof-heading">
+            <section id="product-proof" class="synkk-features synkk-viewport-section" aria-labelledby="product-proof-heading">
                 <div class="synkk-shell">
-                    @php
-                        $surfaces = [
-                            ['key' => 'overview', 'label' => 'Overview', 'heading' => 'See the vault at a glance.', 'description' => 'Vault health, recent sync activity, notes, storage, and the connected fleet in one place.', 'benefits' => ['Live health score', 'Storage and file counts'], 'image' => 'dashboard-overview.webp', 'alt' => 'The real Synkk dashboard showing vaults, sync events, notes, and activity', 'width' => 2300, 'height' => 1294],
-                            ['key' => 'write', 'label' => 'Markdown editor', 'heading' => 'Stay in the note.', 'description' => 'Use the Markdown workspace for outline, preview, version awareness, and focused editing.', 'benefits' => ['Split source and preview', 'Version-aware saves'], 'image' => 'editor-full.webp', 'alt' => 'The real Synkk Markdown editor showing note navigation, source, outline, and split preview', 'width' => 1280, 'height' => 720],
-                            ['key' => 'connect', 'label' => 'Graph view', 'heading' => 'Follow the thinking.', 'description' => 'Inspect linked notes, search the graph, then open an accessible note in context.', 'benefits' => ['Interactive link map', 'Searchable note index'], 'image' => 'graph-full.webp', 'alt' => 'The real Synkk Graph View showing connected notes and an accessible note index', 'width' => 1280, 'height' => 720],
-                            ['key' => 'control', 'label' => 'Permissions', 'heading' => 'Set the boundary before you share.', 'description' => 'Use member defaults and granular path rules to decide what stays read-only or hidden.', 'benefits' => ['Per-path permissions', 'Read, write, or hidden'], 'image' => 'permissions-full.webp', 'alt' => 'The real Synkk Permissions Matrix showing default access, path-rule inheritance, hidden paths, and Add Path Rule controls', 'width' => 1280, 'height' => 720],
-                        ];
-                    @endphp
-                    <div class="synkk-surfaces" data-surface-showcase data-active-surface="overview">
-                        <div class="synkk-surfaces__copy">
-                            <header class="synkk-surfaces__heading">
-                                <p class="synkk-eyebrow">02 / A closer look</p>
-                                <h2 id="product-proof-heading">Four working surfaces. <span>One vault.</span></h2>
-                                <p>Write, connect, and stay in control. A different perspective on the same notes.</p>
-                            </header>
+                    <header class="synkk-section-heading">
+                        <div>
+                            <p class="synkk-eyebrow">02 / Full product capabilities</p>
+                            <h2 id="product-proof-heading">Four working surfaces. <span>One vault.</span> Built for power.</h2>
+                        </div>
+                        <p>Every tool your notes need to stay organized, connected, safe, and private — with large visuals and straight-to-the-point control.</p>
+                    </header>
 
-                            <div class="synkk-surface-tabs" role="tablist" aria-label="Explore Synkk surfaces">
-                                @foreach ($surfaces as $surface)
-                                    <button type="button" role="tab" id="surface-tab-{{ $surface['key'] }}" data-surface-tab="{{ $surface['key'] }}" aria-controls="surface-copy-{{ $surface['key'] }} surface-image-{{ $surface['key'] }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" tabindex="{{ $loop->first ? '0' : '-1' }}"><span>0{{ $loop->iteration }}</span>{{ $surface['label'] }}<i aria-hidden="true">↗</i></button>
-                                @endforeach
+                    <div class="synkk-feature-cards">
+                        <!-- Card 1: Overview & Fleet Visibility -->
+                        <article class="synkk-feature-card">
+                            <div class="synkk-feature-card__copy">
+                                <div class="synkk-feature-card__badge">
+                                    <span class="synkk-status-dot" aria-hidden="true"></span> Available now · Fleet Dashboard
+                                </div>
+                                <h3>See the vault at a glance.</h3>
+                                <p>Monitor your entire vault ecosystem from a single pane of glass. Track storage usage, note counts, recent sync events, fleet revision status, and verify that all connected laptops and phones are synchronized.</p>
+                                <ul class="synkk-feature-card__list">
+                                    <li><strong>Live health scoring:</strong> Real-time audit of vault integrity, unverified changes, and storage limits.</li>
+                                    <li><strong>Fleet telemetry:</strong> Inspect device sync times, client versions, and connection states across platforms.</li>
+                                    <li><strong>Multi-vault switcher:</strong> Manage personal, work, and client vaults under one authenticated roof.</li>
+                                </ul>
+                                <div class="synkk-feature-card__actions">
+                                    @auth
+                                        <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--ink">Open fleet dashboard <span aria-hidden="true">↗</span></a>
+                                    @else
+                                        @if (Route::has('register'))
+                                            <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Create workspace <span aria-hidden="true">↗</span></a>
+                                        @endif
+                                    @endauth
+                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Read architecture <span aria-hidden="true">→</span></a>
+                                </div>
                             </div>
-
-                            <div class="synkk-surfaces__details">
-                                @foreach ($surfaces as $surface)
-                                    <div id="surface-copy-{{ $surface['key'] }}" data-surface-copy="{{ $surface['key'] }}" role="tabpanel" aria-labelledby="surface-tab-{{ $surface['key'] }}" tabindex="0" @if (! $loop->first) hidden @endif>
-                                        <h3>{{ $surface['heading'] }}</h3>
-                                        <p>{{ $surface['description'] }}</p>
-                                        <ul>@foreach ($surface['benefits'] as $benefit)<li>{{ $benefit }}</li>@endforeach</ul>
+                            <div class="synkk-feature-card__media">
+                                <div class="synkk-window-frame">
+                                    <div class="synkk-window-bar" aria-hidden="true">
+                                        <span><i></i><i></i><i></i></span>
+                                        <small>synkk / fleet-overview</small>
+                                        <span>↗</span>
                                     </div>
-                                @endforeach
+                                    <img src="/images/showcase/dashboard-overview.webp" alt="Synkk dashboard showing vault health, connected devices, recent activity, and storage" width="2300" height="1294" loading="lazy" decoding="async">
+                                </div>
                             </div>
+                        </article>
 
-                            <div class="synkk-surfaces__actions">
-                                @auth
-                                    <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--ink">Open your workspace <span aria-hidden="true">↗</span></a>
-                                @else
-                                    @if (Route::has('register'))
-                                        <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Create workspace <span aria-hidden="true">↗</span></a>
-                                    @endif
-                                @endauth
-                                <a href="{{ route('docs.redirect') }}" class="synkk-surface-docs">Explore the docs <span aria-hidden="true">→</span></a>
+                        <!-- Card 2: Markdown Workspace (Reversed) -->
+                        <article class="synkk-feature-card synkk-feature-card--reverse">
+                            <div class="synkk-feature-card__copy">
+                                <div class="synkk-feature-card__badge">
+                                    <span class="synkk-status-dot" aria-hidden="true"></span> Available now · Web Workspace
+                                </div>
+                                <h3>Markdown Editor: Stay in the note.</h3>
+                                <p>Never lose flow when you are away from your main machine. Synkk includes a full in-browser Markdown editor with live split preview, interactive document outline, minimap navigation, reading metrics, and keyboard shortcuts.</p>
+                                <ul class="synkk-feature-card__list">
+                                    <li><strong>Live split preview:</strong> GitHub-flavored Markdown rendered instantaneously side-by-side with your source.</li>
+                                    <li><strong>Document outline & minimap:</strong> Jump through long-form notes with automated heading tree parsing.</li>
+                                    <li><strong>Version-aware saves:</strong> Edit safely with revision checks that prevent silent overwrites.</li>
+                                </ul>
+                                <div class="synkk-feature-card__actions">
+                                    @auth
+                                        <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--ink">Open Markdown editor <span aria-hidden="true">↗</span></a>
+                                    @else
+                                        @if (Route::has('register'))
+                                            <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Try the editor <span aria-hidden="true">↗</span></a>
+                                        @endif
+                                    @endauth
+                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Read editor docs <span aria-hidden="true">→</span></a>
+                                </div>
                             </div>
-                            <p class="synkk-surfaces__principle"><span aria-hidden="true">✳</span> Your files. Your team. Your infrastructure.</p>
-                        </div>
+                            <div class="synkk-feature-card__media">
+                                <div class="synkk-window-frame">
+                                    <div class="synkk-window-bar" aria-hidden="true">
+                                        <span><i></i><i></i><i></i></span>
+                                        <small>synkk / markdown-editor</small>
+                                        <span>↗</span>
+                                    </div>
+                                    <img src="/images/showcase/editor-full.webp" alt="The real Synkk Markdown editor showing note navigation, source, outline, and split preview" width="1280" height="720" loading="lazy" decoding="async">
+                                </div>
+                            </div>
+                        </article>
 
-                        <div class="synkk-surfaces__stage">
-                            <div class="synkk-surface-glow" aria-hidden="true"></div>
-                            <div class="synkk-surface-orbit synkk-surface-orbit--one" aria-hidden="true"><i></i></div>
-                            <div class="synkk-surface-orbit synkk-surface-orbit--two" aria-hidden="true"><i></i></div>
-                            <div class="synkk-surface-images">
-                                @foreach ($surfaces as $surface)
-                                    <figure id="surface-image-{{ $surface['key'] }}" data-surface-image="{{ $surface['key'] }}" aria-labelledby="surface-tab-{{ $surface['key'] }}" @if (! $loop->first) hidden @endif>
-                                        <div class="synkk-surface-window">
-                                            <div class="synkk-window-bar" aria-hidden="true"><span><i></i><i></i><i></i></span><small>synkk / {{ $surface['key'] }}</small><span>↗</span></div>
-                                            <img src="/images/showcase/{{ $surface['image'] }}" alt="{{ $surface['alt'] }}" width="{{ $surface['width'] }}" height="{{ $surface['height'] }}" loading="lazy" decoding="async">
+                        <!-- Card 3: Interactive Visual Graph View -->
+                        <article class="synkk-feature-card">
+                            <div class="synkk-feature-card__copy">
+                                <div class="synkk-feature-card__badge">
+                                    <span class="synkk-status-dot" aria-hidden="true"></span> Available now · Knowledge Mapping
+                                </div>
+                                <h3>Graph View: Follow the thinking.</h3>
+                                <p>Discover how your ideas connect across thousands of notes. Synkk constructs an interactive 2D physics-based force graph of all your <code>[[wikilinks]]</code> and tags. Inspect clusters, search for hidden connections, filter orphan notes, and click any node to jump straight into editing.</p>
+                                <ul class="synkk-feature-card__list">
+                                    <li><strong>Force-directed physics map:</strong> Smooth canvas simulation of relationships and note links.</li>
+                                    <li><strong>Interactive inspection:</strong> Zoom, drag, and search nodes with instant cluster highlights.</li>
+                                    <li><strong>Direct jump to editor:</strong> Click any node to open the underlying Markdown note immediately.</li>
+                                </ul>
+                                <div class="synkk-feature-card__actions">
+                                    @auth
+                                        <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--ink">Open Graph view <span aria-hidden="true">↗</span></a>
+                                    @else
+                                        @if (Route::has('register'))
+                                            <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Explore Graph view <span aria-hidden="true">↗</span></a>
+                                        @endif
+                                    @endauth
+                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Read graph docs <span aria-hidden="true">→</span></a>
+                                </div>
+                            </div>
+                            <div class="synkk-feature-card__media">
+                                <div class="synkk-window-frame">
+                                    <div class="synkk-window-bar" aria-hidden="true">
+                                        <span><i></i><i></i><i></i></span>
+                                        <small>synkk / graph-view</small>
+                                        <span>↗</span>
+                                    </div>
+                                    <img src="/images/showcase/graph-full.webp" alt="The real Synkk Graph View showing connected notes and an accessible note index" width="1280" height="720" loading="lazy" decoding="async">
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Card 4: Granular Path Permissions Matrix (Reversed) -->
+                        <article class="synkk-feature-card synkk-feature-card--reverse">
+                            <div class="synkk-feature-card__copy">
+                                <div class="synkk-feature-card__badge">
+                                    <span class="synkk-status-dot" aria-hidden="true"></span> Available now · Team Access Control
+                                </div>
+                                <h3>Set the boundary before you share.</h3>
+                                <p>Traditional sync forces you into all-or-nothing sharing. Synkk gives you surgical control with a granular per-path permission matrix. Keep <code>Private/**</code> notes hidden, share <code>Client/**</code> as read-only, and collaborate on <code>Projects/**</code> with full read-write access.</p>
+                                <ul class="synkk-feature-card__list">
+                                    <li><strong>Per-member path rules:</strong> Assign Read, Write, or Hidden access per team member.</li>
+                                    <li><strong>Inheritance & overrides:</strong> Subdirectories inherit parent rules with specific exceptions.</li>
+                                    <li><strong>Zero leaks:</strong> Hidden paths are stripped from manifests before reaching untrusted devices.</li>
+                                </ul>
+                                <div class="synkk-feature-card__actions">
+                                    @auth
+                                        <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--ink">Configure permissions <span aria-hidden="true">↗</span></a>
+                                    @else
+                                        @if (Route::has('register'))
+                                            <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Create team workspace <span aria-hidden="true">↗</span></a>
+                                        @endif
+                                    @endauth
+                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Permissions guide <span aria-hidden="true">→</span></a>
+                                </div>
+                            </div>
+                            <div class="synkk-feature-card__media">
+                                <div class="synkk-window-frame">
+                                    <div class="synkk-window-bar" aria-hidden="true">
+                                        <span><i></i><i></i><i></i></span>
+                                        <small>synkk / permissions-matrix</small>
+                                        <span>↗</span>
+                                    </div>
+                                    <img src="/images/showcase/permissions-full.webp" alt="The real Synkk Permissions Matrix showing default access, path-rule inheritance, hidden paths, and Add Path Rule controls" width="1280" height="720" loading="lazy" decoding="async">
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Card 5: Safety Shield & Anti-Data Loss Protection -->
+                        <article class="synkk-feature-card">
+                            <div class="synkk-feature-card__copy">
+                                <div class="synkk-feature-card__badge">
+                                    <span class="synkk-status-dot" aria-hidden="true"></span> Available now · Safety Shield
+                                </div>
+                                <h3>Safety Shield: No note is ever silently lost.</h3>
+                                <p>Other sync tools risk catastrophic data loss when mass deletions or stale sync collisions happen. Synkk includes Safety Shield: a deterministic guard that halts any sync attempting to delete more than 10% of your notes until you confirm it.</p>
+                                <ul class="synkk-feature-card__list">
+                                    <li><strong>10% Deletion threshold guard:</strong> Aborts destructive mass wipes with a safe one-time manual override.</li>
+                                    <li><strong>Pre-mutation snapshots:</strong> Files are backed up locally to <code>.synkk/snapshots/</code> before remote overwrites.</li>
+                                    <li><strong>Conflict fork preservation:</strong> Concurrent edits fork to <code>.sync-conflict-[timestamp].md</code> instead of clobbering.</li>
+                                    <li><strong>Cryptographic fingerprinting:</strong> Every revision is verified using full SHA-256 content hashes.</li>
+                                </ul>
+                                <div class="synkk-feature-card__actions">
+                                    <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Download Plugin v1.0.0 <span aria-hidden="true">↗</span></a>
+                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Safety documentation <span aria-hidden="true">→</span></a>
+                                </div>
+                            </div>
+                            <div class="synkk-feature-card__media">
+                                <div class="synkk-feature-graphic synkk-feature-graphic--shield">
+                                    <div class="synkk-graphic-shield-badge">
+                                        <span class="synkk-graphic-shield-icon">🛡️</span>
+                                        <strong>Safety Shield Active</strong>
+                                        <small>10% bulk deletion threshold guard</small>
+                                    </div>
+                                    <div class="synkk-graphic-shield-items">
+                                        <div class="synkk-shield-item">
+                                            <span class="synkk-shield-item__badge">SHA-256</span>
+                                            <div><strong>Content Checksum</strong><p>Cryptographic fingerprint on every accepted revision</p></div>
                                         </div>
-                                    </figure>
-                                @endforeach
+                                        <div class="synkk-shield-item">
+                                            <span class="synkk-shield-item__badge">SNAPSHOTS</span>
+                                            <div><strong>Pre-Mutation Backups</strong><p>Local snapshot folder saved before remote changes</p></div>
+                                        </div>
+                                        <div class="synkk-shield-item">
+                                            <span class="synkk-shield-item__badge">FORK-SAFE</span>
+                                            <div><strong>Conflict Preservation</strong><p>Forked conflict copies prevent accidental overwrite</p></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="synkk-surface-seal" aria-hidden="true"><svg viewBox="0 0 60 60" fill="none"><path d="M18 20a16 16 0 0 1 27 8m0-10v11H34M42 40a16 16 0 0 1-27-8m0 10V31h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-                        </div>
+                        </article>
+
+                        <!-- Card 6: Self-Hosted Docker & Instant Remote Wipe (Reversed) -->
+                        <article class="synkk-feature-card synkk-feature-card--reverse">
+                            <div class="synkk-feature-card__copy">
+                                <div class="synkk-feature-card__badge">
+                                    <span class="synkk-status-dot" aria-hidden="true"></span> Available now · Enterprise Security
+                                </div>
+                                <h3>Your server. Zero telemetry. Instant remote wipe.</h3>
+                                <p>Deploy Synkk with a single Docker command using embedded high-performance SQLite WAL. Retain 100% data ownership on your own infrastructure. Every device authenticates using scoped, revocable API tokens. If a laptop or phone is lost or stolen, administrators can remotely wipe the device token with one click.</p>
+                                <ul class="synkk-feature-card__list">
+                                    <li><strong>Single Docker container:</strong> Production-ready with Nginx, PHP 8.4, and SQLite WAL out of the box.</li>
+                                    <li><strong>Instant remote token wipe:</strong> Immediately sever and invalidate stolen device tokens.</li>
+                                    <li><strong>Zero telemetry:</strong> No tracking, no third-party analytics, and no external data exposure.</li>
+                                </ul>
+                                <div class="synkk-feature-card__actions">
+                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--ink">Read self-hosting docs <span aria-hidden="true">→</span></a>
+                                    <a href="https://github.com/tawandajosephmutsena/synkk" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--quiet">View GitHub source <span aria-hidden="true">↗</span></a>
+                                </div>
+                            </div>
+                            <div class="synkk-feature-card__media">
+                                <div class="synkk-feature-graphic synkk-feature-graphic--docker">
+                                    <div class="synkk-graphic-docker-header">
+                                        <span><i></i><i></i><i></i></span>
+                                        <small>docker-compose.yml</small>
+                                    </div>
+                                    <pre class="synkk-docker-code"><code>services:
+  synkk:
+    image: synkk/server:latest
+    ports: ["8000:80"]
+    volumes:
+      - ./storage:/var/www/html/storage/app/private
+      - ./database:/var/www/html/database
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=sqlite</code></pre>
+                                    <div class="synkk-graphic-wipe-tag">
+                                        <span>🔒 Remote Device Wipe</span>
+                                        <small>HTTP 410 auto-clears local tokens instantly</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
                     </div>
                 </div>
             </section>
@@ -339,39 +517,72 @@
                     <header class="synkk-section-heading">
                         <div>
                             <p class="synkk-eyebrow">05 / Simple pricing</p>
-                            <h2 id="pricing-heading">Get the plugin free. Pro follows at $49.</h2>
+                            <h2 id="pricing-heading">Simple, transparent pricing. No recurring trap.</h2>
                         </div>
-                        <p>Plugin v1.0.0 is public on GitHub. Pro checkout opens after the server release and license flow pass their launch checks.</p>
+                        <p>Own the self-hosted server on your terms. The Obsidian plugin is free, while commercial licenses give you software updates and direct support.</p>
                     </header>
 
                     <div class="synkk-pricing-grid">
                         <article>
-                            <div class="synkk-price-heading"><span>OBSIDIAN PLUGIN</span><p><strong>$0</strong><small>public release</small></p></div>
-                            <h3>Install the public plugin today.</h3>
-                            <ul><li>Version 1.0.0 on GitHub</li><li>Startup, scheduled, and manual sync</li><li>Selective folder and config rules</li><li>Community release notes</li></ul>
-                            <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--quiet">Download v1.0.0 <span aria-hidden="true">↗</span></a>
+                            <div class="synkk-price-heading">
+                                <span>1-YEAR UPDATE LICENSE</span>
+                                <p><strong>$45</strong><small>1-year update license</small></p>
+                            </div>
+                            <h3>Self-host with one full year of updates.</h3>
+                            <ul>
+                                <li>1 year of software updates & new feature releases</li>
+                                <li>Perpetual access to the purchased version forever</li>
+                                <li>Self-host on your own infrastructure or Docker</li>
+                                <li>Unlimited vaults, notes, and local devices</li>
+                                <li>Obsidian plugin v1.0.0 integration included</li>
+                                <li>Community support & documentation access</li>
+                            </ul>
+                            @if ($storeReady)
+                                <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Get 1-Year License <span aria-hidden="true">↗</span></a>
+                            @else
+                                <button type="button" class="synkk-button synkk-button--pending" disabled>Checkout opens after launch checks</button>
+                            @endif
                         </article>
 
                         <article class="is-featured">
-                            <div class="synkk-price-heading"><span>PRO · LAUNCH LICENSE</span><p><strong>$49</strong><small>one-time</small></p></div>
-                            <h3>Own the commercial server release.</h3>
-                            <ul><li>Perpetual access to the purchased version</li><li>One year of product updates</li><li>One year of direct support</li><li>License delivery through Lemon Squeezy</li></ul>
+                            <div class="synkk-price-heading">
+                                <span>LIFETIME LICENSE · BEST VALUE</span>
+                                <p><strong>$65</strong><small>lifetime license</small></p>
+                            </div>
+                            <h3>Own Synkk forever. Every update included.</h3>
+                            <ul>
+                                <li>Lifetime software updates — never pay a renewal fee</li>
+                                <li>All future v1.x, v2.x, and major milestone releases</li>
+                                <li>Self-host on unlimited servers you control</li>
+                                <li>Priority access to CRDT collaboration & E2EE betas</li>
+                                <li>Direct priority support from core maintainers</li>
+                                <li>Full commercial and personal use rights</li>
+                            </ul>
                             @if ($storeReady)
-                                <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Get Synkk Pro <span aria-hidden="true">↗</span></a>
+                                <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Get Lifetime License <span aria-hidden="true">↗</span></a>
                             @else
                                 <button type="button" class="synkk-button synkk-button--pending" disabled>Checkout opens after launch checks</button>
                             @endif
                         </article>
 
                         <article class="synkk-pricing-grid__team">
-                            <div class="synkk-price-heading"><span>SELF-HOSTED TEAM</span><p><strong>Team</strong><small>self-hosted</small></p></div>
-                            <h3>Plan the server rollout around your team.</h3>
-                            <ul><li>Run Synkk in your own environment</li><li>Review member and path access</li><li>Follow the deployment documentation</li><li>Track launch gates in public</li></ul>
-                            <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Read setup docs <span aria-hidden="true">→</span></a>
+                            <div class="synkk-price-heading">
+                                <span>ENTERPRISE &amp; TEAMS</span>
+                                <p><strong>Enterprise</strong><small>teams &amp; organizations</small></p>
+                            </div>
+                            <h3>Deploy Synkk across your team or company.</h3>
+                            <ul>
+                                <li>Custom deployment assistance (Docker, K8s, Bare Metal)</li>
+                                <li>Granular path permission & team onboarding architecture</li>
+                                <li>Dedicated support channel with core maintainers</li>
+                                <li>Custom SLA, invoice billing, and security audit review</li>
+                                <li>Unlimited team members, devices, and enterprise vaults</li>
+                            </ul>
+                            <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Book a meeting <span aria-hidden="true">↗</span></a>
                         </article>
                     </div>
 
-                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public plugin. Lemon Squeezy opens after checkout verification. AppSumo follows the full public launch.</p>
+                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public plugin. Lemon Squeezy manages license checkout. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline hover:text-zinc-900">book-it.ottomate.space</a>.</p>
                 </div>
             </section>
 
@@ -385,10 +596,34 @@
                     </header>
 
                     <ol class="synkk-roadmap-list">
-                        <li class="is-live"><span>LIVE</span><div><strong>Obsidian plugin v1.0.0</strong><p>The installable plugin release is public on GitHub now.</p></div></li>
-                        <li><span>LAUNCH GATE</span><div><strong>Foundation server release</strong><p>Public packaging, clean-install proof, verified checkout, and license activation UI.</p></div></li>
-                        <li><span>NEXT</span><div><strong>Safety and collaboration</strong><p>Deletion guard release, local snapshots, CRDT convergence, and a visual conflict sandbox.</p></div></li>
-                        <li><span>PLANNED</span><div><strong>Selective and private transport</strong><p>Ghost files, folder profiles, QR pairing, client-side encryption, relays, and background sync.</p></div></li>
+                        <li class="is-live">
+                            <span>LIVE NOW</span>
+                            <div>
+                                <strong>Obsidian plugin v1.0.0</strong>
+                                <p>The installable plugin release is public on GitHub now with hash-based sync, Safety Shield deletion protection, path exclusions, and automatic conflict forking.</p>
+                            </div>
+                        </li>
+                        <li class="is-live">
+                            <span>LIVE NOW</span>
+                            <div>
+                                <strong>Foundation server release</strong>
+                                <p>Self-hosted server with SQLite WAL, web Markdown workspace, 2D visual graph view, member path permissions matrix, note version rollback, and Docker orchestration.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span>NEXT UP</span>
+                            <div>
+                                <strong>Safety and collaboration</strong>
+                                <p>Character-level CRDT multiplayer editing directly in Obsidian and web, and an in-editor visual conflict sandbox for side-by-side 3-way note reconciliation.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span>PLANNED</span>
+                            <div>
+                                <strong>Selective and private transport</strong>
+                                <p>On-demand ghost files for large media attachments, client-side zero-knowledge End-to-End Encryption (E2EE), native mobile background sync relays, and 2-second QR pairing.</p>
+                            </div>
+                        </li>
                     </ol>
                 </div>
             </section>

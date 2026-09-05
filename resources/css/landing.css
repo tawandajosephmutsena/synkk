@@ -277,20 +277,20 @@ summary:focus-visible,
 .synkk-hero__frame {
     position: relative;
     display: grid;
-    grid-template-columns: 1fr 1.05fr;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.35fr);
     align-items: center;
-    gap: 2.5rem;
+    gap: clamp(2rem, 3.5vw, 3.5rem);
 }
 .synkk-hero__copy {
     min-width: 0;
-    padding: 1.75rem 0 2rem;
+    padding: 1.5rem 0 2rem;
 }
 .synkk-hero h1 {
     margin: 0;
-    font-size: clamp(4rem, 7.4vw, 7rem);
+    font-size: clamp(2.75rem, 4.2vw, 4.3rem);
     font-weight: 500;
-    letter-spacing: -0.075em;
-    line-height: 0.98;
+    letter-spacing: -0.06em;
+    line-height: 1.04;
 }
 .synkk-hero__line {
     display: block;
@@ -347,7 +347,8 @@ summary:focus-visible,
 .synkk-hero__media {
     position: relative;
     min-width: 0;
-    aspect-ratio: 1;
+    aspect-ratio: 16 / 11;
+    min-height: 480px;
     isolation: isolate;
     border: 1px solid #e1e3db;
     border-radius: 2rem;
@@ -404,8 +405,8 @@ summary:focus-visible,
 }
 .synkk-device-chip {
     position: absolute;
-    top: 18%;
-    right: 6%;
+    top: 14%;
+    right: 5%;
     display: flex;
     align-items: center;
     gap: 0.6rem;
@@ -415,6 +416,7 @@ summary:focus-visible,
     background: rgb(255 255 255 / 74%);
     box-shadow: 0 10px 35px rgb(44 49 33 / 5%);
     font-size: 0.7rem;
+    z-index: 4;
 }
 .synkk-device-chip span {
     margin-left: 0.65rem;
@@ -422,21 +424,21 @@ summary:focus-visible,
 }
 .synkk-laptop {
     position: absolute;
-    top: 29%;
-    left: -5%;
-    width: 102%;
+    top: 14%;
+    left: -3%;
+    width: 106%;
     z-index: 2;
-    transform: perspective(1200px) rotateY(-7deg) rotateX(5deg) rotateZ(-3deg);
+    transform: perspective(1200px) rotateY(-5deg) rotateX(4deg) rotateZ(-2deg);
 }
 .synkk-laptop__screen {
     overflow: hidden;
-    padding: 0.4rem;
-    border: 1px solid rgb(255 255 255 / 90%);
-    border-radius: 0.8rem;
+    padding: 0.5rem;
+    border: 1px solid rgb(255 255 255 / 95%);
+    border-radius: 1rem;
     background: #f9faf7;
     box-shadow:
-        0 30px 55px -14px rgb(47 52 41 / 30%),
-        0 3px 6px rgb(47 52 41 / 8%);
+        0 35px 70px -15px rgb(47 52 41 / 32%),
+        0 4px 10px rgb(47 52 41 / 8%);
 }
 .synkk-window-bar {
     display: flex;
@@ -470,14 +472,14 @@ summary:focus-visible,
     width: 100%;
     height: auto;
     border: 1px solid #e4e8de;
-    border-radius: 0.35rem;
+    border-radius: 0.5rem;
 }
 .synkk-graph-peek {
     position: absolute;
-    bottom: 7%;
-    right: -3%;
+    bottom: 5%;
+    right: -2%;
     z-index: 3;
-    width: 44%;
+    width: 42%;
     overflow: hidden;
     padding: 0.4rem;
     border: 1px solid #eff0ec;
@@ -744,289 +746,278 @@ summary:focus-visible,
     background: #edf0e5;
     border-block: 1px solid #dfe4d5;
 }
-/* One continuous product card: copy and controls beside the real capture. */
-.synkk-surfaces {
-    --surface-tint: #e6ebdd;
-    --surface-glow: #d9e5a8;
+/* Features Section & Power Cards */
+.synkk-features {
+    position: relative;
+    background: #edf0e5;
+    border-block: 1px solid #dfe4d5;
+}
+.synkk-feature-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 2.75rem;
+    margin-top: 3rem;
+}
+.synkk-feature-card {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-    overflow: hidden;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
+    gap: clamp(2rem, 3.8vw, 3.8rem);
+    align-items: center;
+    padding: clamp(2rem, 3.5vw, 3.5rem);
     border: 1px solid #d4dcc7;
-    border-radius: 1.7rem;
+    border-radius: 1.8rem;
     background: #fbfcf7;
     box-shadow:
-        0 35px 75px -40px rgb(48 64 29 / 24%),
-        0 2px 3px rgb(48 64 29 / 3%);
+        0 30px 65px -35px rgb(48 64 29 / 20%),
+        0 2px 4px rgb(48 64 29 / 3%);
+    transition: border-color 300ms, box-shadow 300ms, transform 300ms var(--synkk-ease);
 }
-.synkk-surfaces[data-active-surface='write'] {
-    --surface-tint: #e9e4ee;
-    --surface-glow: #d5c5e4;
-}
-.synkk-surfaces[data-active-surface='connect'] {
-    --surface-tint: #e9e9da;
-    --surface-glow: #e0dda9;
-}
-.synkk-surfaces[data-active-surface='control'] {
-    --surface-tint: #deebe5;
-    --surface-glow: #b5d8c7;
-}
-.synkk-surfaces__copy {
-    position: relative;
-    z-index: 2;
-    padding: clamp(2rem, 3.6vw, 3.5rem);
-}
-.synkk-surfaces__heading h2 {
-    margin: 0;
-    font-size: clamp(2.4rem, 3.45vw, 3.4rem);
-    line-height: 1.05;
-    letter-spacing: -0.055em;
-    font-weight: 500;
-    text-wrap: balance;
-}
-.synkk-surfaces__heading h2 span {
-    color: #73864b;
-}
-.synkk-surfaces__heading > p:last-child {
-    max-width: 28rem;
-    margin: 1.25rem 0 0;
-    color: var(--synkk-muted);
-    font-size: 0.88rem;
-    line-height: 1.7;
-}
-.synkk-surface-tabs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.55rem;
-    margin-block: 2rem;
-}
-.synkk-surface-tabs button {
-    position: relative;
-    display: flex;
-    min-height: 3rem;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.8rem;
-    border: 1px solid #dce2d2;
-    border-radius: 0.65rem;
-    background: transparent;
-    color: #626e54;
-    font-size: 0.72rem;
-    text-align: left;
-    cursor: pointer;
-    transition:
-        background 350ms,
-        border-color 350ms,
-        color 350ms,
-        transform 350ms var(--synkk-ease);
-}
-.synkk-surface-tabs button > span {
-    font-family: var(--synkk-mono);
-    font-size: 0.54rem;
-    opacity: 0.7;
-}
-.synkk-surface-tabs button > i {
-    margin-left: auto;
-    font-style: normal;
-    opacity: 0.45;
-    transition: transform 350ms var(--synkk-ease);
-}
-.synkk-surface-tabs button:hover {
-    background: #eff3e5;
-    transform: translateY(-2px);
-    border-color: #bfcca5;
-}
-.synkk-surface-tabs button[aria-selected='true'] {
-    background: #dcecaf;
-    border-color: #c8d996;
-    color: #344825;
-}
-.synkk-surface-tabs button[aria-selected='true'] > i {
-    opacity: 1;
-    transform: rotate(45deg);
-}
-.synkk-surfaces__details {
-    min-height: 11.5rem;
-}
-.synkk-surfaces__details [role='tabpanel'] {
-    animation: synkk-surface-copy 500ms var(--synkk-ease);
-}
-.synkk-surfaces__details h3 {
-    margin: 0 0 0.8rem;
-    font-size: clamp(1.4rem, 2vw, 1.8rem);
-    line-height: 1.15;
-    font-weight: 500;
-    letter-spacing: -0.035em;
-}
-.synkk-surfaces__details p {
-    max-width: 28rem;
-    margin: 0;
-    color: var(--synkk-muted);
-    font-size: 0.81rem;
-    line-height: 1.75;
-}
-.synkk-surfaces__details ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.65rem 1.2rem;
-    padding: 0;
-    margin: 1.2rem 0 0;
-    list-style: none;
-    color: #64764c;
-    font-size: 0.64rem;
-}
-.synkk-surfaces__details li::before {
-    content: '✓';
-    margin-right: 0.4rem;
-}
-.synkk-surfaces__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem 1.3rem;
-    align-items: center;
-    margin-top: 0.8rem;
-}
-.synkk-surfaces__actions .synkk-button {
-    padding-inline: 1.25rem;
-    gap: 1rem;
-    font-size: 0.75rem;
-}
-.synkk-surface-docs {
-    display: inline-flex;
-    min-height: 2.8rem;
-    align-items: center;
-    gap: 0.6rem;
-    font-size: 0.73rem;
-    color: #5b6a48;
-    text-decoration: none;
-}
-.synkk-surface-docs:hover {
-    text-decoration: underline;
-    text-underline-offset: 4px;
-}
-.synkk-surfaces__principle {
-    display: flex;
-    gap: 0.6rem;
-    align-items: center;
-    margin: 1.75rem 0 0;
-    padding-top: 1.4rem;
-    border-top: 1px solid #e0e5d7;
-    font-size: 0.61rem;
-    color: #6f7b61;
-}
-.synkk-surfaces__principle > span {
-    color: #7b9350;
-    font-size: 1.1rem;
-}
-.synkk-surfaces__stage {
-    position: relative;
-    display: grid;
-    place-items: center;
-    min-width: 0;
-    overflow: hidden;
-    isolation: isolate;
-    border-left: 1px solid #dfe4d5;
-    background: var(--surface-tint);
-    transition: background 800ms;
-}
-.synkk-surfaces__stage::before {
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(#6f7f58 0.65px, transparent 0.65px);
-    background-size: 20px 20px;
-    opacity: 0.2;
-    mask-image: radial-gradient(ellipse at center, black, transparent 80%);
-    content: '';
-}
-.synkk-surface-glow {
-    position: absolute;
-    width: 90%;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    background: radial-gradient(closest-side, var(--surface-glow), transparent);
-    opacity: 0.8;
-    animation: synkk-surface-glow 12s ease-in-out infinite alternate;
-}
-.synkk-surface-orbit {
-    position: absolute;
-    border: 1px solid rgb(101 122 74 / 16%);
-    border-radius: 50%;
-    width: 85%;
-    aspect-ratio: 1;
-    animation: synkk-orbit 48s linear infinite;
-}
-.synkk-surface-orbit--two {
-    width: 120%;
-    border-style: dashed;
-    animation-duration: 65s;
-    animation-direction: reverse;
-}
-.synkk-surface-orbit > i {
-    position: absolute;
-    left: 14.5%;
-    top: 14.5%;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #9cae7e;
-    box-shadow: 0 0 0 5px rgb(156 174 126 / 12%);
-}
-.synkk-surface-orbit--two > i {
-    background: #aa9bb5;
-}
-.synkk-surface-images {
-    position: relative;
-    width: 92%;
-    z-index: 2;
-    perspective: 1200px;
-}
-.synkk-surface-images figure {
-    margin: 0;
-    animation: synkk-surface-image 850ms var(--synkk-ease) both;
-}
-.synkk-surface-window {
-    padding: 0.45rem;
-    border: 1px solid rgb(255 255 255 / 95%);
-    border-radius: 0.85rem;
-    background: #fafcf6;
+.synkk-feature-card:hover {
+    border-color: #bfcaa6;
     box-shadow:
-        0 40px 60px -20px rgb(51 64 37 / 28%),
-        0 5px 10px rgb(51 64 37 / 7%);
-    transform: rotateY(-5deg) rotateX(4deg) rotateZ(-2deg);
-    animation: synkk-surface-float 7s ease-in-out infinite;
+        0 40px 80px -35px rgb(48 64 29 / 26%),
+        0 4px 10px rgb(48 64 29 / 6%);
+    transform: translateY(-2px);
 }
-.synkk-surface-window img {
+.synkk-feature-card--reverse {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.95fr);
+}
+.synkk-feature-card--reverse .synkk-feature-card__copy {
+    order: 2;
+}
+.synkk-feature-card--reverse .synkk-feature-card__media {
+    order: 1;
+}
+.synkk-feature-card__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.synkk-feature-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    background: #eef4e0;
+    border: 1px solid #d4e0bd;
+    color: #536733;
+    font-family: var(--synkk-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.03em;
+    margin-bottom: 1.2rem;
+}
+.synkk-feature-card h3 {
+    margin: 0;
+    font-size: clamp(1.65rem, 2.4vw, 2.25rem);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1.2;
+    color: var(--synkk-ink);
+}
+.synkk-feature-card p {
+    margin: 1rem 0 0;
+    color: var(--synkk-muted);
+    font-size: 0.92rem;
+    line-height: 1.68;
+}
+.synkk-feature-card__list {
+    display: grid;
+    gap: 0.85rem;
+    margin: 1.6rem 0 0;
+    padding: 0;
+    list-style: none;
+    width: 100%;
+}
+.synkk-feature-card__list li {
+    position: relative;
+    padding-left: 1.5rem;
+    color: #4f5b45;
+    font-size: 0.84rem;
+    line-height: 1.55;
+}
+.synkk-feature-card__list li::before {
+    position: absolute;
+    left: 0;
+    top: 0.05em;
+    content: '✓';
+    color: #688339;
+    font-weight: 600;
+}
+.synkk-feature-card__list strong {
+    color: var(--synkk-ink);
+    font-weight: 500;
+}
+.synkk-feature-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.85rem;
+    margin-top: 2rem;
+}
+.synkk-feature-card__media {
+    position: relative;
+    width: 100%;
+}
+.synkk-window-frame {
+    overflow: hidden;
+    border: 1px solid #d8dfcd;
+    border-radius: 1.1rem;
+    background: #ffffff;
+    box-shadow:
+        0 24px 50px -20px rgb(40 47 31 / 22%),
+        0 2px 6px rgb(40 47 31 / 5%);
+    transition: transform 350ms var(--synkk-ease), box-shadow 350ms var(--synkk-ease);
+}
+.synkk-window-frame:hover {
+    box-shadow:
+        0 32px 65px -20px rgb(40 47 31 / 28%),
+        0 4px 10px rgb(40 47 31 / 8%);
+    transform: scale(1.01);
+}
+.synkk-window-frame img {
     display: block;
     width: 100%;
     height: auto;
     aspect-ratio: 16 / 9;
-    object-fit: contain;
-    border: 1px solid #dfe5d7;
-    border-radius: 0.45rem;
-    background: #f3f6ed;
+    object-fit: cover;
+    border-top: 1px solid #ebefe2;
 }
-.synkk-surface-window .synkk-window-bar {
-    height: 2rem;
+
+/* Feature Graphic: Safety Shield */
+.synkk-feature-graphic--shield {
+    padding: 2.25rem;
+    border: 1px solid #d4dec3;
+    border-radius: 1.2rem;
+    background: linear-gradient(145deg, #f5f8ed, #ebf2de);
+    box-shadow: 0 20px 45px -15px rgb(48 64 29 / 18%);
 }
-.synkk-surface-seal {
-    position: absolute;
-    z-index: 3;
-    bottom: 10%;
-    right: 10%;
-    width: 4.6rem;
-    height: 4.6rem;
+.synkk-graphic-shield-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #d2dec0;
+}
+.synkk-graphic-shield-icon {
+    font-size: 2rem;
+}
+.synkk-graphic-shield-badge strong {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #27381b;
+}
+.synkk-graphic-shield-badge small {
+    color: #617349;
+    font-size: 0.76rem;
+    font-family: var(--synkk-mono);
+}
+.synkk-graphic-shield-items {
     display: grid;
-    place-items: center;
-    border: 1px solid rgb(255 255 255 / 90%);
-    border-radius: 50%;
-    background: rgb(248 251 239 / 85%);
-    box-shadow: 0 12px 30px rgb(51 64 37 / 8%);
-    color: #718947;
+    gap: 1rem;
+    margin-top: 1.5rem;
 }
-.synkk-surface-seal svg {
-    width: 3.2rem;
-    height: 3.2rem;
-    animation: synkk-orbit 18s linear infinite;
+.synkk-shield-item {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: 0.8rem;
+    background: #ffffff;
+    border: 1px solid #dce5ce;
+    box-shadow: 0 4px 10px rgb(48 64 29 / 6%);
+}
+.synkk-shield-item__badge {
+    font-family: var(--synkk-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.45rem;
+    background: #e2edd0;
+    color: #465b2a;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+.synkk-shield-item strong {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #26331a;
+}
+.synkk-shield-item p {
+    margin: 0.15rem 0 0;
+    font-size: 0.74rem;
+    color: #6a785e;
+}
+
+/* Feature Graphic: Docker / Infrastructure */
+.synkk-feature-graphic--docker {
+    padding: 1.75rem;
+    border: 1px solid #2e3b26;
+    border-radius: 1.2rem;
+    background: #202b1c;
+    color: #ecf3e2;
+    box-shadow: 0 24px 55px -15px rgb(20 28 15 / 45%);
+}
+.synkk-graphic-docker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #33442a;
+    color: #92a483;
+}
+.synkk-graphic-docker-header span {
+    display: flex;
+    gap: 5px;
+}
+.synkk-graphic-docker-header i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #506543;
+}
+.synkk-graphic-docker-header i:first-child {
+    background: #89b35a;
+}
+.synkk-graphic-docker-header small {
+    font-family: var(--synkk-mono);
+    font-size: 0.65rem;
+}
+.synkk-docker-code {
+    margin: 1.25rem 0;
+    padding: 0;
+    background: transparent;
+    font-family: var(--synkk-mono);
+    font-size: 0.74rem;
+    line-height: 1.6;
+    color: #c9d8bc;
+    overflow-x: auto;
+}
+.synkk-graphic-wipe-tag {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-radius: 0.6rem;
+    background: #2a3a23;
+    border: 1px solid #3f5435;
+    font-size: 0.74rem;
+}
+.synkk-graphic-wipe-tag span {
+    font-weight: 500;
+    color: #e5f1d4;
+}
+.synkk-graphic-wipe-tag small {
+    font-family: var(--synkk-mono);
+    font-size: 0.64rem;
+    color: #98ad87;
+}
+
+/* Backwards compatibility */
+.synkk-surfaces {
+    display: block;
 }
 @keyframes synkk-surface-copy {
     from {
@@ -1649,7 +1640,7 @@ summary:focus-visible,
         gap: 2rem;
     }
     .synkk-hero h1 {
-        font-size: 7.6vw;
+        font-size: clamp(2.5rem, 5.2vw, 3.8rem);
     }
     .synkk-hero__actions .synkk-button {
         padding-inline: 1.1rem;
@@ -1771,15 +1762,28 @@ summary:focus-visible,
         padding: 0;
     }
     .synkk-hero h1 {
-        font-size: clamp(4.7rem, 12vw, 7rem);
+        font-size: clamp(2.35rem, 6.5vw, 3.5rem);
     }
     .synkk-hero__lede {
         max-width: 30rem;
     }
     .synkk-hero__media {
-        width: 93%;
-        max-width: 38rem;
+        width: 100%;
+        max-width: 44rem;
+        aspect-ratio: 16 / 11;
         justify-self: center;
+    }
+    .synkk-feature-card,
+    .synkk-feature-card--reverse {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        padding: clamp(1.6rem, 3.5vw, 2.25rem);
+    }
+    .synkk-feature-card--reverse .synkk-feature-card__copy {
+        order: 1;
+    }
+    .synkk-feature-card--reverse .synkk-feature-card__media {
+        order: 2;
     }
     .synkk-laptop {
         left: -3%;
@@ -1926,7 +1930,7 @@ summary:focus-visible,
         margin-bottom: 1.2rem;
     }
     .synkk-hero h1 {
-        font-size: clamp(4.2rem, 16vw, 5.3rem);
+        font-size: clamp(2.25rem, 8.5vw, 3.25rem);
     }
     .synkk-hero__lede {
         font-size: 0.94rem;
@@ -1951,8 +1955,9 @@ summary:focus-visible,
         gap: 2rem;
     }
     .synkk-hero__media {
-        width: 96%;
-        border-radius: 1.2rem;
+        width: 100%;
+        aspect-ratio: 16 / 11;
+        border-radius: 1.4rem;
     }
     .synkk-stage-label {
         top: 1.2rem;
@@ -2186,128 +2191,51 @@ summary:focus-visible,
 }
 
 @media (max-width: 1100px) {
-    .synkk-surfaces__copy {
-        padding: 2rem;
-    }
-    .synkk-surfaces__heading h2 {
-        font-size: 2.65rem;
-    }
-    .synkk-surface-tabs button {
-        padding: 0.7rem;
-        gap: 0.4rem;
-        font-size: 0.65rem;
-    }
-    .synkk-surfaces__details {
-        min-height: 13rem;
-    }
-}
-@media (max-width: 800px) {
-    .synkk-surfaces {
-        grid-template-columns: 1fr;
-    }
-    .synkk-surfaces__copy {
+    .synkk-feature-card {
         padding: 2.5rem;
     }
-    .synkk-surfaces__heading h2 {
-        max-width: 21ch;
-        font-size: 3rem;
+}
+@media (max-width: 900px) {
+    .synkk-feature-cards {
+        gap: 2rem;
     }
-    .synkk-surface-tabs {
-        max-width: 30rem;
+    .synkk-feature-card,
+    .synkk-feature-card--reverse {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        padding: 2rem;
     }
-    .synkk-surface-tabs button {
-        font-size: 0.75rem;
+    .synkk-feature-card--reverse .synkk-feature-card__copy {
+        order: 1;
     }
-    .synkk-surfaces__details {
-        min-height: 10rem;
+    .synkk-feature-card--reverse .synkk-feature-card__media {
+        order: 2;
     }
-    .synkk-surfaces__details p {
-        max-width: 32rem;
-    }
-    .synkk-surfaces__stage {
-        min-height: 27rem;
-        border-left: 0;
-        border-top: 1px solid #dfe4d5;
-    }
-    .synkk-surface-images {
-        width: 88%;
-    }
-    .synkk-surface-seal {
-        bottom: 7%;
-        right: 7%;
-        width: 3.7rem;
-        height: 3.7rem;
+    .synkk-feature-graphic--shield,
+    .synkk-feature-graphic--docker {
+        padding: 1.5rem;
     }
 }
-@media (max-width: 520px) {
-    .synkk-surfaces {
-        border-radius: 1.2rem;
+@media (max-width: 600px) {
+    .synkk-feature-card {
+        padding: 1.5rem;
+        border-radius: 1.4rem;
     }
-    .synkk-surfaces__copy {
-        padding: 1.6rem;
+    .synkk-feature-card h3 {
+        font-size: 1.45rem;
     }
-    .synkk-surfaces__heading h2 {
-        font-size: 2.35rem;
+    .synkk-feature-card p {
+        font-size: 0.86rem;
     }
-    .synkk-surfaces__heading > p:last-child {
-        font-size: 0.82rem;
+    .synkk-feature-card__list li {
+        font-size: 0.8rem;
     }
-    .synkk-surface-tabs {
-        margin-block: 1.5rem;
-        gap: 0.45rem;
+    .synkk-feature-card__actions {
+        flex-direction: column;
+        align-items: stretch;
     }
-    .synkk-surface-tabs button {
-        gap: 0.4rem;
-        padding: 0.65rem;
-        font-size: 0.65rem;
-    }
-    .synkk-surface-tabs button > i {
-        display: none;
-    }
-    .synkk-surfaces__details {
-        min-height: 12.5rem;
-    }
-    .synkk-surfaces__details h3 {
-        font-size: 1.6rem;
-    }
-    .synkk-surfaces__details p {
-        font-size: 0.78rem;
-    }
-    .synkk-surfaces__details ul {
-        gap: 0.6rem;
-        font-size: 0.6rem;
-    }
-    .synkk-surfaces__actions {
-        gap: 0.4rem 1rem;
-    }
-    .synkk-surfaces__actions .synkk-button {
-        min-height: 2.9rem;
-        font-size: 0.68rem;
-    }
-    .synkk-surface-docs {
-        font-size: 0.67rem;
-    }
-    .synkk-surfaces__principle {
-        font-size: 0.54rem;
-    }
-    .synkk-surfaces__stage {
-        min-height: 20rem;
-    }
-    .synkk-surface-window {
-        border-radius: 0.65rem;
-        padding: 0.3rem;
-    }
-    .synkk-surface-window .synkk-window-bar {
-        height: 1.4rem;
-    }
-    .synkk-surface-seal {
-        width: 3rem;
-        height: 3rem;
-        bottom: 8%;
-        right: 8%;
-    }
-    .synkk-surface-seal svg {
-        width: 2.3rem;
-        height: 2.3rem;
+    .synkk-feature-card__actions .synkk-button {
+        width: 100%;
+        justify-content: center;
     }
 }

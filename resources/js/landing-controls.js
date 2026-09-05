@@ -1,4 +1,8 @@
 export const initializeSurfaceShowcase = (showcase) => {
+    if (!showcase) {
+        return () => {};
+    }
+
     const tabs = [...showcase.querySelectorAll('[data-surface-tab]')];
     const panels = [...showcase.querySelectorAll('[data-surface-copy], [data-surface-image]')];
     const views = tabs.map((tab) => tab.dataset.surfaceTab);
