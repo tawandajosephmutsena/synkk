@@ -43,7 +43,7 @@ if (page) {
 
         gsap.utils
             .toArray(
-                '.synkk-surfaces, .synkk-feature-card, .synkk-safety-card, .synkk-pricing-grid article, .synkk-roadmap-list li, .synkk-capability-strip article',
+                '.synkk-surfaces, .synkk-feature-card, .synkk-safety-card, .synkk-pricing-grid article, .synkk-pricing-trust, .synkk-roadmap-list li, .synkk-faq-list details, .synkk-final-cta, .synkk-capability-strip article',
             )
             .forEach((card) => {
                 gsap.from(card, {

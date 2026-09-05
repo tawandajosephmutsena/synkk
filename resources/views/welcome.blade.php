@@ -530,12 +530,12 @@
                             </div>
                             <h3>Self-host with one full year of updates.</h3>
                             <ul>
-                                <li>1 year of software updates & new feature releases</li>
+                                <li>1 year of software updates &amp; new feature releases</li>
                                 <li>Perpetual access to the purchased version forever</li>
                                 <li>Self-host on your own infrastructure or Docker</li>
                                 <li>Unlimited vaults, notes, and local devices</li>
                                 <li>Obsidian plugin v1.0.0 integration included</li>
-                                <li>Community support & documentation access</li>
+                                <li>Community support &amp; documentation access</li>
                             </ul>
                             @if ($storeReady)
                                 <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Get 1-Year License <span aria-hidden="true">↗</span></a>
@@ -545,16 +545,20 @@
                         </article>
 
                         <article class="is-featured">
-                            <div class="synkk-price-heading">
+                            <div class="synkk-price-featured-badge">
+                                <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
                                 <span>LIFETIME LICENSE · BEST VALUE</span>
-                                <p><strong>$65</strong><small>lifetime license</small></p>
+                            </div>
+                            <div class="synkk-price-heading">
+                                <span>LIFETIME LICENSE</span>
+                                <p><strong>$65</strong><small>lifetime license · pay once, own forever</small></p>
                             </div>
                             <h3>Own Synkk forever. Every update included.</h3>
                             <ul>
                                 <li>Lifetime software updates — never pay a renewal fee</li>
                                 <li>All future v1.x, v2.x, and major milestone releases</li>
                                 <li>Self-host on unlimited servers you control</li>
-                                <li>Priority access to CRDT collaboration & E2EE betas</li>
+                                <li>Priority access to CRDT collaboration &amp; E2EE betas</li>
                                 <li>Direct priority support from core maintainers</li>
                                 <li>Full commercial and personal use rights</li>
                             </ul>
@@ -573,13 +577,32 @@
                             <h3>Deploy Synkk across your team or company.</h3>
                             <ul>
                                 <li>Custom deployment assistance (Docker, K8s, Bare Metal)</li>
-                                <li>Granular path permission & team onboarding architecture</li>
+                                <li>Granular path permission &amp; team onboarding architecture</li>
                                 <li>Dedicated support channel with core maintainers</li>
                                 <li>Custom SLA, invoice billing, and security audit review</li>
                                 <li>Unlimited team members, devices, and enterprise vaults</li>
                             </ul>
                             <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Book a meeting <span aria-hidden="true">↗</span></a>
                         </article>
+                    </div>
+
+                    <div class="synkk-pricing-trust">
+                        <div class="synkk-trust-item">
+                            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
+                            <span>100% Self-Hosted &amp; Local-First</span>
+                        </div>
+                        <div class="synkk-trust-item">
+                            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
+                            <span>Instant Software License Activation</span>
+                        </div>
+                        <div class="synkk-trust-item">
+                            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
+                            <span>No Subscription Trap · Pay Once</span>
+                        </div>
+                        <div class="synkk-trust-item">
+                            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 16v-1a4.978 4.978 0 00-1.552-3.619A6.974 6.974 0 0118 15v1h-2zM4 16v-1c0-.853.21-1.657.58-2.368A4.978 4.978 0 003 15v1h1z"/></svg>
+                            <span>Obsidian Plugin Always Free</span>
+                        </div>
                     </div>
 
                     <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public plugin. Lemon Squeezy manages license checkout. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline hover:text-zinc-900">book-it.ottomate.space</a>.</p>
@@ -593,35 +616,73 @@
                         <h2 id="roadmap-heading">Plugin now. Server release next.</h2>
                         <p>The public plugin is downloadable today. The rows separate what is live, what must clear launch, and what follows.</p>
                         <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--paper">See the public repository <span aria-hidden="true">↗</span></a>
+
+                        <div class="synkk-roadmap-monitor" aria-label="Release telemetry">
+                            <div class="synkk-roadmap-monitor__header">
+                                <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                                <strong>RELEASE MONITOR</strong>
+                            </div>
+                            <div class="synkk-roadmap-monitor__grid">
+                                <div><small>STABLE PLUGIN</small><span>v1.0.0 Public</span></div>
+                                <div><small>SERVER ENGINE</small><span>SQLite WAL</span></div>
+                                <div><small>COLLAB SPEC</small><span>CRDT / Yjs</span></div>
+                                <div><small>INTEGRITY</small><span>SHA-256 Verified</span></div>
+                            </div>
+                        </div>
                     </header>
 
                     <ol class="synkk-roadmap-list">
                         <li class="is-live">
-                            <span>LIVE NOW</span>
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>LIVE NOW</span>
                             <div>
                                 <strong>Obsidian plugin v1.0.0</strong>
                                 <p>The installable plugin release is public on GitHub now with hash-based sync, Safety Shield deletion protection, path exclusions, and automatic conflict forking.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>SHA-256 Checksums</span>
+                                    <span>Safety Shield 10%</span>
+                                    <span>Conflict Forking</span>
+                                    <span>Path Exclusions</span>
+                                </div>
                             </div>
                         </li>
                         <li class="is-live">
-                            <span>LIVE NOW</span>
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>LIVE NOW</span>
                             <div>
                                 <strong>Foundation server release</strong>
                                 <p>Self-hosted server with SQLite WAL, web Markdown workspace, 2D visual graph view, member path permissions matrix, note version rollback, and Docker orchestration.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>Docker Compose</span>
+                                    <span>SQLite WAL Engine</span>
+                                    <span>Markdown Workspace</span>
+                                    <span>2D Graph Canvas</span>
+                                    <span>Permissions Matrix</span>
+                                </div>
                             </div>
                         </li>
-                        <li>
-                            <span>NEXT UP</span>
+                        <li class="is-next">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>NEXT UP</span>
                             <div>
                                 <strong>Safety and collaboration</strong>
                                 <p>Character-level CRDT multiplayer editing directly in Obsidian and web, and an in-editor visual conflict sandbox for side-by-side 3-way note reconciliation.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>CRDT Multiplayer</span>
+                                    <span>3-Way Diff Sandbox</span>
+                                    <span>Side-by-Side Visuals</span>
+                                    <span>Real-time Relays</span>
+                                </div>
                             </div>
                         </li>
-                        <li>
-                            <span>PLANNED</span>
+                        <li class="is-planned">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--slate" aria-hidden="true"><i></i></span>PLANNED</span>
                             <div>
                                 <strong>Selective and private transport</strong>
                                 <p>On-demand ghost files for large media attachments, client-side zero-knowledge End-to-End Encryption (E2EE), native mobile background sync relays, and 2-second QR pairing.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>Zero-Knowledge E2EE</span>
+                                    <span>Mobile Ghost Files</span>
+                                    <span>2s QR Pairing</span>
+                                    <span>Background Sync</span>
+                                </div>
                             </div>
                         </li>
                     </ol>
@@ -639,59 +700,155 @@
 
                 <div class="synkk-faq-list">
                     <details open>
-                        <summary><span>01</span>What can I install today?</summary>
-                        <p>The Obsidian plugin v1.0.0 is public on GitHub. The Synkk web product currently provides authenticated sync, the editor, Graph View, member path permissions, versions, and restores.</p>
+                        <summary>
+                            <span>01</span>What can I install today?
+                            <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        </summary>
+                        <div class="synkk-faq-answer">
+                            <p>The Obsidian plugin v1.0.0 is public on GitHub. The Synkk web product currently provides authenticated sync, the editor, Graph View, member path permissions, versions, and restores.</p>
+                        </div>
                     </details>
                     <details>
-                        <summary><span>02</span>Does Synkk replace my Markdown files?</summary>
-                        <p>No. Your vault remains portable files and folders. Synkk adds controlled sync, access, and recovery around the notes you own.</p>
+                        <summary>
+                            <span>02</span>Does Synkk replace my Markdown files?
+                            <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        </summary>
+                        <div class="synkk-faq-answer">
+                            <p>No. Your vault remains portable files and folders. Synkk adds controlled sync, access, and recovery around the notes you own.</p>
+                        </div>
                     </details>
                     <details>
-                        <summary><span>03</span>Is character-level CRDT sync available?</summary>
-                        <p>Not yet. CRDT collaboration and the visual conflict sandbox are the next public milestone after launch.</p>
+                        <summary>
+                            <span>03</span>Is character-level CRDT sync available?
+                            <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        </summary>
+                        <div class="synkk-faq-answer">
+                            <p>Not yet. CRDT collaboration and the visual conflict sandbox are the next public milestone after launch.</p>
+                        </div>
                     </details>
                     <details>
-                        <summary><span>04</span>When does the $49 Pro license launch?</summary>
-                        <p>After the public server package, Lemon Squeezy checkout, and license activation screen are verified end to end. Until then, the page does not accept payment.</p>
+                        <summary>
+                            <span>04</span>When does the $45 / $65 license checkout open?
+                            <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        </summary>
+                        <div class="synkk-faq-answer">
+                            <p>After the public server package, Lemon Squeezy checkout, and license activation screen are verified end to end. Until then, the page does not accept payment.</p>
+                        </div>
                     </details>
                     <details>
-                        <summary><span>05</span>Can I self-host Synkk?</summary>
-                        <p>Yes. The web product is designed for a server you control. The documentation includes the current environment requirements, Docker direction, storage locations, and the production checks still required before the server package is called ready.</p>
+                        <summary>
+                            <span>05</span>Can I self-host Synkk?
+                            <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        </summary>
+                        <div class="synkk-faq-answer">
+                            <p>Yes. The web product is designed for a server you control. The documentation includes the current environment requirements, Docker direction, storage locations, and the production checks still required before the server package is called ready.</p>
+                        </div>
                     </details>
                     <details>
-                        <summary><span>06</span>What happens when two devices edit the same note?</summary>
-                        <p>The Foundation release preserves the stale upload as a conflict copy instead of silently overwriting the current file. Character-level CRDT merging and an in-editor conflict sandbox are planned after launch.</p>
+                        <summary>
+                            <span>06</span>What happens when two devices edit the same note?
+                            <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        </summary>
+                        <div class="synkk-faq-answer">
+                            <p>The Foundation release preserves the stale upload as a conflict copy instead of silently overwriting the current file. Character-level CRDT merging and an in-editor conflict sandbox are planned after launch.</p>
+                        </div>
                     </details>
                     <details>
-                        <summary><span>07</span>Can I sync only selected folders?</summary>
-                        <p>Yes. The plugin supports selective folder and configuration rules today. On-demand ghost files for large attachments are a later roadmap milestone for mobile storage control.</p>
+                        <summary>
+                            <span>07</span>Can I sync only selected folders?
+                            <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        </summary>
+                        <div class="synkk-faq-answer">
+                            <p>Yes. The plugin supports selective folder and configuration rules today. On-demand ghost files for large attachments are a later roadmap milestone for mobile storage control.</p>
+                        </div>
                     </details>
                     <details>
-                        <summary><span>08</span>Does Synkk read my private vault?</summary>
-                        <p>Synkk only receives the files and paths your configured device and team permissions allow. Client-side zero-knowledge encryption is future work; review the current access and hashing model in the documentation before production use.</p>
+                        <summary>
+                            <span>08</span>Does Synkk read my private vault?
+                            <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        </summary>
+                        <div class="synkk-faq-answer">
+                            <p>Synkk only receives the files and paths your configured device and team permissions allow. Client-side zero-knowledge encryption is future work; review the current access and hashing model in the documentation before production use.</p>
+                        </div>
                     </details>
                 </div>
             </section>
 
-            <section class="synkk-final-cta synkk-shell" aria-labelledby="final-heading">
-                <div>
-                    <p class="synkk-eyebrow">Your next chapter</p>
-                    <h2 id="final-heading">Install the Obsidian plugin.</h2>
-                    <p>Download v1.0.0 from GitHub, then follow the setup guide to connect it to Synkk.</p>
-                </div>
-                <div class="synkk-final-cta__actions">
-                    <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Download v1.0.0 <span aria-hidden="true">↗</span></a>
-                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--paper">Read the docs <span aria-hidden="true">→</span></a>
+            <section class="synkk-final-cta synkk-viewport-section synkk-shell" aria-labelledby="final-heading">
+                <div class="synkk-final-cta__ambient" aria-hidden="true"></div>
+                <div class="synkk-final-cta__grid">
+                    <div class="synkk-final-cta__copy">
+                        <div class="synkk-cta-badge">
+                            <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                            <span>v1.0.0 Public Release · GitHub Ready</span>
+                        </div>
+                        <p class="synkk-eyebrow">Your next chapter</p>
+                        <h2 id="final-heading">Install the Obsidian plugin.</h2>
+                        <p>Download v1.0.0 from GitHub, then follow the setup guide to connect it to Synkk.</p>
+                        <div class="synkk-final-cta__actions">
+                            <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Download v1.0.0 <span aria-hidden="true">↗</span></a>
+                            <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--paper">Read the docs <span aria-hidden="true">→</span></a>
+                        </div>
+                        <div class="synkk-cta-guarantees">
+                            <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> 100% Local Files</span>
+                            <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Zero Telemetry</span>
+                            <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Self-Hosted Server</span>
+                        </div>
+                    </div>
+
+                    <div class="synkk-cta-terminal" aria-label="Quick setup terminal commands">
+                        <div class="synkk-cta-terminal__header">
+                            <div class="synkk-cta-terminal__controls" aria-hidden="true">
+                                <span class="synkk-dot synkk-dot--red"></span>
+                                <span class="synkk-dot synkk-dot--amber"></span>
+                                <span class="synkk-dot synkk-dot--green"></span>
+                            </div>
+                            <span class="synkk-cta-terminal__title">synkk-quickstart.sh</span>
+                            <span class="synkk-cta-terminal__badge">Docker / Compose</span>
+                        </div>
+                        <div class="synkk-cta-terminal__body">
+                            <div class="synkk-code-line"><span class="synkk-prompt">$</span> <span class="synkk-cmd">docker pull ghcr.io/synkk/server:latest</span></div>
+                            <div class="synkk-code-line"><span class="synkk-prompt">$</span> <span class="synkk-cmd">docker run -d -p 8000:8000 -v ~/vaults:/vaults synkk/server</span></div>
+                            <div class="synkk-code-output"><span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span> Synkk vault server online at http://127.0.0.1:8000</div>
+                            <div class="synkk-code-line synkk-code-line--comment"># Pair Obsidian plugin with token: synkk_live_sec_89f...</div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
 
         <footer class="synkk-footer">
-            <div class="synkk-shell synkk-footer__top">
-                <div><img src="/images/synkk-logo.svg" alt="Synkk — Obsidian everywhere" width="689" height="270" loading="lazy"><p>Portable notes. Visible safety. Infrastructure you control.</p></div>
-                <nav aria-label="Footer navigation"><a href="#product">Product</a><a href="#workflow">How it works</a><a href="#pricing">Pricing</a><a href="#roadmap">Roadmap</a><a href="#faq">FAQ</a><a href="{{ route('docs.redirect') }}">Documentation</a><a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer">GitHub ↗</a></nav>
+            <div class="synkk-shell">
+                <div class="synkk-footer-telemetry">
+                    <div class="synkk-footer-telemetry__status">
+                        <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                        <strong>SYSTEM STATUS:</strong>
+                        <span>Sync Engine v1.0.0 · Local-First Architecture · Systems Operational</span>
+                    </div>
+                    <a href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin" target="_blank" rel="noopener noreferrer" class="synkk-footer-telemetry__link">Public Repository ↗</a>
+                </div>
+
+                <div class="synkk-footer__top">
+                    <div>
+                        <img src="/images/synkk-logo.svg" alt="Synkk — Obsidian everywhere" width="689" height="270" loading="lazy">
+                        <p>Portable notes. Visible safety. Infrastructure you control.</p>
+                    </div>
+                    <nav aria-label="Footer navigation">
+                        <a href="#product">Product</a>
+                        <a href="#workflow">How it works</a>
+                        <a href="#pricing">Pricing</a>
+                        <a href="#roadmap">Roadmap</a>
+                        <a href="#faq">FAQ</a>
+                        <a href="{{ route('docs.redirect') }}">Documentation</a>
+                        <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+                    </nav>
+                </div>
+                <div class="synkk-footer__bottom">
+                    <span>© {{ now()->year }} Synkk</span>
+                    <span>Obsidian everywhere</span>
+                    <span>Built in public</span>
+                </div>
             </div>
-            <div class="synkk-shell synkk-footer__bottom"><span>© {{ now()->year }} Synkk</span><span>Obsidian everywhere</span><span>Built in public</span></div>
         </footer>
     </body>
 </html>
