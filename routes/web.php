@@ -51,6 +51,7 @@ Route::get('docs', function () {
 
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
+    ->scopeBindings()
     ->group(function () {
         Route::livewire('dashboard', 'pages::dashboard.index')->name('dashboard');
         Route::livewire('vaults', 'pages::vaults.index')->name('vaults.index');

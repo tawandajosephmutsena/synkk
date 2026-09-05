@@ -42,9 +42,11 @@ class PruneDeletedVaultFiles extends Command
 
         $prunedCount = 0;
 
+        $disk = config('synkk.storage_disk', 'local');
+
         foreach ($expiredFiles as $file) {
-            if ($file->storage_path && Storage::disk('local')->exists($file->storage_path)) {
-                Storage::disk('local')->delete($file->storage_path);
+            if ($file->storage_path && Storage::disk($disk)->exists($file->storage_path)) {
+                Storage::disk($disk)->delete($file->storage_path);
             }
 
             $file->delete();

@@ -17,7 +17,7 @@ services:
       SYNKK_STORAGE_DISK: "local"
     volumes:
       - synkk_database:/var/www/html/database
-      - synkk_storage:/var/www/html/storage/app/vaults
+      - synkk_storage:/var/www/html/storage/app/private
 
 volumes:
   synkk_database:

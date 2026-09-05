@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Enums\TeamRole;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -33,7 +32,7 @@ use Illuminate\Support\Str;
 #[Fillable(['team_id', 'name', 'slug', 'description', 'default_permission', 'created_by'])]
 class Vault extends Model
 {
-    use HasFactory, SoftDeletes;
+    use SoftDeletes;
 
     protected static function boot(): void
     {
@@ -53,31 +52,49 @@ class Vault extends Model
         });
     }
 
+    /**
+     * @return BelongsTo<Team, $this>
+     */
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * @return HasMany<VaultFile, $this>
+     */
     public function files(): HasMany
     {
         return $this->hasMany(VaultFile::class);
     }
 
+    /**
+     * @return HasMany<VaultPermission, $this>
+     */
     public function permissions(): HasMany
     {
         return $this->hasMany(VaultPermission::class);
     }
 
+    /**
+     * @return HasMany<VaultChangeLog, $this>
+     */
     public function changeLogs(): HasMany
     {
         return $this->hasMany(VaultChangeLog::class);
     }
 
+    /**
+     * @return HasMany<VaultFileVersion, $this>
+     */
     public function fileVersions(): HasMany
     {
         return $this->hasMany(VaultFileVersion::class);

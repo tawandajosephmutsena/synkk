@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -18,21 +17,20 @@ use Illuminate\Support\Str;
  * @property string $token_preview
  * @property Carbon|null $last_used_at
  * @property string|null $last_ip
+ * @property string|null $client_platform
  * @property string $access_scope
- * @property array|null $allowed_ip_subnets
- * @property array|null $allowed_vault_ids
+ * @property array<string>|null $allowed_ip_subnets
+ * @property array<int>|null $allowed_vault_ids
  * @property bool $is_wiped
  * @property Carbon|null $wiped_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read User $user
- * @property-read Team $team
+ * @property-read User|null $user
+ * @property-read Team|null $team
  */
 #[Fillable(['user_id', 'team_id', 'name', 'token_hash', 'token_preview', 'last_used_at', 'last_ip', 'client_platform', 'access_scope', 'allowed_ip_subnets', 'allowed_vault_ids', 'is_wiped', 'wiped_at'])]
 class DeviceToken extends Model
 {
-    use HasFactory;
-
     protected function casts(): array
     {
         return [
@@ -44,11 +42,17 @@ class DeviceToken extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<Team, $this>
+     */
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
@@ -88,7 +92,8 @@ class DeviceToken extends Model
 
     /**
      * Generate a new device token.
-     * Returns: array{token: string, model: DeviceToken}
+     *
+     * @return array{plain_token: string, device_token: self}
      */
     public static function createToken(User $user, Team $team, string $name, ?string $platform = null): array
     {

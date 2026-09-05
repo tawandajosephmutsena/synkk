@@ -62,6 +62,8 @@ new #[Title('Vault Details')] class extends Component {
 
     public function mount(Vault $vault): void
     {
+        abort_unless(Auth::user()->can('view', $vault), 403);
+
         $this->vault = $vault;
         $this->editName = $vault->name;
         $this->editDescription = $vault->description ?? '';
@@ -224,6 +226,8 @@ new #[Title('Vault Details')] class extends Component {
 
     public function updateVaultSettings(): void
     {
+        $this->authorize('update', $this->vault);
+
         $this->validate([
             'editName' => ['required', 'string', 'max:255'],
             'editDescription' => ['nullable', 'string', 'max:1000'],
@@ -241,6 +245,8 @@ new #[Title('Vault Details')] class extends Component {
 
     public function addPathPermission(): void
     {
+        $this->authorize('managePermissions', $this->vault);
+
         $this->validate([
             'rulePath' => ['required', 'string', 'max:500'],
             'rulePermission' => ['required', 'in:read_write,read_only,hidden'],
@@ -278,12 +284,16 @@ new #[Title('Vault Details')] class extends Component {
 
     public function deletePermission(int $permissionId): void
     {
+        $this->authorize('managePermissions', $this->vault);
+
         $this->vault->permissions()->where('id', $permissionId)->delete();
         Flux::toast(variant: 'info', text: __('Permission rule removed.'));
     }
 
     public function deleteVault(): void
     {
+        $this->authorize('delete', $this->vault);
+
         $name = $this->vault->name;
         $this->vault->delete();
 
@@ -479,9 +489,11 @@ new #[Title('Vault Details')] class extends Component {
         }
 
         $content = $this->editorContent;
+        $placeholders = [];
+        $index = 0;
 
         // Convert Obsidian-style callouts: > [!TIP], > Tip:, etc.
-        $content = preg_replace_callback('/^>\s*(?:\[!(TIP|NOTE|WARNING|IMPORTANT|CAUTION)\]|Tip:)\s*(.*?)$(?:\n(>(?:.*))*)?/mi', function ($matches) {
+        $content = preg_replace_callback('/^>\s*(?:\[!(TIP|NOTE|WARNING|IMPORTANT|CAUTION)\]|Tip:)\s*(.*?)$(?:\n(>(?:.*))*)?/mi', function ($matches) use (&$placeholders, &$index) {
             $type = ! empty($matches[1]) ? strtoupper($matches[1]) : 'TIP';
             $title = ! empty(trim($matches[2])) && $type !== 'TIP' ? trim($matches[2]) : ($type === 'TIP' ? 'Tip' : ucfirst(strtolower($type)));
             $firstLineBody = ($type === 'TIP' && ! empty(trim($matches[2])) && trim($matches[2]) !== 'Tip') ? trim($matches[2]) : '';
@@ -509,19 +521,36 @@ new #[Title('Vault Details')] class extends Component {
                 default => 'text-blue-300',
             };
 
-            return "<div class=\"callout-box my-5 rounded-2xl border p-5 {$containerClass} shadow-lg\"><div class=\"flex items-center gap-2 font-bold text-xs mb-2 {$titleColor}\"><span class=\"text-sm\">💡</span> <span class=\"tracking-wide\">{$title}</span></div><div class=\"text-xs leading-relaxed text-zinc-300\">{$body}</div></div>";
+            $safeTitle = e($title);
+            $safeBody = nl2br(e($body));
+
+            $key = "%%SYNKK_CALLOUT_{$index}%%";
+            $placeholders[$key] = "<div class=\"callout-box my-5 rounded-2xl border p-5 {$containerClass} shadow-lg\"><div class=\"flex items-center gap-2 font-bold text-xs mb-2 {$titleColor}\"><span class=\"text-sm\">💡</span> <span class=\"tracking-wide\">{$safeTitle}</span></div><div class=\"text-xs leading-relaxed text-zinc-300\">{$safeBody}</div></div>";
+            $index++;
+
+            return "\n\n{$key}\n\n";
         }, $content);
 
         // Convert [[Wiki Links]]
-        $content = preg_replace_callback('/\[\[(.*?)\]\]/', function ($matches) {
+        $content = preg_replace_callback('/\[\[(.*?)\]\]/', function ($matches) use (&$placeholders, &$index) {
             $parts = explode('|', $matches[1]);
             $target = trim($parts[0]);
             $label = isset($parts[1]) ? trim($parts[1]) : $target;
+            $safeLabel = e($label);
 
-            return "<span class=\"inline-flex items-center rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs font-semibold text-emerald-400 border border-emerald-500/20\">[[{$label}]]</span>";
+            $key = "%%SYNKK_WIKI_{$index}%%";
+            $placeholders[$key] = "<span class=\"inline-flex items-center rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs font-semibold text-emerald-400 border border-emerald-500/20\">[[{$safeLabel}]]</span>";
+            $index++;
+
+            return $key;
         }, $content);
 
-        return Str::markdown($content);
+        $html = Str::markdown($content, [
+            'html_input' => 'strip',
+            'allow_unsafe_links' => false,
+        ]);
+
+        return strtr($html, $placeholders);
     }
 }; ?>
 

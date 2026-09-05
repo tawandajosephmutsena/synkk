@@ -33,6 +33,8 @@ class VaultSyncController extends Controller
         $vaults = $team->vaults()
             ->withCount(['files' => fn ($q) => $q->where('is_deleted', false)])
             ->get()
+            ->filter(fn (Vault $vault) => $deviceToken->canAccessVault($vault->id))
+            ->values()
             ->map(function (Vault $vault) use ($user) {
                 return [
                     'id' => $vault->id,
@@ -63,9 +65,9 @@ class VaultSyncController extends Controller
         $deviceToken = $request->attributes->get('device_token');
         $user = $deviceToken->user;
 
-        // Verify vault belongs to team
-        if ($vault->team_id !== $deviceToken->team_id) {
-            return response()->json(['error' => 'Vault not found in current team'], 404);
+        // Verify vault belongs to team and device has permission
+        if ($vault->team_id !== $deviceToken->team_id || ! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
         }
 
         $sinceVersion = (int) $request->query('since_version', 0);
@@ -139,8 +141,8 @@ class VaultSyncController extends Controller
         $deviceToken = $request->attributes->get('device_token');
         $user = $deviceToken->user;
 
-        if ($vault->team_id !== $deviceToken->team_id) {
-            return response()->json(['error' => 'Vault not found'], 404);
+        if ($vault->team_id !== $deviceToken->team_id || ! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
         }
 
         $sinceVersion = (int) $request->query('since_version', 0);
@@ -190,8 +192,8 @@ class VaultSyncController extends Controller
         $user = $deviceToken->user;
         $disk = config('synkk.storage_disk', 'local');
 
-        if ($vault->team_id !== $deviceToken->team_id) {
-            return response()->json(['error' => 'Vault not found'], 404);
+        if ($vault->team_id !== $deviceToken->team_id || ! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
         }
 
         $path = $request->query('path');
@@ -213,9 +215,7 @@ class VaultSyncController extends Controller
             return response()->json(['error' => 'File not found on storage'], 404);
         }
 
-        $fullDiskPath = Storage::disk($disk)->path($file->storage_path);
-
-        return response()->file($fullDiskPath, [
+        return Storage::disk($disk)->response($file->storage_path, basename($file->path), [
             'Content-Type' => $this->guessMimeType($file->path),
             'X-Synkk-Sha256' => $file->sha256,
             'X-Synkk-Version' => (string) $file->version,
@@ -231,8 +231,15 @@ class VaultSyncController extends Controller
         $deviceToken = $request->attributes->get('device_token');
         $user = $deviceToken->user;
 
-        if ($vault->team_id !== $deviceToken->team_id) {
-            return response()->json(['error' => 'Vault not found'], 404);
+        if ($vault->team_id !== $deviceToken->team_id || ! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
+        }
+
+        if ($deviceToken->access_scope === 'read_only') {
+            return response()->json([
+                'error' => 'Permission Denied',
+                'message' => 'This device token has read-only access and cannot upload, modify, or delete vault files.',
+            ], 403);
         }
 
         $request->validate([
@@ -289,8 +296,15 @@ class VaultSyncController extends Controller
         $deviceToken = $request->attributes->get('device_token');
         $user = $deviceToken->user;
 
-        if ($vault->team_id !== $deviceToken->team_id) {
-            return response()->json(['error' => 'Vault not found'], 404);
+        if ($vault->team_id !== $deviceToken->team_id || ! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
+        }
+
+        if ($deviceToken->access_scope === 'read_only') {
+            return response()->json([
+                'error' => 'Permission Denied',
+                'message' => 'This device token has read-only access and cannot execute batch sync modifications.',
+            ], 403);
         }
 
         $maxBatch = config('synkk.max_batch_size', 100);
@@ -323,8 +337,15 @@ class VaultSyncController extends Controller
         $deviceToken = $request->attributes->get('device_token');
         $user = $deviceToken->user;
 
-        if ($vault->team_id !== $deviceToken->team_id) {
-            return response()->json(['error' => 'Vault not found'], 404);
+        if ($vault->team_id !== $deviceToken->team_id || ! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
+        }
+
+        if ($deviceToken->access_scope === 'read_only') {
+            return response()->json([
+                'error' => 'Permission Denied',
+                'message' => 'This device token has read-only access and cannot delete vault files.',
+            ], 403);
         }
 
         $path = trim($request->input('path'), '/');
@@ -372,7 +393,7 @@ class VaultSyncController extends Controller
     protected function generateConflictPath(string $path, string $userName): string
     {
         $info = pathinfo($path);
-        $dirname = ($info['dirname'] && $info['dirname'] !== '.') ? $info['dirname'].'/' : '';
+        $dirname = (isset($info['dirname']) && $info['dirname'] !== '.') ? $info['dirname'].'/' : '';
         $filename = $info['filename'];
         $extension = isset($info['extension']) ? '.'.$info['extension'] : '';
         $safeUser = Str::slug($userName);

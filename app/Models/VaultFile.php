@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -30,8 +29,6 @@ use Illuminate\Support\Facades\Storage;
 #[Fillable(['vault_id', 'path', 'storage_path', 'sha256', 'size', 'version', 'is_deleted', 'last_modified_by'])]
 class VaultFile extends Model
 {
-    use HasFactory;
-
     protected function casts(): array
     {
         return [
@@ -41,16 +38,25 @@ class VaultFile extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Vault, $this>
+     */
     public function vault(): BelongsTo
     {
         return $this->belongsTo(Vault::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function lastModifier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'last_modified_by');
     }
 
+    /**
+     * @return HasMany<VaultFileVersion, $this>
+     */
     public function versions(): HasMany
     {
         return $this->hasMany(VaultFileVersion::class)->orderBy('version', 'desc');

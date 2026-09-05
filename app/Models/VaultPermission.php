@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -20,8 +19,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['vault_id', 'user_id', 'path', 'permission', 'is_folder'])]
 class VaultPermission extends Model
 {
-    use HasFactory;
-
     protected function casts(): array
     {
         return [
@@ -29,11 +26,17 @@ class VaultPermission extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Vault, $this>
+     */
     public function vault(): BelongsTo
     {
         return $this->belongsTo(Vault::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

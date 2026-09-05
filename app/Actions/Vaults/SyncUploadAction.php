@@ -219,7 +219,7 @@ class SyncUploadAction
     protected function generateConflictPath(string $path, string $userName): string
     {
         $info = pathinfo($path);
-        $dirname = ($info['dirname'] && $info['dirname'] !== '.') ? $info['dirname'].'/' : '';
+        $dirname = (isset($info['dirname']) && $info['dirname'] !== '.') ? $info['dirname'].'/' : '';
         $filename = $info['filename'];
         $extension = isset($info['extension']) ? '.'.$info['extension'] : '';
         $safeUser = Str::slug($userName);
