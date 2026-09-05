@@ -5,6 +5,8 @@ use App\Models\DeviceToken;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Vault;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 test('vault policy prevents non-team members from viewing vault', function () {
     $owner = User::factory()->create();
@@ -119,4 +121,17 @@ test('read-only device tokens cannot upload or delete files', function () {
         ]);
 
     $batchResponse->assertStatus(403);
+});
+
+test('api rate limiter is registered and enforces request bounds', function () {
+    $limiter = RateLimiter::limiter('api');
+    expect($limiter)->not->toBeNull();
+
+    $request = Request::create('/api/v1/vaults', 'GET');
+    $request->headers->set('Authorization', 'Bearer synkk_test_token');
+
+    $limit = $limiter($request);
+    expect($limit->maxAttempts)->toBe(300)
+        ->and($limit->decaySeconds)->toBe(60)
+        ->and($limit->key)->toBe('synkk_test_token');
 });

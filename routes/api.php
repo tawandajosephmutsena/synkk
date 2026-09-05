@@ -6,7 +6,7 @@ use App\Http\Middleware\AuthenticateDeviceToken;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')
-    ->middleware([AuthenticateDeviceToken::class])
+    ->middleware(['throttle:api', AuthenticateDeviceToken::class])
     ->group(function () {
         // Device & Auth verification
         Route::get('auth/verify', [AuthController::class, 'verify'])->name('api.auth.verify');

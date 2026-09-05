@@ -37,7 +37,7 @@ FROM base as final
 COPY --from=frontend-builder /app/public/build /var/www/html/public/build
 
 # Setup permissions & database directory
-RUN mkdir -p /var/www/html/storage/app/vaults /var/www/html/database \
+RUN mkdir -p /var/www/html/storage/app/private /var/www/html/database \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
 # Copy Nginx and Supervisor configs
