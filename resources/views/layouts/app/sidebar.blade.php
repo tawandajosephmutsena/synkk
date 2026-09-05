@@ -39,6 +39,26 @@
             </flux:sidebar.nav>
 
             <flux:spacer />
+
+            <!-- Donezo Style Plugin Promo Card in Sidebar -->
+            <div class="in-data-flux-sidebar-collapsed-desktop:hidden relative overflow-hidden rounded-2xl bg-[#0D3B29] p-4 text-white shadow-xs my-2 dark:bg-[#092B1E]">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="flex size-7 items-center justify-center rounded-lg bg-white/15 text-white">
+                        <flux:icon icon="bolt" class="size-4" />
+                    </div>
+                    <span class="text-xs font-bold tracking-tight text-white">{{ __('Obsidian Sync') }}</span>
+                </div>
+                <p class="text-[11px] text-emerald-100/80 leading-snug mb-3">
+                    {{ __('Sync your vault notes in real-time across all devices.') }}
+                </p>
+                <a
+                    href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin"
+                    target="_blank"
+                    class="block w-full rounded-full bg-white py-1.5 text-center text-xs font-bold text-[#0D3B29] hover:bg-gray-100 transition-colors"
+                >
+                    {{ __('Download Plugin') }}
+                </a>
+            </div>
         </flux:sidebar>
 
         <!-- Mobile Header -->
