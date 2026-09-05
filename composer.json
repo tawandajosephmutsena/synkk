@@ -1,11 +1,14 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/livewire-starter-kit",
+    "name": "ottomate/synkk",
     "type": "project",
-    "description": "The official Laravel starter kit for Livewire.",
+    "description": "Self-hosted team vault sync server and dashboard for Obsidian.",
     "keywords": [
-        "laravel",
-        "framework"
+        "obsidian",
+        "sync",
+        "team-collaboration",
+        "markdown",
+        "laravel"
     ],
     "license": "MIT",
     "require": {
