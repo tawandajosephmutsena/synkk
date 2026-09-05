@@ -28,8 +28,8 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
         </div>
 
         <div class="flex items-center gap-2">
-            <flux:button href="https://ottomate.space" target="_blank" icon="folder-git-2" variant="subtle">
-                Repository (ottomate.space)
+            <flux:button href="https://github.com/tawandajosephmutsena/synkk" target="_blank" icon="folder-git-2" variant="subtle">
+                GitHub Repository
             </flux:button>
             <flux:button href="{{ route('devices.index') }}" icon="device-phone-mobile" variant="primary">
                 Generate Device Token
@@ -332,7 +332,7 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                     <!-- Endpoint 1 -->
                     <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
                         <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded bg-sky-500 text-white font-bold text-[10px]">POST</span>
+                            <span class="px-2 py-0.5 rounded bg-emerald-500 text-white font-bold text-[10px]">GET</span>
                             <span class="font-bold text-zinc-900 dark:text-white">/auth/verify</span>
                         </div>
                         <flux:text size="sm">Validates the <code>X-Device-Token</code> header and returns the user, team, and device info.</flux:text>
@@ -359,19 +359,46 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                     <!-- Endpoint 4 -->
                     <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
                         <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded bg-sky-500 text-white font-bold text-[10px]">POST</span>
-                            <span class="font-bold text-zinc-900 dark:text-white">/vaults/{slug}/push</span>
+                            <span class="px-2 py-0.5 rounded bg-emerald-500 text-white font-bold text-[10px]">GET</span>
+                            <span class="font-bold text-zinc-900 dark:text-white">/vaults/{slug}/changes?since_version={v}</span>
                         </div>
-                        <flux:text size="sm">Pushes batch file creations, updates, or deletions with base64 encoded content.</flux:text>
+                        <flux:text size="sm">Returns incremental changes and revisions since a specific vault version for efficient catch-up sync.</flux:text>
                     </div>
 
                     <!-- Endpoint 5 -->
                     <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
                         <div class="flex items-center gap-2">
                             <span class="px-2 py-0.5 rounded bg-emerald-500 text-white font-bold text-[10px]">GET</span>
-                            <span class="font-bold text-zinc-900 dark:text-white">/vaults/{slug}/pull/{file_path}</span>
+                            <span class="font-bold text-zinc-900 dark:text-white">/vaults/{slug}/download?path={path}</span>
                         </div>
-                        <flux:text size="sm">Downloads a single file's latest content or binary stream.</flux:text>
+                        <flux:text size="sm">Streams the binary or markdown contents of a file with SHA-256 validation headers.</flux:text>
+                    </div>
+
+                    <!-- Endpoint 6 -->
+                    <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded bg-sky-500 text-white font-bold text-[10px]">POST</span>
+                            <span class="font-bold text-zinc-900 dark:text-white">/vaults/{slug}/upload</span>
+                        </div>
+                        <flux:text size="sm">Uploads a single note or asset with base64 content, SHA-256 verification, and DLP scanning.</flux:text>
+                    </div>
+
+                    <!-- Endpoint 7 -->
+                    <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded bg-red-500 text-white font-bold text-[10px]">POST</span>
+                            <span class="font-bold text-zinc-900 dark:text-white">/vaults/{slug}/delete</span>
+                        </div>
+                        <flux:text size="sm">Soft-deletes a file, recording a deletion tombstone in the vault changelog.</flux:text>
+                    </div>
+
+                    <!-- Endpoint 8 -->
+                    <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded bg-purple-600 text-white font-bold text-[10px]">POST</span>
+                            <span class="font-bold text-zinc-900 dark:text-white">/vaults/{slug}/batch-sync</span>
+                        </div>
+                        <flux:text size="sm">Atomic transaction executing batch file uploads and deletions in a single network round-trip.</flux:text>
                     </div>
                 </div>
             </flux:card>
@@ -394,7 +421,8 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                     <pre class="font-mono text-xs bg-zinc-900 text-emerald-400 p-4 rounded-xl overflow-x-auto"><code>docker run -d \
   --name synkk-server \
   -p 8080:80 \
-  -v synkk_storage:/var/www/html/storage \
+  -v synkk_storage:/var/www/html/storage/app/private \
+  -v synkk_database:/var/www/html/database \
   -e APP_KEY=base64:{{ base64_encode('synkk-production-secret-key-32b') }} \
   -e DB_CONNECTION=sqlite \
   synkk/synkk:latest</code></pre>
@@ -418,10 +446,12 @@ services:
       - APP_URL=https://synkk.yourdomain.com
       - DB_CONNECTION=sqlite
     volumes:
-      - synkk_data:/var/www/html/storage
+      - synkk_database:/var/www/html/database
+      - synkk_storage:/var/www/html/storage/app/private
 
 volumes:
-  synkk_data:</code></pre>
+  synkk_database:
+  synkk_storage:</code></pre>
                 </div>
             </flux:card>
         @endif
