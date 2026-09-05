@@ -302,19 +302,23 @@ new #[Title('Dashboard')] class extends Component {
         return $todayActivity ? max($todayActivity['percentage'], 74) : 74;
     }
 
-    #[Computed]
-    public function uptimeFormatted(): string
+    public function refreshTelemetry(): void
     {
-        if (! $this->team) {
-            return '01:24:08';
+        Flux::toast(variant: 'success', text: __('Sync metrics and fleet telemetry updated.'));
+    }
+
+    #[Computed]
+    public function lastSyncAt(): ?string
+    {
+        if (! $this->team || $this->vaults->isEmpty()) {
+            return null;
         }
 
-        $createdAt = $this->team->created_at ?? now()->subHours(2);
-        $hours = str_pad((string) min(now()->diffInHours($createdAt), 99), 2, '0', STR_PAD_LEFT);
-        $minutes = str_pad((string) (now()->diffInMinutes($createdAt) % 60), 2, '0', STR_PAD_LEFT);
-        $seconds = str_pad((string) (now()->diffInSeconds($createdAt) % 60), 2, '0', STR_PAD_LEFT);
+        $latestLog = VaultChangeLog::whereIn('vault_id', $this->vaults->pluck('id'))
+            ->latest('created_at')
+            ->first();
 
-        return "{$hours}:{$minutes}:{$seconds}";
+        return $latestLog?->created_at?->diffForHumans();
     }
 
     #[Computed]
@@ -362,14 +366,72 @@ new #[Title('Dashboard')] class extends Component {
                 @endif
             </button>
 
-            <!-- User Profile Chip (Donezo Style) -->
-            <div class="flex items-center gap-3 rounded-full border border-gray-200/90 bg-white py-1.5 pl-2 pr-4 shadow-[0_2px_6px_rgba(0,0,0,0.02)] dark:border-zinc-800 dark:bg-zinc-900">
-                <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" size="sm" class="size-8 rounded-full" />
-                <div class="text-left leading-tight hidden sm:block">
-                    <div class="text-xs font-bold text-gray-900 dark:text-white">{{ auth()->user()->name }}</div>
-                    <div class="text-[11px] text-gray-400 dark:text-zinc-400">{{ auth()->user()->email }}</div>
-                </div>
-            </div>
+            <!-- User Profile Dropdown Menu (Donezo Style) -->
+            <flux:dropdown position="bottom" align="end">
+                <button type="button" class="group flex items-center gap-2.5 rounded-full border border-gray-200/90 bg-white py-1 pl-1.5 pr-3 shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-all hover:bg-gray-50 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/80 cursor-pointer" data-test="dashboard-user-menu-button">
+                    <div class="relative shrink-0">
+                        <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" size="sm" class="size-8 rounded-full" />
+                        <span class="absolute bottom-0 right-0 size-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900"></span>
+                    </div>
+                    <div class="text-left leading-tight hidden sm:block">
+                        <div class="text-xs font-bold text-gray-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400">{{ auth()->user()->name }}</div>
+                        <div class="text-[11px] text-gray-400 dark:text-zinc-400">{{ auth()->user()->email }}</div>
+                    </div>
+                    <flux:icon name="chevron-down" variant="micro" class="size-3.5 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-zinc-200" />
+                </button>
+
+                <flux:menu class="min-w-64">
+                    <div class="flex items-center gap-2.5 px-3 py-2 text-start text-xs">
+                        <flux:avatar
+                            :name="auth()->user()->name"
+                            :initials="auth()->user()->initials()"
+                            size="sm"
+                        />
+                        <div class="grid flex-1 text-start leading-tight min-w-0">
+                            <span class="truncate font-bold text-gray-900 dark:text-zinc-100">{{ auth()->user()->name }}</span>
+                            <span class="truncate text-gray-500 dark:text-zinc-400 text-[11px] font-medium">{{ auth()->user()->email }}</span>
+                        </div>
+                    </div>
+
+                    <flux:menu.separator />
+
+                    <flux:menu.radio.group>
+                        <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate class="text-xs font-medium cursor-pointer">
+                            {{ __('Account Settings') }}
+                        </flux:menu.item>
+                        <flux:menu.item :href="route('security.edit')" icon="shield-check" wire:navigate class="text-xs font-medium cursor-pointer">
+                            {{ __('Security & 2FA') }}
+                        </flux:menu.item>
+                        <flux:menu.item :href="route('teams.index')" icon="users" wire:navigate class="text-xs font-medium cursor-pointer">
+                            {{ __('Team Settings') }}
+                        </flux:menu.item>
+                        <flux:menu.item :href="route('appearance.edit')" icon="swatch" wire:navigate class="text-xs font-medium cursor-pointer">
+                            {{ __('Appearance / Theme') }}
+                        </flux:menu.item>
+                    </flux:menu.radio.group>
+
+                    <flux:menu.separator />
+
+                    <flux:menu.item :href="route('docs')" icon="book-open-text" wire:navigate class="text-xs font-medium cursor-pointer">
+                        {{ __('Documentation') }}
+                    </flux:menu.item>
+
+                    <flux:menu.separator />
+
+                    <form method="POST" action="{{ route('logout') }}" class="w-full">
+                        @csrf
+                        <flux:menu.item
+                            as="button"
+                            type="submit"
+                            icon="arrow-right-start-on-rectangle"
+                            class="w-full cursor-pointer text-xs font-medium text-red-600 dark:text-red-400"
+                            data-test="logout-button"
+                        >
+                            {{ __('Log Out') }}
+                        </flux:menu.item>
+                    </form>
+                </flux:menu>
+            </flux:dropdown>
         </div>
     </div>
 
@@ -751,7 +813,7 @@ new #[Title('Dashboard')] class extends Component {
             </div>
         </div>
 
-        <!-- 3. Time Tracker (Actual Team Sync Runtime Hero Card - 4 cols) -->
+        <!-- 3. Sync Engine & Fleet Health Hero Card (4 cols) -->
         <div class="lg:col-span-4 wave-ribbon-bg relative overflow-hidden rounded-3xl p-6 text-white shadow-sm flex flex-col justify-between min-h-[220px]">
             <!-- Decorative wavy ribbon graphic overlay -->
             <div class="absolute right-0 top-0 size-48 opacity-25 pointer-events-none">
@@ -764,26 +826,73 @@ new #[Title('Dashboard')] class extends Component {
             </div>
 
             <div>
-                <span class="text-xs font-semibold uppercase tracking-wider text-emerald-300/80">{{ __('Time Tracker') }}</span>
-                <div class="mt-4 font-mono text-4xl font-black tracking-wider text-white">
-                    {{ $this->uptimeFormatted }}
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-emerald-300/90">{{ __('Sync Engine & Fleet') }}</span>
+                    @if ($this->syncReporting['sync_health_score'] >= 90)
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-200 border border-emerald-400/30">
+                            <span class="size-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            {{ __('Healthy') }} ({{ $this->syncReporting['sync_health_score'] }}%)
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-200 border border-amber-400/30">
+                            <span class="size-2 rounded-full bg-amber-400"></span>
+                            {{ __('Attention') }} ({{ $this->syncReporting['sync_health_score'] }}%)
+                        </span>
+                    @endif
                 </div>
-                <div class="mt-1 text-xs text-emerald-200/80 font-medium">
-                    {{ __('Continuous WebSocket Sync Active') }}
+
+                <!-- Primary Metrics Grid -->
+                <div class="mt-4 grid grid-cols-2 gap-3">
+                    <div class="rounded-2xl bg-black/15 p-3 backdrop-blur-xs border border-white/10">
+                        <div class="font-mono text-2xl font-black text-white">
+                            {{ $this->activeDevicesCount }}
+                        </div>
+                        <div class="text-[11px] font-medium text-emerald-200/80 mt-0.5">
+                            {{ __('Connected Devices') }}
+                        </div>
+                    </div>
+                    <div class="rounded-2xl bg-black/15 p-3 backdrop-blur-xs border border-white/10">
+                        <div class="font-mono text-sm font-bold text-white truncate" title="{{ $this->lastSyncAt ?? __('No syncs yet') }}">
+                            {{ $this->lastSyncAt ?? __('No syncs yet') }}
+                        </div>
+                        <div class="text-[11px] font-medium text-emerald-200/80 mt-0.5">
+                            {{ __('Last Sync Pulse') }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Status Message -->
+                <div class="mt-3 flex items-center gap-1.5 text-xs">
+                    @if ($this->conflictCount > 0)
+                        <flux:icon icon="exclamation-triangle" class="size-3.5 text-amber-300 shrink-0" />
+                        <span class="text-amber-200 font-medium">{{ __(':count conflict(s) pending review', ['count' => $this->conflictCount]) }}</span>
+                    @else
+                        <flux:icon icon="check-circle" class="size-3.5 text-emerald-300 shrink-0" />
+                        <span class="text-emerald-100/90 font-medium">{{ __('Vaults synchronized with 0 conflicts') }}</span>
+                    @endif
                 </div>
             </div>
 
-            <!-- Controls (Donezo White Pause & Red Stop Circles) -->
-            <div class="mt-6 flex items-center gap-3">
-                <!-- White Pause Button -->
-                <button type="button" class="flex size-11 items-center justify-center rounded-full bg-white text-gray-900 shadow-sm transition-transform hover:scale-105 active:scale-95">
-                    <flux:icon icon="pause" class="size-4 fill-current" />
+            <!-- Functional Actions (Donezo White Refresh & Fleet Link) -->
+            <div class="mt-5 flex items-center gap-2.5">
+                <button
+                    type="button"
+                    wire:click="refreshTelemetry"
+                    wire:loading.attr="disabled"
+                    class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-gray-900 shadow-sm transition-all hover:bg-gray-100 active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                    <flux:icon icon="arrow-path" class="size-3.5 text-emerald-700" wire:loading.class="animate-spin" />
+                    <span>{{ __('Refresh Status') }}</span>
                 </button>
 
-                <!-- Red Stop Button -->
-                <button type="button" class="flex size-11 items-center justify-center rounded-full bg-[#E53935] text-white shadow-sm transition-transform hover:scale-105 active:scale-95">
-                    <span class="size-3.5 rounded-sm bg-white"></span>
-                </button>
+                <a
+                    href="{{ route('devices.index') }}"
+                    wire:navigate
+                    class="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-400/30 px-3.5 py-2 text-xs font-semibold text-white transition-all active:scale-95"
+                >
+                    <flux:icon icon="device-phone-mobile" class="size-3.5 text-emerald-300" />
+                    <span>{{ __('Manage Fleet') }}</span>
+                </a>
             </div>
         </div>
     </div>

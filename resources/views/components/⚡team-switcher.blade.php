@@ -160,46 +160,6 @@ new class extends Component {
                 </flux:menu.item>
             </flux:modal.trigger>
 
-            <flux:menu.separator />
-
-            <!-- Settings & Configuration -->
-            <flux:menu.heading class="text-[10px] font-bold tracking-wider uppercase text-zinc-400">{{ __('Settings & Preferences') }}</flux:menu.heading>
-
-            <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate class="text-xs font-medium cursor-pointer">
-                {{ __('Account Settings') }}
-            </flux:menu.item>
-            <flux:menu.item :href="route('security.edit')" icon="shield-check" wire:navigate class="text-xs font-medium cursor-pointer">
-                {{ __('Security & 2FA') }}
-            </flux:menu.item>
-            <flux:menu.item :href="route('teams.index')" icon="users" wire:navigate class="text-xs font-medium cursor-pointer">
-                {{ __('Team Members') }}
-            </flux:menu.item>
-            <flux:menu.item :href="route('appearance.edit')" icon="swatch" wire:navigate class="text-xs font-medium cursor-pointer">
-                {{ __('Appearance / Theme') }}
-            </flux:menu.item>
-
-            <flux:menu.separator />
-
-            <!-- Help & Docs -->
-            <flux:menu.item :href="route('docs')" icon="book-open-text" wire:navigate class="text-xs font-medium cursor-pointer">
-                {{ __('Documentation') }}
-            </flux:menu.item>
-
-            <flux:menu.separator />
-
-            <!-- Logout -->
-            <form method="POST" action="{{ route('logout') }}" class="w-full">
-                @csrf
-                <flux:menu.item
-                    as="button"
-                    type="submit"
-                    icon="arrow-right-start-on-rectangle"
-                    class="w-full cursor-pointer text-xs font-medium text-red-600 dark:text-red-400"
-                    data-test="logout-button"
-                >
-                    {{ __('Log Out') }}
-                </flux:menu.item>
-            </form>
         </flux:menu>
     </flux:dropdown>
 </div>
