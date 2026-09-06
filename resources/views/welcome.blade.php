@@ -45,6 +45,7 @@
                     <a href="#workflow">How it works</a>
                     <a href="#safety">Safety</a>
                     <a href="#comparison">Why Synkk</a>
+                    <a href="#moonshot">Moonshot</a>
                     <a href="#pricing">Pricing</a>
                     <a href="#roadmap">Roadmap</a>
                     <a href="{{ route('docs.redirect') }}">Docs</a>
@@ -66,8 +67,9 @@
                             <a href="#workflow">How it works <span>02</span></a>
                             <a href="#safety">Safety <span>03</span></a>
                             <a href="#comparison">Why Synkk <span>04</span></a>
-                            <a href="#pricing">Pricing <span>05</span></a>
-                            <a href="#roadmap">Roadmap <span>06</span></a>
+                            <a href="#moonshot">Moonshot <span>05</span></a>
+                            <a href="#pricing">Pricing <span>06</span></a>
+                            <a href="#roadmap">Roadmap <span>07</span></a>
                             <a href="{{ route('docs.redirect') }}">Documentation <span>↗</span></a>
                             @guest
                                 <a href="{{ route('login') }}">Log in <span>↗</span></a>
@@ -827,8 +829,8 @@
                                     </th>
                                     <td class="synkk-col-featured">
                                         <div class="synkk-cell-check">
-                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> $65 Total</strong>
-                                            <span class="synkk-cell-sub">Buy server license once. Unlimited seats, unlimited devices, zero subscriptions.</span>
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> $0 Free / $79 LTD</strong>
+                                            <span class="synkk-cell-sub">100% free open-source, or $79 lifetime team server (up to 10 users). Zero per-seat tax.</span>
                                         </div>
                                     </td>
                                     <td>
@@ -862,59 +864,286 @@
                 </div>
             </section>
 
+            <section id="moonshot" class="synkk-moonshot synkk-viewport-section" aria-labelledby="moonshot-heading">
+                <div class="synkk-shell">
+                    <header class="synkk-section-heading">
+                        <div>
+                            <p class="synkk-eyebrow">06 / The Moonshot Architecture</p>
+                            <h2 id="moonshot-heading">The Synkk Moonshot Engine</h2>
+                        </div>
+                        <p>Beyond simple file synchronization. Four breakthrough systems engineered to eliminate sync friction, prevent data loss, scale team collaboration, and guarantee uncompromising data sovereignty.</p>
+                    </header>
+
+                    <div class="synkk-moonshot-engine">
+                        <!-- Pillar 1: Real-Time Multiplayer CRDT -->
+                        <article class="synkk-moonshot-card">
+                            <div class="synkk-moonshot-card__header">
+                                <div class="synkk-moonshot-card__badge">
+                                    <span class="synkk-moonshot-step">01</span>
+                                    <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                                    <span>REAL-TIME MULTIPLAYER CRDT (Yjs)</span>
+                                </div>
+                                <span class="synkk-moonshot-phase">STAGE 2 COLLAB SPEC</span>
+                            </div>
+                            <div class="synkk-moonshot-card__body">
+                                <div class="synkk-moonshot-card__content">
+                                    <h3>Two users typing in the exact same .md note simultaneously without Git merge hell.</h3>
+                                    <p>Traditional sync engines force last-write-wins overwrites or leave ugly Git conflict markers that corrupt your Markdown. Synkk's CRDT engine integrates Yjs binary state vectors to merge concurrent keystrokes deterministically at the sub-character level.</p>
+                                    <ul class="synkk-moonshot-features">
+                                        <li><strong>Zero Merge Hell:</strong> Eliminates <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> conflict markers forever.</li>
+                                        <li><strong>Real-Time Remote Cursors:</strong> Live multi-caret awareness across desktop, mobile, and web.</li>
+                                        <li><strong>Offline-First Resilience:</strong> Edit without internet; changes converge smoothly upon reconnect.</li>
+                                    </ul>
+                                </div>
+                                <div class="synkk-moonshot-visual">
+                                    <div class="synkk-crdt-preview">
+                                        <div class="synkk-crdt-bar">
+                                            <span><i></i><i></i><i></i></span>
+                                            <small>collaborative-session.md · 2 peers active</small>
+                                            <span class="synkk-crdt-sync-badge">Yjs Active</span>
+                                        </div>
+                                        <div class="synkk-crdt-editor">
+                                            <p class="synkk-crdt-line"><span class="synkk-crdt-line-num">1</span># Q4 Strategic Product Priorities</p>
+                                            <p class="synkk-crdt-line"><span class="synkk-crdt-line-num">2</span>We are shipping the sovereign team brain engine.</p>
+                                            <p class="synkk-crdt-line"><span class="synkk-crdt-line-num">3</span>- <span class="synkk-user-text synkk-user--alice">Alice: Real-time conflict-free CRDT sync</span><span class="synkk-caret synkk-caret--alice" data-user="Alice"></span></p>
+                                            <p class="synkk-crdt-line"><span class="synkk-crdt-line-num">4</span>- <span class="synkk-user-text synkk-user--bob">Bob: Instant 2-second QR mobile pairing</span><span class="synkk-caret synkk-caret--bob" data-user="Bob"></span></p>
+                                            <p class="synkk-crdt-line"><span class="synkk-crdt-line-num">5</span>State vector delta: <code class="synkk-crdt-hash">0x4a9f...b27e [synced]</code></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <div class="synkk-moonshot-arrow" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                        </div>
+
+                        <!-- Pillar 2: Instant Zero-Config Mobile Onboarding -->
+                        <article class="synkk-moonshot-card">
+                            <div class="synkk-moonshot-card__header">
+                                <div class="synkk-moonshot-card__badge">
+                                    <span class="synkk-moonshot-step">02</span>
+                                    <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                                    <span>INSTANT ZERO-CONFIG MOBILE ONBOARDING</span>
+                                </div>
+                                <span class="synkk-moonshot-phase synkk-moonshot-phase--live">LIVE IN V1.0</span>
+                            </div>
+                            <div class="synkk-moonshot-card__body">
+                                <div class="synkk-moonshot-card__content">
+                                    <h3>Scan a single QR code on the Synkk web dashboard to link iOS/Android in 2 seconds.</h3>
+                                    <p>No more tedious typing of server URLs, port numbers, long device tokens, or complex base64 keys on touchscreen keyboards. Synkk generates a secure, instant-pairing QR code on your dashboard that auto-provisions iOS and Android devices in one camera scan.</p>
+                                    <ul class="synkk-moonshot-features">
+                                        <li><strong>2-Second Pairing:</strong> Auto-configures Server API URL, Device Token, and Vault slug.</li>
+                                        <li><strong>Cross-Platform Support:</strong> One-tap connect for iPhone, iPad, and Android devices.</li>
+                                        <li><strong>Cryptographic Safety:</strong> Scoped, revocable device tokens with remote wipe capability.</li>
+                                    </ul>
+                                </div>
+                                <div class="synkk-moonshot-visual">
+                                    <div class="synkk-qr-preview">
+                                        <div class="synkk-qr-card">
+                                            <div class="synkk-qr-frame">
+                                                <svg class="synkk-qr-code-svg" viewBox="0 0 100 100" fill="currentColor">
+                                                    <rect x="10" y="10" width="25" height="25" rx="3" fill="#1c2518"/>
+                                                    <rect x="15" y="15" width="15" height="15" fill="#ffffff"/>
+                                                    <rect x="18" y="18" width="9" height="9" fill="#1c2518"/>
+                                                    <rect x="65" y="10" width="25" height="25" rx="3" fill="#1c2518"/>
+                                                    <rect x="70" y="15" width="15" height="15" fill="#ffffff"/>
+                                                    <rect x="73" y="18" width="9" height="9" fill="#1c2518"/>
+                                                    <rect x="10" y="65" width="25" height="25" rx="3" fill="#1c2518"/>
+                                                    <rect x="15" y="70" width="15" height="15" fill="#ffffff"/>
+                                                    <rect x="18" y="73" width="9" height="9" fill="#1c2518"/>
+                                                    <rect x="42" y="12" width="6" height="6" fill="#1c2518"/>
+                                                    <rect x="52" y="18" width="6" height="6" fill="#1c2518"/>
+                                                    <rect x="42" y="28" width="6" height="6" fill="#1c2518"/>
+                                                    <rect x="42" y="42" width="16" height="16" rx="2" fill="#78934b"/>
+                                                    <rect x="65" y="45" width="8" height="8" fill="#1c2518"/>
+                                                    <rect x="78" y="52" width="12" height="6" fill="#1c2518"/>
+                                                    <rect x="42" y="68" width="8" height="8" fill="#1c2518"/>
+                                                    <rect x="55" y="75" width="15" height="10" fill="#1c2518"/>
+                                                    <rect x="75" y="75" width="15" height="15" fill="#1c2518"/>
+                                                </svg>
+                                                <div class="synkk-qr-scan-line"></div>
+                                            </div>
+                                            <div class="synkk-qr-telemetry">
+                                                <div class="synkk-qr-telemetry__pill">
+                                                    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                                                    <span>Paired in 1.8s</span>
+                                                </div>
+                                                <small>iOS &amp; Android · Synkk Instant Pairing</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <div class="synkk-moonshot-arrow" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                        </div>
+
+                        <!-- Pillar 3: Agentic Knowledge Graph & RAG Server -->
+                        <article class="synkk-moonshot-card">
+                            <div class="synkk-moonshot-card__header">
+                                <div class="synkk-moonshot-card__badge">
+                                    <span class="synkk-moonshot-step">03</span>
+                                    <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                                    <span>AGENTIC KNOWLEDGE GRAPH &amp; RAG SERVER</span>
+                                </div>
+                                <span class="synkk-moonshot-phase">FUTURE HORIZON</span>
+                            </div>
+                            <div class="synkk-moonshot-card__body">
+                                <div class="synkk-moonshot-card__content">
+                                    <h3>Self-hosted vector embeddings &amp; local LLM chat answering questions from your vault.</h3>
+                                    <p>Transform your static notes into an active reasoning engine. Synkk pairs your 2D <code>[[wikilink]]</code> knowledge graph with local vector embeddings. Run private LLM queries with Ollama or vLLM directly over your notes without exposing proprietary knowledge to third-party AI APIs.</p>
+                                    <ul class="synkk-moonshot-features">
+                                        <li><strong>Graph-Augmented RAG:</strong> Traverses note backlinks to retrieve deeply connected contextual memory.</li>
+                                        <li><strong>100% Private Embeddings:</strong> Local vector generation ensures zero confidential vault leaks.</li>
+                                        <li><strong>Agentic Retrieval:</strong> Synthesizes verified answers with exact line and note citations.</li>
+                                    </ul>
+                                </div>
+                                <div class="synkk-moonshot-visual">
+                                    <div class="synkk-rag-preview">
+                                        <div class="synkk-rag-header">
+                                            <span><i></i> Local RAG Node</span>
+                                            <span class="synkk-rag-status">Ollama / Llama-3 Active</span>
+                                        </div>
+                                        <div class="synkk-rag-query">
+                                            <span class="synkk-rag-prompt">&gt; Query:</span>
+                                            <p>"Summarize our team's sync protocol and security boundaries."</p>
+                                        </div>
+                                        <div class="synkk-rag-context">
+                                            <small>Retrieved 3 nodes via [[wikilink]] graph traversal:</small>
+                                            <div class="synkk-rag-chips">
+                                                <span>[[Architecture/DLP-Shield.md]] (98%)</span>
+                                                <span>[[Security/Path-ACLs.md]] (95%)</span>
+                                                <span>[[API/Sha256-Hash.md]] (91%)</span>
+                                            </div>
+                                        </div>
+                                        <div class="synkk-rag-answer">
+                                            <p>Synkk enforces path-level ACLs per member and verifies every revision with SHA-256 checksums before accepting writes. Confidential secrets are caught by in-app DLP scanning.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <div class="synkk-moonshot-arrow" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                        </div>
+
+                        <!-- Pillar 4: Zero-Knowledge Team E2EE -->
+                        <article class="synkk-moonshot-card">
+                            <div class="synkk-moonshot-card__header">
+                                <div class="synkk-moonshot-card__badge">
+                                    <span class="synkk-moonshot-step">04</span>
+                                    <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                                    <span>ZERO-KNOWLEDGE TEAM E2EE (CLIENT-SIDE ENCRYPTION)</span>
+                                </div>
+                                <span class="synkk-moonshot-phase">FUTURE HORIZON</span>
+                            </div>
+                            <div class="synkk-moonshot-card__body">
+                                <div class="synkk-moonshot-card__content">
+                                    <h3>Server stores encrypted blobs; web viewer decrypts via WebAssembly/WebCrypto.</h3>
+                                    <p>Maximum cryptographic privacy for regulated and security-sensitive teams. Files are encrypted on your device using AES-256-GCM before transmission. The Synkk server only ever sees opaque ciphertext blobs, while the web workspace decrypts files locally in your browser memory via WebAssembly.</p>
+                                    <ul class="synkk-moonshot-features">
+                                        <li><strong>Zero Server Knowledge:</strong> Plaintext notes and encryption keys never touch server disks.</li>
+                                        <li><strong>WebAssembly Decryptor:</strong> High-performance client-side decryption right in your browser.</li>
+                                        <li><strong>Team Key Governance:</strong> Asymmetric key exchange protocols for secure multi-seat sharing.</li>
+                                    </ul>
+                                </div>
+                                <div class="synkk-moonshot-visual">
+                                    <div class="synkk-e2ee-preview">
+                                        <div class="synkk-e2ee-flow">
+                                            <div class="synkk-e2ee-stage">
+                                                <div class="synkk-e2ee-badge">DEVICE (LOCAL)</div>
+                                                <div class="synkk-e2ee-box">Plaintext Note</div>
+                                                <small>Markdown / Images</small>
+                                            </div>
+                                            <div class="synkk-e2ee-arrow">
+                                                <span>AES-GCM</span>
+                                                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                            </div>
+                                            <div class="synkk-e2ee-stage synkk-e2ee-stage--server">
+                                                <div class="synkk-e2ee-badge">SYNKK SERVER</div>
+                                                <div class="synkk-e2ee-box synkk-e2ee-box--locked">
+                                                    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
+                                                    <span>Opaque Blob</span>
+                                                </div>
+                                                <small>Zero Knowledge</small>
+                                            </div>
+                                            <div class="synkk-e2ee-arrow">
+                                                <span>Wasm</span>
+                                                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                            </div>
+                                            <div class="synkk-e2ee-stage">
+                                                <div class="synkk-e2ee-badge">WEB VIEWER</div>
+                                                <div class="synkk-e2ee-box">Decrypted Note</div>
+                                                <small>In-Browser DOM</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
             <section id="pricing" class="synkk-pricing synkk-viewport-section" aria-labelledby="pricing-heading">
                 <div class="synkk-shell">
                     <header class="synkk-section-heading">
                         <div>
-                            <p class="synkk-eyebrow">06 / Zero Seat Tax</p>
+                            <p class="synkk-eyebrow">07 / Packaging &amp; Pricing Architecture</p>
                             <h2 id="pricing-heading">Own your team brain. No recurring seat tax.</h2>
                         </div>
-                        <p>Obsidian Sync charges $48–$96/year per seat for a closed cloud sync. Synkk gives your entire team local-first speed, path ACLs, and 100% data sovereignty on your private server. Pay once, own it forever.</p>
+                        <p>Choose the model that fits your workflow: 100% free open-source self-hosting, lifetime commercial team server ownership, or zero-config managed cloud.</p>
                     </header>
 
                     <div class="synkk-pricing-grid">
-                        <article>
+                        <!-- Tier 1: Synkk Community -->
+                        <article class="synkk-pricing-card synkk-pricing-card--community">
                             <div class="synkk-price-heading">
-                                <span>1-YEAR UPDATE LICENSE</span>
-                                <p><strong>$45</strong><small>1-year update license</small></p>
+                                <span>FREE &amp; OPEN SOURCE · SELF-HOSTED</span>
+                                <p><strong>$0</strong><small>free forever · full source code</small></p>
                             </div>
-                            <h3>Self-host your personal knowledge engine.</h3>
+                            <h3>Synkk Community</h3>
+                            <p class="synkk-price-subtitle">Full source code for developers, homelabs &amp; independent creators.</p>
                             <ul>
-                                <li>1 year of software updates &amp; new feature releases</li>
-                                <li>Perpetual access to the purchased version forever</li>
-                                <li>Self-host on your own infrastructure or Docker</li>
-                                <li>Local-first sync with instant QR mobile pairing</li>
-                                <li>Web Markdown workspace &amp; 2D interactive graph</li>
-                                <li>Atomic Safety Shield (aborts on &gt;10% mass wipe)</li>
-                                <li>Unlimited vaults, notes, and local devices</li>
-                                <li>Obsidian plugin v1.0.0 integration included</li>
+                                <li>Full source code (Laravel backend + Obsidian plugin)</li>
+                                <li>Whole-file sync &amp; cryptographic SHA-256 verification</li>
+                                <li>Note version history &amp; 1-click snapshot restore</li>
+                                <li>In-browser Markdown web editor &amp; document outline</li>
+                                <li>Basic folder scoping &amp; path exclusions</li>
+                                <li>Unlimited notes, unlimited vaults &amp; unlimited devices</li>
+                                <li>Public community support via GitHub Discussions</li>
                             </ul>
-                            @if ($storeReady)
-                                <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Get 1-Year License <span aria-hidden="true">↗</span></a>
-                            @else
-                                <button type="button" class="synkk-button synkk-button--pending" disabled>Checkout opens after launch checks</button>
-                            @endif
+                            <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Clone on GitHub <span aria-hidden="true">↗</span></a>
                         </article>
 
-                        <article class="is-featured">
+                        <!-- Tier 2: Synkk Pro / Team (Featured) -->
+                        <article class="synkk-pricing-card synkk-pricing-card--pro is-featured">
                             <div class="synkk-price-featured-badge">
                                 <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
-                                <span>LIFETIME LICENSE · SOVEREIGN TEAM BRAIN</span>
+                                <span>APPSUMO LAUNCH DEAL · BEST VALUE</span>
                             </div>
                             <div class="synkk-price-heading">
-                                <span>LIFETIME LICENSE</span>
-                                <p><strong>$65</strong><small>lifetime license · pay once, own forever</small></p>
+                                <span>SELF-HOSTED COMMERCIAL LICENSE</span>
+                                <p><strong>$79</strong><small>one-time lifetime deal (launch phase $59–$99)</small></p>
                             </div>
-                            <h3>The complete team knowledge base. Zero seat fees.</h3>
+                            <div class="synkk-price-commercial-toggle">
+                                <span>Standard commercial: <strong>$8</strong> / user / month or <strong>$79</strong> / year / seat</span>
+                            </div>
+                            <h3>Synkk Pro / Team</h3>
+                            <p class="synkk-price-subtitle">Self-hosted commercial server with full governance (up to 10 users).</p>
                             <ul>
-                                <li>Lifetime software updates — never pay a renewal fee</li>
-                                <li>Zero recurring per-seat fees — save $1,440/yr vs SaaS</li>
+                                <li>Everything in Community, plus:</li>
+                                <li>Lifetime self-hosted team server (up to 10 users with launch deal)</li>
+                                <li>In-App DLP Secret Scanning (intercepts leaked OpenAI / AWS keys)</li>
+                                <li>IP Whitelisting &amp; Subnet restriction rules</li>
+                                <li>1-Click Instant Remote Device Wipe (HTTP 410 token purge)</li>
+                                <li>Webhook automation &amp; event relays (Slack, Discord, Zapier)</li>
                                 <li>Granular Path-Level ACLs (Inbox vs Client vs Internal)</li>
-                                <li>In-app DLP Secret Scanner (blocks leaked API keys)</li>
-                                <li>Multi-member Web Workspace &amp; full interactive graph</li>
-                                <li>1-Click Quick Connect QR code mobile onboarding</li>
-                                <li>Priority access to CRDT live collaboration &amp; E2EE betas</li>
-                                <li>Direct priority support from core maintainers</li>
+                                <li>Priority Support directly from core maintainers</li>
                             </ul>
                             @if ($storeReady)
                                 <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Get Lifetime License <span aria-hidden="true">↗</span></a>
@@ -923,36 +1152,51 @@
                             @endif
                         </article>
 
-                        <article class="synkk-pricing-grid__team">
+                        <!-- Tier 3: Synkk Cloud -->
+                        <article class="synkk-pricing-card synkk-pricing-card--cloud">
                             <div class="synkk-price-heading">
-                                <span>ENTERPRISE &amp; TEAMS</span>
-                                <p><strong>Enterprise</strong><small>teams &amp; organizations</small></p>
+                                <span>ZERO-CONFIG MANAGED SAAS</span>
+                                <p><strong>$12</strong><small>/ user / month</small></p>
                             </div>
-                            <h3>Deploy Synkk across your team or company.</h3>
+                            <h3>Synkk Cloud</h3>
+                            <p class="synkk-price-subtitle">For teams that love Obsidian but do not want to manage Docker or servers.</p>
                             <ul>
-                                <li>Custom Kubernetes &amp; air-gapped Docker deployments</li>
-                                <li>Enterprise fleet governance &amp; 1-click device remote wipe</li>
-                                <li>IP subnet restriction &amp; read-only contractor tokens</li>
-                                <li>Audit trail logging &amp; SOC2 compliance assistance</li>
-                                <li>Dedicated support channel with core maintainers</li>
-                                <li>Custom SLA, invoice billing, and security audit review</li>
+                                <li>Zero DevOps: no Docker, PHP, SSL certs, or database backups</li>
+                                <li>1-Click team setup — hosted in Frankfurt (GDPR) or US-East</li>
+                                <li>Automated hourly offsite encrypted backups &amp; failover</li>
+                                <li>Full Pro feature suite: DLP scanning, remote wipe &amp; webhooks</li>
+                                <li>Automated updates, security patches, and zero maintenance</li>
+                                <li>99.99% uptime SLA &amp; dedicated priority cloud support</li>
+                                <li>Multi-device sync with instant 2-second QR pairing</li>
                             </ul>
-                            <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Book a meeting <span aria-hidden="true">↗</span></a>
+                            @if (Route::has('register'))
+                                <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Start Cloud Workspace <span aria-hidden="true">→</span></a>
+                            @else
+                                <a href="{{ route('login') }}" class="synkk-button synkk-button--ink">Start Cloud Workspace <span aria-hidden="true">→</span></a>
+                            @endif
                         </article>
+                    </div>
+
+                    <div class="synkk-pricing-enterprise">
+                        <div class="synkk-pricing-enterprise__copy">
+                            <strong>Need custom Kubernetes clusters, air-gapped deployments, or SOC2 compliance?</strong>
+                            <p>We provide dedicated support channels, IP subnet audit logging, and custom SLAs for enterprise organizations.</p>
+                        </div>
+                        <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--quiet">Book a meeting <span aria-hidden="true">↗</span></a>
                     </div>
 
                     <div class="synkk-pricing-trust">
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
-                            <span>100% Self-Hosted &amp; Local-First</span>
+                            <span>100% Self-Hosted or Managed Cloud</span>
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
-                            <span>Instant Software License Activation</span>
+                            <span>Instant License &amp; Cloud Activation</span>
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
-                            <span>No Subscription Trap · Pay Once</span>
+                            <span>AppSumo Lifetime Deal · Zero Recurring Seat Tax</span>
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 16v-1a4.978 4.978 0 00-1.552-3.619A6.974 6.974 0 0118 15v1h-2zM4 16v-1c0-.853.21-1.657.58-2.368A4.978 4.978 0 003 15v1h1z"/></svg>
@@ -960,14 +1204,14 @@
                         </div>
                     </div>
 
-                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public plugin. Lemon Squeezy manages license checkout. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline hover:text-zinc-900">book-it.ottomate.space</a>.</p>
+                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public open-source plugin and server code. Lemon Squeezy and AppSumo manage commercial licenses. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline hover:text-zinc-900">book-it.ottomate.space</a>.</p>
                 </div>
             </section>
 
             <section id="roadmap" class="synkk-roadmap synkk-viewport-section" aria-labelledby="roadmap-heading">
                 <div class="synkk-shell synkk-roadmap__grid">
                     <header class="synkk-roadmap__intro">
-                        <p class="synkk-eyebrow">06 / Built in the open</p>
+                        <p class="synkk-eyebrow">08 / Built in the open</p>
                         <h2 id="roadmap-heading">Plugin now. Server release next.</h2>
                         <p>The public plugin is downloadable today. The rows separate what is live, what must clear launch, and what follows.</p>
                         <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--paper">See the public repository <span aria-hidden="true">↗</span></a>
@@ -1047,7 +1291,7 @@
             <section id="faq" class="synkk-faq synkk-viewport-section synkk-shell" aria-labelledby="faq-heading">
                 <header class="synkk-section-heading">
                     <div>
-                        <p class="synkk-eyebrow">07 / Before you install</p>
+                        <p class="synkk-eyebrow">09 / Before you install</p>
                         <h2 id="faq-heading">Clear answers before you sync.</h2>
                     </div>
                     <p>The public plugin, current product, and future roadmap are labelled separately so you can choose the right starting point.</p>
@@ -1083,11 +1327,11 @@
                     </details>
                     <details>
                         <summary>
-                            <span>04</span>When does the $45 / $65 license checkout open?
+                            <span>04</span>When does the $79 commercial license checkout open?
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>After the public server package, Lemon Squeezy checkout, and license activation screen are verified end to end. Until then, the page does not accept payment.</p>
+                            <p>After the public server package, Lemon Squeezy and AppSumo checkout flows, and license activation screens are verified end to end. Until then, the page does not accept payment.</p>
                         </div>
                     </details>
                     <details>
@@ -1096,7 +1340,7 @@
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>Yes. The web product is designed for a server you control. The documentation includes the current environment requirements, Docker direction, storage locations, and the production checks still required before the server package is called ready.</p>
+                            <p>Yes. Synkk Community is 100% free and open-source on GitHub. You can self-host using single-command Docker Compose on your own VPS or homelab hardware.</p>
                         </div>
                     </details>
                     <details>
@@ -1193,6 +1437,7 @@
                         <a href="#workflow">How it works</a>
                         <a href="#safety">Safety</a>
                         <a href="#comparison">Why Synkk</a>
+                        <a href="#moonshot">Moonshot</a>
                         <a href="#pricing">Pricing</a>
                         <a href="#roadmap">Roadmap</a>
                         <a href="#faq">FAQ</a>

@@ -1454,6 +1454,404 @@ summary:focus-visible,
     line-height: 1.48;
 }
 
+/* ==========================================================================
+   Section: The Synkk Moonshot Engine
+   ========================================================================== */
+.synkk-moonshot {
+    position: relative;
+    padding-block: clamp(5rem, 9vw, 8rem);
+    background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(226, 237, 210, 0.45), transparent 70%), #f8f6f0;
+    border-block: 1px solid #eae3d5;
+}
+.synkk-moonshot-engine {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 3.5rem;
+}
+.synkk-moonshot-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 2.2rem;
+    border: 1px solid #e2ddd2;
+    border-radius: 1.5rem;
+    background: #ffffff;
+    box-shadow: 0 12px 32px -8px rgba(50, 42, 30, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.synkk-moonshot-card:hover {
+    transform: translateY(-3px);
+    border-color: #c9d8a9;
+    box-shadow: 0 20px 48px -12px rgba(50, 42, 30, 0.09);
+}
+.synkk-moonshot-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid #f0ecdf;
+}
+.synkk-moonshot-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-family: var(--synkk-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #273420;
+    letter-spacing: 0.04em;
+}
+.synkk-moonshot-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 0.45rem;
+    background: #eef3de;
+    color: #44592a;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+.synkk-moonshot-phase {
+    font-family: var(--synkk-mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    background: #f1ede1;
+    color: #6d6756;
+    border: 1px solid #ded8c7;
+    letter-spacing: 0.05em;
+}
+.synkk-moonshot-phase--live {
+    background: #eaf5d3;
+    color: #2e4c13;
+    border-color: #c4e48b;
+}
+.synkk-moonshot-card__body {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 2.5rem;
+    align-items: center;
+    margin-top: 1.5rem;
+}
+.synkk-moonshot-card__content h3 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.35;
+    color: #172115;
+    letter-spacing: -0.025em;
+}
+.synkk-moonshot-card__content p {
+    margin-top: 0.85rem;
+    font-size: 0.92rem;
+    line-height: 1.68;
+    color: #5d6752;
+}
+.synkk-moonshot-features {
+    display: grid;
+    gap: 0.65rem;
+    margin: 1.4rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+.synkk-moonshot-features li {
+    position: relative;
+    padding-left: 1.3rem;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: #434c3a;
+}
+.synkk-moonshot-features li::before {
+    position: absolute;
+    left: 0;
+    top: 0.05rem;
+    content: '→';
+    color: #728c46;
+    font-weight: 800;
+}
+.synkk-moonshot-arrow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #9cb17d;
+    height: 1.25rem;
+}
+.synkk-moonshot-arrow svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    animation: synkk-arrow-bounce 2s infinite ease-in-out;
+}
+@keyframes synkk-arrow-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+}
+
+/* Visual Mockup Displays inside Moonshot cards */
+.synkk-crdt-preview,
+.synkk-qr-preview,
+.synkk-rag-preview,
+.synkk-e2ee-preview {
+    background: #192217;
+    color: #e9f0e2;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    border: 1px solid rgba(186, 230, 80, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    font-size: 0.82rem;
+}
+.synkk-crdt-bar,
+.synkk-rag-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: var(--synkk-mono);
+    font-size: 0.62rem;
+    color: #a4b49a;
+}
+.synkk-crdt-bar span i {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #475440;
+    margin-right: 3px;
+}
+.synkk-crdt-sync-badge {
+    color: #d8f352;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: rgba(216, 243, 82, 0.15);
+}
+.synkk-crdt-editor {
+    margin-top: 0.85rem;
+    font-family: var(--synkk-mono);
+    font-size: 0.72rem;
+    line-height: 1.7;
+}
+.synkk-crdt-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+.synkk-crdt-line-num {
+    color: #576550;
+    user-select: none;
+    width: 1.2rem;
+}
+.synkk-user--alice {
+    color: #c9eb6b;
+    background: rgba(201, 235, 107, 0.12);
+    padding: 0 0.2rem;
+    border-radius: 2px;
+}
+.synkk-user--bob {
+    color: #f7ba53;
+    background: rgba(247, 186, 83, 0.12);
+    padding: 0 0.2rem;
+    border-radius: 2px;
+}
+.synkk-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    vertical-align: middle;
+    animation: synkk-blink 1s infinite;
+}
+.synkk-caret--alice { background: #c9eb6b; }
+.synkk-caret--bob { background: #f7ba53; }
+@keyframes synkk-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.synkk-crdt-hash {
+    color: #8da474;
+    font-size: 0.65rem;
+}
+
+/* QR Code Preview */
+.synkk-qr-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid #ded8c9;
+    color: #172115;
+    padding: 1.5rem;
+}
+.synkk-qr-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+}
+.synkk-qr-frame {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1.5px solid #d4cbb8;
+    background: #faf8f2;
+}
+.synkk-qr-code-svg {
+    width: 100%;
+    height: 100%;
+}
+.synkk-qr-scan-line {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    height: 2px;
+    background: #7ca836;
+    box-shadow: 0 0 8px #9ee03a;
+    animation: synkk-qr-scan 2.5s ease-in-out infinite alternate;
+}
+@keyframes synkk-qr-scan {
+    0% { top: 12px; }
+    100% { top: 116px; }
+}
+.synkk-qr-telemetry {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+}
+.synkk-qr-telemetry__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    background: #e9f5d3;
+    color: #2b4912;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.synkk-qr-telemetry small {
+    font-size: 0.68rem;
+    color: #6d7564;
+}
+
+/* RAG Preview */
+.synkk-rag-query {
+    margin-top: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+}
+.synkk-rag-prompt {
+    font-family: var(--synkk-mono);
+    color: #c9eb6b;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+.synkk-rag-query p {
+    margin: 0.2rem 0 0;
+    font-size: 0.78rem;
+    color: #f1f6ec;
+}
+.synkk-rag-context {
+    margin-top: 0.65rem;
+}
+.synkk-rag-context small {
+    display: block;
+    font-family: var(--synkk-mono);
+    font-size: 0.6rem;
+    color: #8da080;
+    margin-bottom: 0.35rem;
+}
+.synkk-rag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+.synkk-rag-chips span {
+    font-family: var(--synkk-mono);
+    font-size: 0.6rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: rgba(186, 230, 80, 0.12);
+    color: #d8f352;
+    border: 1px solid rgba(186, 230, 80, 0.25);
+}
+.synkk-rag-answer {
+    margin-top: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    border-left: 2px solid #a8db48;
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.74rem;
+    line-height: 1.55;
+    color: #d7e2cf;
+}
+.synkk-rag-answer p { margin: 0; }
+
+/* E2EE Flow */
+.synkk-e2ee-flow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    padding: 0.85rem 0.4rem;
+}
+.synkk-e2ee-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    text-align: center;
+    flex: 1;
+}
+.synkk-e2ee-badge {
+    font-family: var(--synkk-mono);
+    font-size: 0.55rem;
+    color: #92a486;
+    letter-spacing: 0.05em;
+}
+.synkk-e2ee-box {
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #f1f6ec;
+    font-size: 0.72rem;
+    font-weight: 600;
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.synkk-e2ee-box--locked {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    background: rgba(216, 243, 82, 0.15);
+    color: #d8f352;
+    border-color: rgba(216, 243, 82, 0.35);
+}
+.synkk-e2ee-stage small {
+    font-size: 0.58rem;
+    color: #7b8a71;
+}
+.synkk-e2ee-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    color: #7da545;
+    font-family: var(--synkk-mono);
+    font-size: 0.52rem;
+}
+
+/* ==========================================================================
+   Section: Pricing & Packaging Architecture
+   ========================================================================== */
 .synkk-pricing {
     position: relative;
     background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(204, 226, 172, 0.45), transparent 70%), #eeece6;
@@ -1534,7 +1932,7 @@ summary:focus-visible,
     flex-wrap: wrap;
     align-items: baseline;
     gap: 0.7rem;
-    margin: 2rem 0;
+    margin: 1.5rem 0 0.8rem;
 }
 .synkk-price-heading strong {
     font-size: clamp(3rem, 4.3vw, 4.3rem);
@@ -1549,6 +1947,48 @@ summary:focus-visible,
 .is-featured .synkk-price-heading small {
     color: #c0ceaf;
 }
+.synkk-price-subtitle {
+    margin: 0.45rem 0 1rem;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: #646d5a;
+}
+.is-featured .synkk-price-subtitle {
+    color: #c9d8bd;
+}
+.synkk-price-commercial-toggle {
+    margin-bottom: 1.25rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 0.72rem;
+    color: #d9e8be;
+    line-height: 1.4;
+}
+.synkk-pricing-enterprise {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    padding: 1.6rem 2rem;
+    border: 1px solid #dcd8cb;
+    border-radius: 1.2rem;
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+.synkk-pricing-enterprise__copy strong {
+    display: block;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #172115;
+}
+.synkk-pricing-enterprise__copy p {
+    margin: 0.3rem 0 0;
+    font-size: 0.84rem;
+    color: #646d5c;
+}
 .synkk-pricing-grid h3 {
     max-width: 22ch;
     margin: 0;
@@ -1560,7 +2000,7 @@ summary:focus-visible,
 .synkk-pricing-grid ul {
     display: grid;
     gap: 0.9rem;
-    margin: 2rem 0 2.5rem;
+    margin: 1.5rem 0 2.2rem;
     padding: 0;
     list-style: none;
     color: #626d57;
@@ -2768,8 +3208,31 @@ summary:focus-visible,
     .synkk-feature-graphic--docker {
         padding: 1.5rem;
     }
+    .synkk-moonshot-card__body {
+        grid-template-columns: 1fr;
+        gap: 1.8rem;
+    }
+    .synkk-pricing-enterprise {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.2rem;
+    }
+    .synkk-pricing-enterprise .synkk-button {
+        width: 100%;
+        justify-content: center;
+    }
 }
 @media (max-width: 600px) {
+    .synkk-moonshot-card {
+        padding: 1.5rem;
+        border-radius: 1.2rem;
+    }
+    .synkk-moonshot-card__content h3 {
+        font-size: 1.18rem;
+    }
+    .synkk-crdt-editor {
+        font-size: 0.65rem;
+    }
     .synkk-feature-card {
         padding: 1.5rem;
         border-radius: 1.4rem;

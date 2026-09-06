@@ -76,17 +76,40 @@ test('the landing page presents real product captures without a mascot overlay',
     $this->assertFileDoesNotExist(public_path('images/showcase/devices-full.png'));
 });
 
-test('the landing page presents the 1-year, lifetime, and enterprise meeting pricing options', function () {
+test('the landing page presents the complete 3-tier packaging and pricing architecture', function () {
     $response = $this->get(route('home'));
 
     $response
-        ->assertSee('$45')
-        ->assertSee('1-year update license')
-        ->assertSee('$65')
-        ->assertSee('LIFETIME LICENSE')
-        ->assertSee('ENTERPRISE & TEAMS')
+        ->assertSee('Packaging &amp; Pricing Architecture', escape: false)
+        ->assertSee('Synkk Community')
+        ->assertSee('$0')
+        ->assertSee('FREE &amp; OPEN SOURCE', escape: false)
+        ->assertSee('Synkk Pro / Team')
+        ->assertSee('$79')
+        ->assertSee('APPSUMO LAUNCH DEAL')
+        ->assertSee('$8')
+        ->assertSee('Synkk Cloud')
+        ->assertSee('$12')
+        ->assertSee('ZERO-CONFIG MANAGED SAAS')
+        ->assertSee('Frankfurt')
+        ->assertSee('US-East')
         ->assertSee('book-it.ottomate.space', escape: false)
         ->assertSee('Book a meeting');
+});
+
+test('the landing page presents the synkk moonshot engine with its 4 core pillars', function () {
+    $response = $this->get(route('home'));
+
+    $response
+        ->assertSee('The Synkk Moonshot Engine')
+        ->assertSee('REAL-TIME MULTIPLAYER CRDT (Yjs)')
+        ->assertSee('Two users typing in the exact same .md note simultaneously without Git merge hell')
+        ->assertSee('INSTANT ZERO-CONFIG MOBILE ONBOARDING')
+        ->assertSee('Scan a single QR code on the Synkk web dashboard to link iOS/Android in 2 seconds')
+        ->assertSee('AGENTIC KNOWLEDGE GRAPH &amp; RAG SERVER', escape: false)
+        ->assertSee('Self-hosted vector embeddings &amp; local LLM chat answering questions from your vault', escape: false)
+        ->assertSee('ZERO-KNOWLEDGE TEAM E2EE (CLIENT-SIDE ENCRYPTION)')
+        ->assertSee('Server stores encrypted blobs; web viewer decrypts via WebAssembly/WebCrypto');
 });
 
 test('the landing page clearly separates the public plugin from the server launch roadmap', function () {
