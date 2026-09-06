@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\DeviceToken;
 use App\Models\Team;
 use App\Models\User;
+use App\Models\Vault;
+use App\Models\VaultChangeLog;
 use Livewire\Livewire;
 
 test('guests are redirected to login when attempting to access super admin dashboard', function () {
@@ -121,4 +124,84 @@ test('super admin cannot impersonate themselves', function () {
         ->assertSessionHas('error');
 
     expect(session()->has('impersonator_id'))->toBeFalse();
+});
+
+test('super admin livewire component can generate a batch of commercial license keys', function () {
+    $admin = User::factory()->asSuperAdmin()->create();
+
+    $component = Livewire::actingAs($admin)
+        ->test('pages::admin.dashboard')
+        ->set('newLicenseTier', 'pro_ltd')
+        ->set('batchLicenseCount', 5)
+        ->call('generateBatchLicenses');
+
+    $batch = $component->get('batchGeneratedKeys');
+    expect($batch)->toHaveCount(5);
+    foreach ($batch as $key) {
+        expect($key)->toStartWith('SYNK-PRO-');
+    }
+});
+
+test('super admin can inspect tenant and execute emergency device revocation', function () {
+    $admin = User::factory()->asSuperAdmin()->create();
+    $user = User::factory()->create();
+    $team = $user->personalTeam();
+
+    $dev1 = DeviceToken::createToken($user, $team, 'MacBook', 'mac');
+    $dev2 = DeviceToken::createToken($user, $team, 'iPhone', 'ios');
+
+    expect($team->deviceTokens()->where('is_wiped', false)->count())->toBe(2);
+
+    Livewire::actingAs($admin)
+        ->test('pages::admin.dashboard')
+        ->call('inspectTenant', $team->id)
+        ->call('revokeAllTenantDevices', $team->id);
+
+    expect($team->deviceTokens()->where('is_wiped', false)->count())->toBe(0);
+});
+
+test('super admin can view sync telemetry and dismiss dlp security alerts', function () {
+    $admin = User::factory()->asSuperAdmin()->create();
+    $user = User::factory()->create();
+    $team = $user->personalTeam();
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Audit Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $log = VaultChangeLog::create([
+        'vault_id' => $vault->id,
+        'user_id' => $user->id,
+        'device_name' => 'MacBook Pro',
+        'path' => 'secrets.env',
+        'action' => 'updated',
+        'version' => 1,
+        'size' => 1024,
+        'has_secrets' => true,
+        'detected_secrets' => ['AWS Access Key'],
+    ]);
+
+    $component = Livewire::actingAs($admin)
+        ->test('pages::admin.dashboard')
+        ->set('activeTab', 'telemetry')
+        ->set('telemetrySecretsOnly', true);
+
+    expect($component->get('stats')['dlp_alerts'])->toBe(1);
+
+    $component->call('dismissDlpAlert', $log->id);
+
+    expect($log->fresh()->has_secrets)->toBeFalse();
+});
+
+test('super admin can trigger cache clear and snapshot pruning operations', function () {
+    $admin = User::factory()->asSuperAdmin()->create();
+
+    Livewire::actingAs($admin)
+        ->test('pages::admin.dashboard')
+        ->set('activeTab', 'system')
+        ->call('clearApplicationCache')
+        ->call('pruneOldSnapshots')
+        ->assertOk();
 });

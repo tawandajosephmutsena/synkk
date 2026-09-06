@@ -6,9 +6,12 @@ use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultChangeLog;
 use App\Models\VaultFile;
+use App\Models\VaultFileVersion;
 use App\Services\PlanService;
 use Flux\Flux;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
@@ -32,9 +35,19 @@ new #[Title('Platform Super Admin')] class extends Component {
     public ?int $editMaxVaults = null;
     public ?int $editMaxMembers = null;
 
+    // Tenant deep-dive inspection state
+    public ?int $inspectingTeamId = null;
+
+    // Telemetry & Security audit state
+    public string $telemetrySearch = '';
+    public string $telemetryActionFilter = 'all';
+    public bool $telemetrySecretsOnly = false;
+
     // License generator state
     public string $newLicenseTier = 'pro_ltd';
     public ?string $generatedKey = null;
+    public int $batchLicenseCount = 5;
+    public array $batchGeneratedKeys = [];
 
     public function setTab(string $tab): void
     {
@@ -44,14 +57,14 @@ new #[Title('Platform Super Admin')] class extends Component {
     #[Computed]
     public function stats(): array
     {
-        $planService = app(PlanService::class);
         $totalTenants = Team::count();
         $totalUsers = User::count();
         $totalVaults = Vault::count();
         $totalFiles = VaultFile::where('is_deleted', false)->count();
         $totalBytes = (int) VaultFile::where('is_deleted', false)->sum('size');
-        $activeDevices = DeviceToken::where('is_revoked', false)->count();
+        $activeDevices = DeviceToken::where('is_wiped', false)->count();
         $syncEvents = VaultChangeLog::count();
+        $dlpAlerts = VaultChangeLog::where('has_secrets', true)->count();
 
         return [
             'total_tenants' => $totalTenants,
@@ -61,6 +74,7 @@ new #[Title('Platform Super Admin')] class extends Component {
             'total_storage' => $totalBytes > 0 ? Number::fileSize($totalBytes, precision: 1) : '0 B',
             'active_devices' => $activeDevices,
             'sync_events' => $syncEvents,
+            'dlp_alerts' => $dlpAlerts,
             'paid_tenants' => Team::whereIn('plan', ['pro_ltd', 'cloud'])->count(),
         ];
     }
@@ -103,6 +117,87 @@ new #[Title('Platform Super Admin')] class extends Component {
         }
 
         return $query->take(50)->get();
+    }
+
+    #[Computed]
+    public function telemetryLogs(): Collection
+    {
+        $query = VaultChangeLog::with(['vault', 'user'])->latest('created_at');
+
+        if ($this->telemetrySecretsOnly) {
+            $query->where('has_secrets', true);
+        }
+
+        if ($this->telemetryActionFilter !== 'all') {
+            $query->where('action', $this->telemetryActionFilter);
+        }
+
+        if (filled($this->telemetrySearch)) {
+            $search = $this->telemetrySearch;
+            $query->where(function ($q) use ($search) {
+                $q->where('path', 'like', "%{$search}%")
+                    ->orWhere('device_name', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->take(50)->get();
+    }
+
+    #[Computed]
+    public function inspectedTeam(): ?Team
+    {
+        if (! $this->inspectingTeamId) {
+            return null;
+        }
+
+        return Team::with(['vaults', 'deviceTokens.user', 'members'])->find($this->inspectingTeamId);
+    }
+
+    #[Computed]
+    public function platformBreakdown(): array
+    {
+        return DeviceToken::where('is_wiped', false)
+            ->whereNotNull('client_platform')
+            ->select('client_platform', DB::raw('count(*) as count'))
+            ->groupBy('client_platform')
+            ->pluck('count', 'client_platform')
+            ->toArray();
+    }
+
+    #[Computed]
+    public function databaseTableMetrics(): array
+    {
+        return [
+            'Tenants (Teams)' => Team::count(),
+            'Users' => User::count(),
+            'Vaults' => Vault::count(),
+            'Active Files' => VaultFile::where('is_deleted', false)->count(),
+            'File Versions' => VaultFileVersion::count(),
+            'Sync Event Logs' => VaultChangeLog::count(),
+            'Device Tokens' => DeviceToken::count(),
+        ];
+    }
+
+    public function inspectTenant(int $teamId): void
+    {
+        $this->inspectingTeamId = $teamId;
+        $this->dispatch('open-modal', name: 'inspect-tenant');
+    }
+
+    public function revokeAllTenantDevices(int $teamId): void
+    {
+        $team = Team::findOrFail($teamId);
+        $count = $team->deviceTokens()->where('is_wiped', false)->count();
+
+        $team->deviceTokens()->where('is_wiped', false)->update([
+            'is_wiped' => true,
+            'wiped_at' => now(),
+        ]);
+
+        Flux::toast(variant: 'warning', text: __("Emergency Device Revocation: :count device tokens wiped for ':name'.", [
+            'count' => $count,
+            'name' => $team->name,
+        ]));
     }
 
     public function updateTenantPlan(int $teamId, string $newPlan): void
@@ -208,8 +303,34 @@ new #[Title('Platform Super Admin')] class extends Component {
         $segment3 = strtoupper(Str::random(4));
 
         $this->generatedKey = "{$prefix}-{$segment1}-{$segment2}-{$segment3}";
+        $this->batchGeneratedKeys = [];
 
         Flux::toast(variant: 'success', text: __('New commercial license key generated.'));
+    }
+
+    public function generateBatchLicenses(): void
+    {
+        $this->validate([
+            'batchLicenseCount' => ['required', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $prefix = match ($this->newLicenseTier) {
+            'cloud' => 'SYNK-CLOUD',
+            default => 'SYNK-PRO',
+        };
+
+        $keys = [];
+        for ($i = 0; $i < $this->batchLicenseCount; $i++) {
+            $s1 = strtoupper(Str::random(4));
+            $s2 = strtoupper(Str::random(4));
+            $s3 = strtoupper(Str::random(4));
+            $keys[] = "{$prefix}-{$s1}-{$s2}-{$s3}";
+        }
+
+        $this->batchGeneratedKeys = $keys;
+        $this->generatedKey = $keys[0];
+
+        Flux::toast(variant: 'success', text: __(':count commercial license keys generated.', ['count' => count($keys)]));
     }
 
     public function activateLicenseOnTeam(int $teamId): void
@@ -240,26 +361,51 @@ new #[Title('Platform Super Admin')] class extends Component {
 
         Flux::toast(variant: 'success', text: __("License revoked from tenant ':name'. Reverted to Community Free.", ['name' => $team->name]));
     }
+
+    public function dismissDlpAlert(int $changeLogId): void
+    {
+        $log = VaultChangeLog::findOrFail($changeLogId);
+        $log->update(['has_secrets' => false]);
+
+        Flux::toast(variant: 'success', text: __('DLP security alert acknowledged and resolved.'));
+    }
+
+    public function clearApplicationCache(): void
+    {
+        Artisan::call('cache:clear');
+        Flux::toast(variant: 'success', text: __('Application and Redis/File cache successfully flushed.'));
+    }
+
+    public function pruneOldSnapshots(): void
+    {
+        Artisan::call('vaults:prune-deleted', ['--days' => 30]);
+        Flux::toast(variant: 'success', text: __('Old deleted vault snapshots pruned past 30-day retention.'));
+    }
 }; ?>
 
 <div class="flex h-full w-full flex-1 flex-col gap-6 font-sans text-slate-900 dark:text-slate-100">
     <!-- Top Platform Bar -->
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/80 pb-4 dark:border-zinc-800">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-gray-200/80 pb-4 dark:border-zinc-800">
         <div class="flex items-center gap-3">
-            <div class="flex size-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+            <div class="flex size-11 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600 shadow-2xs dark:bg-amber-500/20 dark:text-amber-400">
                 <flux:icon icon="shield-check" class="size-6" />
             </div>
             <div>
                 <div class="flex items-center gap-2">
-                    <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{{ __('Synkk Platform Super Admin') }}</h1>
+                    <h1 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">{{ __('Synkk Platform Super Admin') }}</h1>
                     <span class="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">{{ __('Multi-Tenant SaaS Control') }}</span>
+                    @if ($this->stats['dlp_alerts'] > 0)
+                        <span class="inline-flex items-center gap-1 rounded-md bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800 animate-pulse dark:bg-rose-950/60 dark:text-rose-300">
+                            {{ $this->stats['dlp_alerts'] }} {{ __('DLP Alerts') }}
+                        </span>
+                    @endif
                 </div>
-                <p class="text-xs text-slate-500 dark:text-zinc-400">{{ __('Global tenant management, subscription tiers, storage limits, and support impersonation.') }}</p>
+                <p class="text-xs text-slate-500 dark:text-zinc-400">{{ __('Multi-tenant SaaS governance, quota customizer, fleet telemetry, secret audits, and support impersonation.') }}</p>
             </div>
         </div>
 
         <!-- Tab Controls -->
-        <div class="flex items-center gap-1 rounded-xl bg-slate-200/60 p-1 dark:bg-zinc-800/80">
+        <div class="flex flex-wrap items-center gap-1 rounded-xl bg-slate-200/60 p-1 dark:bg-zinc-800/80">
             <button
                 type="button"
                 wire:click="setTab('overview')"
@@ -283,6 +429,16 @@ new #[Title('Platform Super Admin')] class extends Component {
             </button>
             <button
                 type="button"
+                wire:click="setTab('telemetry')"
+                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer relative {{ $activeTab === 'telemetry' ? 'bg-white text-slate-900 shadow-xs dark:bg-zinc-900 dark:text-white' : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white' }}"
+            >
+                {{ __('Telemetry & DLP') }}
+                @if ($this->stats['dlp_alerts'] > 0)
+                    <span class="size-2 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5"></span>
+                @endif
+            </button>
+            <button
+                type="button"
                 wire:click="setTab('licenses')"
                 class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer {{ $activeTab === 'licenses' ? 'bg-white text-slate-900 shadow-xs dark:bg-zinc-900 dark:text-white' : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white' }}"
             >
@@ -293,7 +449,7 @@ new #[Title('Platform Super Admin')] class extends Component {
                 wire:click="setTab('system')"
                 class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer {{ $activeTab === 'system' ? 'bg-white text-slate-900 shadow-xs dark:bg-zinc-900 dark:text-white' : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white' }}"
             >
-                {{ __('System') }}
+                {{ __('System & Ops') }}
             </button>
         </div>
     </div>
@@ -388,11 +544,36 @@ new #[Title('Platform Super Admin')] class extends Component {
                         <p class="text-[11px] text-indigo-700/80 dark:text-indigo-400/80 mt-1">{{ __('50 Vaults • 100 Devices • CRDT & RAG') }}</p>
                     </div>
                 </div>
+
+                <!-- Platform Devices breakdown -->
+                <div class="mt-5 border-t border-gray-100 pt-4 dark:border-zinc-800">
+                    <h4 class="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-2.5">{{ __('Connected Client Platform Distribution') }}</h4>
+                    <div class="flex flex-wrap items-center gap-2">
+                        @foreach ($this->platformBreakdown as $platform => $count)
+                            <div class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800">
+                                <span class="font-bold text-slate-900 dark:text-white uppercase text-xs">{{ $platform }}</span>
+                                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-zinc-700 dark:text-zinc-300">{{ $count }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
             </div>
 
             <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
                 <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-3">{{ __('Platform Fast Actions') }}</h3>
                 <div class="flex flex-col gap-2.5">
+                    <button
+                        type="button"
+                        wire:click="setTab('telemetry')"
+                        class="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-start hover:bg-slate-50 dark:border-zinc-800 dark:hover:bg-zinc-800/50 cursor-pointer"
+                    >
+                        <div class="flex items-center gap-2.5">
+                            <flux:icon icon="bolt" class="size-4 text-emerald-500" />
+                            <span class="text-xs font-semibold text-slate-800 dark:text-zinc-200">{{ __('Live Fleet Sync Telemetry') }}</span>
+                        </div>
+                        <flux:icon icon="chevron-right" class="size-4 text-slate-400" />
+                    </button>
+
                     <button
                         type="button"
                         wire:click="setTab('tenants')"
@@ -412,7 +593,7 @@ new #[Title('Platform Super Admin')] class extends Component {
                     >
                         <div class="flex items-center gap-2.5">
                             <flux:icon icon="key" class="size-4 text-amber-500" />
-                            <span class="text-xs font-semibold text-slate-800 dark:text-zinc-200">{{ __('Generate AppSumo License Key') }}</span>
+                            <span class="text-xs font-semibold text-slate-800 dark:text-zinc-200">{{ __('Generate AppSumo Batch Keys') }}</span>
                         </div>
                         <flux:icon icon="chevron-right" class="size-4 text-slate-400" />
                     </button>
@@ -493,7 +674,13 @@ new #[Title('Platform Super Admin')] class extends Component {
                                                 {{ substr($tenant->name, 0, 2) }}
                                             </span>
                                             <div>
-                                                <div class="font-bold text-slate-900 dark:text-white">{{ $tenant->name }}</div>
+                                                <button
+                                                    type="button"
+                                                    wire:click="inspectTenant({{ $tenant->id }})"
+                                                    class="font-bold text-slate-900 hover:text-emerald-700 dark:text-white dark:hover:text-emerald-400 cursor-pointer text-left"
+                                                >
+                                                    {{ $tenant->name }}
+                                                </button>
                                                 <div class="text-[10px] text-slate-400 font-mono">/{{ $tenant->slug }}</div>
                                             </div>
                                         </div>
@@ -533,6 +720,13 @@ new #[Title('Platform Super Admin')] class extends Component {
                                     </td>
                                     <td class="py-3.5 px-4 text-right">
                                         <div class="flex items-center justify-end gap-1.5">
+                                            <button
+                                                type="button"
+                                                wire:click="inspectTenant({{ $tenant->id }})"
+                                                class="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                                            >
+                                                {{ __('Deep Dive') }}
+                                            </button>
                                             <button
                                                 type="button"
                                                 wire:click="openQuotaModal({{ $tenant->id }})"
@@ -658,12 +852,132 @@ new #[Title('Platform Super Admin')] class extends Component {
         </div>
     @endif
 
-    <!-- TAB 4: LICENSES & APPSUMO LTD -->
+    <!-- TAB 4: TELEMETRY & DLP SECURITY ALERTS -->
+    @if ($activeTab === 'telemetry')
+        <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="relative w-full max-w-sm">
+                    <flux:icon icon="magnifying-glass" class="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                    <input
+                        wire:model.live.debounce.250ms="telemetrySearch"
+                        type="text"
+                        placeholder="Filter by note path or device..."
+                        class="w-full rounded-xl border border-gray-200/90 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 shadow-2xs focus:border-[#0D3B29] focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
+                    />
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        wire:click="$toggle('telemetrySecretsOnly')"
+                        class="rounded-xl px-3 py-2 text-xs font-bold transition-colors cursor-pointer {{ $telemetrySecretsOnly ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300' }}"
+                    >
+                        {{ __('DLP Secrets Only') }}
+                    </button>
+
+                    <select
+                        wire:model.live="telemetryActionFilter"
+                        class="rounded-xl border border-gray-200/90 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-2xs focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 cursor-pointer"
+                    >
+                        <option value="all">{{ __('All Actions') }}</option>
+                        <option value="created">{{ __('Created') }}</option>
+                        <option value="updated">{{ __('Updated') }}</option>
+                        <option value="deleted">{{ __('Deleted') }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Telemetry Stream Table -->
+            <div class="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="border-b border-gray-200/80 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400">
+                            <tr>
+                                <th class="py-3 px-4">{{ __('Timestamp') }}</th>
+                                <th class="py-3 px-4">{{ __('Vault & Tenant') }}</th>
+                                <th class="py-3 px-4">{{ __('File Path') }}</th>
+                                <th class="py-3 px-4">{{ __('Action') }}</th>
+                                <th class="py-3 px-4">{{ __('Device & User') }}</th>
+                                <th class="py-3 px-4">{{ __('DLP & Security') }}</th>
+                                <th class="py-3 px-4 text-right">{{ __('Audit Action') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-zinc-800/80">
+                            @forelse ($this->telemetryLogs as $log)
+                                <tr class="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors {{ $log->has_secrets ? 'bg-rose-50/40 dark:bg-rose-950/20' : '' }}">
+                                    <td class="py-3 px-4 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
+                                        {{ $log->created_at?->format('H:i:s M j') ?? '—' }}
+                                    </td>
+                                    <td class="py-3 px-4 font-semibold text-slate-900 dark:text-white">
+                                        <div>{{ $log->vault?->name ?? 'Vault #'.$log->vault_id }}</div>
+                                        <div class="text-[10px] text-slate-400">{{ $log->vault?->team?->name }}</div>
+                                    </td>
+                                    <td class="py-3 px-4 font-mono text-slate-700 dark:text-zinc-300">
+                                        <span class="truncate max-w-xs block" title="{{ $log->path }}">{{ $log->path }}</span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        @if ($log->action === 'created')
+                                            <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">{{ __('CREATED') }}</span>
+                                        @elseif ($log->action === 'updated')
+                                            <span class="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">{{ __('UPDATED') }}</span>
+                                        @else
+                                            <span class="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">{{ __('DELETED') }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-4 text-slate-600 dark:text-zinc-300">
+                                        <div>{{ $log->device_name ?? 'API' }}</div>
+                                        <div class="text-[10px] text-slate-400">{{ $log->user?->name ?? 'Unknown User' }}</div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        @if ($log->has_secrets)
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase">
+                                                    {{ __('Secrets Leaked') }}
+                                                </span>
+                                                @if (! empty($log->detected_secrets))
+                                                    <span class="text-[10px] text-rose-700 dark:text-rose-300 font-mono">
+                                                        {{ implode(', ', $log->detected_secrets) }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-[11px] text-slate-400">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-4 text-right">
+                                        @if ($log->has_secrets)
+                                            <button
+                                                type="button"
+                                                wire:click="dismissDlpAlert({{ $log->id }})"
+                                                class="rounded-lg bg-slate-200 px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-300 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
+                                            >
+                                                {{ __('Acknowledge') }}
+                                            </button>
+                                        @else
+                                            <span class="text-[11px] text-slate-400 italic">Clean</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="py-8 text-center text-slate-500 dark:text-zinc-400">
+                                        {{ __('No sync events found matching criteria.') }}
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- TAB 5: LICENSES & APPSUMO LTD -->
     @if ($activeTab === 'licenses')
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs lg:col-span-1 dark:border-zinc-800 dark:bg-zinc-900">
-                <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">{{ __('Generate Lifetime License') }}</h3>
-                <p class="text-xs text-slate-500 dark:text-zinc-400 mb-4">{{ __('Generate cryptographically formatted license keys for AppSumo, Lemon Squeezy, or custom deals.') }}</p>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">{{ __('Generate Lifetime Licenses') }}</h3>
+                <p class="text-xs text-slate-500 dark:text-zinc-400 mb-4">{{ __('Generate cryptographically formatted license keys for AppSumo, Lemon Squeezy, or custom deals in single or bulk batches.') }}</p>
 
                 <div class="flex flex-col gap-3">
                     <div>
@@ -677,20 +991,43 @@ new #[Title('Platform Super Admin')] class extends Component {
                         </select>
                     </div>
 
-                    <button
-                        type="button"
-                        wire:click="generateLicenseKey"
-                        class="rounded-xl bg-[#0D3B29] py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#092B1E] transition-colors cursor-pointer"
-                    >
-                        {{ __('Generate New Key') }}
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="generateLicenseKey"
+                            class="flex-1 rounded-xl bg-[#0D3B29] py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#092B1E] transition-colors cursor-pointer"
+                        >
+                            {{ __('Generate 1 Key') }}
+                        </button>
 
-                    @if ($generatedKey)
+                        <button
+                            type="button"
+                            wire:click="generateBatchLicenses"
+                            class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 shadow-xs hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white cursor-pointer"
+                        >
+                            {{ __('Batch (5 Keys)') }}
+                        </button>
+                    </div>
+
+                    @if ($generatedKey && empty($batchGeneratedKeys))
                         <div class="mt-3 rounded-xl border border-amber-500/30 bg-amber-50/50 p-3 dark:border-amber-500/20 dark:bg-amber-950/20">
                             <span class="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block mb-1">{{ __('Generated License Key') }}</span>
                             <div class="flex items-center justify-between">
                                 <code class="font-mono text-xs font-bold text-slate-900 dark:text-white select-all">{{ $generatedKey }}</code>
                             </div>
+                        </div>
+                    @endif
+
+                    @if (! empty($batchGeneratedKeys))
+                        <div class="mt-3 rounded-xl border border-amber-500/30 bg-amber-50/50 p-3 dark:border-amber-500/20 dark:bg-amber-950/20">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">{{ __('Generated Batch Keys') }} ({{ count($batchGeneratedKeys) }})</span>
+                            </div>
+                            <textarea
+                                readonly
+                                rows="5"
+                                class="w-full font-mono text-[11px] bg-white rounded-lg p-2 border border-slate-200 dark:bg-zinc-900 dark:border-zinc-700 select-all"
+                            >{{ implode("\n", $batchGeneratedKeys) }}</textarea>
                         </div>
                     @endif
                 </div>
@@ -747,7 +1084,7 @@ new #[Title('Platform Super Admin')] class extends Component {
         </div>
     @endif
 
-    <!-- TAB 5: SYSTEM & INFRASTRUCTURE -->
+    <!-- TAB 6: SYSTEM & OPS -->
     @if ($activeTab === 'system')
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
@@ -786,22 +1123,41 @@ new #[Title('Platform Super Admin')] class extends Component {
                 </dl>
             </div>
 
+            <!-- Maintenance & Operations Buttons -->
             <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-                <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-3">{{ __('Sync Telemetry & Limits') }}</h3>
-                <dl class="divide-y divide-gray-100 dark:divide-zinc-800/60 text-xs">
-                    <div class="py-2 flex justify-between">
-                        <dt class="text-slate-500 dark:text-zinc-400">{{ __('Max Batch Sync Size') }}</dt>
-                        <dd class="font-bold text-slate-900 dark:text-white">{{ config('synkk.max_batch_size', 100) }} files</dd>
-                    </div>
-                    <div class="py-2 flex justify-between">
-                        <dt class="text-slate-500 dark:text-zinc-400">{{ __('Version Retention') }}</dt>
-                        <dd class="font-bold text-slate-900 dark:text-white">{{ config('synkk.version_retention_limit', 25) }} snapshots</dd>
-                    </div>
-                    <div class="py-2 flex justify-between">
-                        <dt class="text-slate-500 dark:text-zinc-400">{{ __('Atomic Abort Guard') }}</dt>
-                        <dd class="font-bold text-emerald-600 dark:text-emerald-400">10% threshold</dd>
-                    </div>
-                </dl>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-3">{{ __('Operations & Maintenance') }}</h3>
+                <div class="flex flex-col gap-2.5">
+                    <button
+                        type="button"
+                        wire:click="clearApplicationCache"
+                        class="flex items-center justify-between rounded-xl border border-slate-200 p-2.5 text-xs font-semibold hover:bg-slate-50 dark:border-zinc-700 dark:hover:bg-zinc-800 cursor-pointer"
+                    >
+                        <span>{{ __('Flush Application Cache') }}</span>
+                        <flux:icon icon="arrow-path" class="size-4 text-slate-500" />
+                    </button>
+
+                    <button
+                        type="button"
+                        wire:click="pruneOldSnapshots"
+                        class="flex items-center justify-between rounded-xl border border-slate-200 p-2.5 text-xs font-semibold hover:bg-slate-50 dark:border-zinc-700 dark:hover:bg-zinc-800 cursor-pointer"
+                    >
+                        <span>{{ __('Prune Soft-Deleted Files (>30d)') }}</span>
+                        <flux:icon icon="trash" class="size-4 text-slate-500" />
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Record Metrics -->
+            <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs sm:col-span-2 lg:col-span-3 dark:border-zinc-800 dark:bg-zinc-900">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-3">{{ __('Database Record Scale & Table Footprint') }}</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                    @foreach ($this->databaseTableMetrics as $table => $count)
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-center dark:border-zinc-800 dark:bg-zinc-800/60">
+                            <span class="text-[11px] text-slate-500 dark:text-zinc-400 block truncate">{{ $table }}</span>
+                            <span class="text-base font-bold text-slate-900 dark:text-white mt-1 block">{{ number_format($count) }}</span>
+                        </div>
+                    @endforeach
+                </div>
             </div>
         </div>
     @endif
@@ -859,5 +1215,106 @@ new #[Title('Platform Super Admin')] class extends Component {
                 </div>
             </div>
         </div>
+    </flux:modal>
+
+    <!-- Tenant Deep-Dive Slideover / Modal -->
+    <flux:modal name="inspect-tenant" class="w-full max-w-2xl">
+        @if ($this->inspectedTeam)
+            <div class="space-y-5">
+                <div class="flex items-start justify-between border-b border-gray-100 pb-3 dark:border-zinc-800">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <flux:heading size="xl">{{ $this->inspectedTeam->name }}</flux:heading>
+                            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-800 dark:bg-zinc-800 dark:text-zinc-200 uppercase">
+                                {{ $this->inspectedTeam->planName() }}
+                            </span>
+                        </div>
+                        <flux:subheading>Workspace slug: <code class="font-mono text-xs text-emerald-700 dark:text-emerald-400">/{{ $this->inspectedTeam->slug }}</code> • Created {{ $this->inspectedTeam->created_at->format('M j, Y') }}</flux:subheading>
+                    </div>
+
+                    @if ($this->inspectedTeam->owner())
+                        <form method="POST" action="{{ route('admin.impersonate', $this->inspectedTeam->owner()) }}">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
+                            >
+                                {{ __('Login as Owner') }}
+                            </button>
+                        </form>
+                    @endif
+                </div>
+
+                <!-- Vaults belonging to this team -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider dark:text-zinc-300 mb-2">{{ __('Active Vaults') }} ({{ $this->inspectedTeam->vaults->count() }})</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        @forelse ($this->inspectedTeam->vaults as $vault)
+                            <div class="rounded-xl border border-slate-200 p-3 bg-slate-50/50 dark:border-zinc-800 dark:bg-zinc-800/40">
+                                <div class="font-semibold text-xs text-slate-900 dark:text-white">{{ $vault->name }}</div>
+                                <div class="text-[11px] text-slate-500 font-mono mt-0.5">/{{ $vault->slug }} • {{ $vault->files()->where('is_deleted', false)->count() }} files</div>
+                            </div>
+                        @empty
+                            <p class="text-xs text-slate-400 italic">{{ __('No vaults created yet.') }}</p>
+                        @endforelse
+                    </div>
+                </div>
+
+                <!-- Connected Devices & Emergency Revoke -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider dark:text-zinc-300">{{ __('Connected Device Fleet') }} ({{ $this->inspectedTeam->deviceTokens->count() }})</h4>
+                        @if ($this->inspectedTeam->deviceTokens->where('is_wiped', false)->isNotEmpty())
+                            <button
+                                type="button"
+                                wire:click="revokeAllTenantDevices({{ $this->inspectedTeam->id }})"
+                                class="rounded-lg bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 cursor-pointer"
+                            >
+                                {{ __('Emergency Revoke All Devices') }}
+                            </button>
+                        @endif
+                    </div>
+
+                    <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+                                <tr>
+                                    <th class="py-2 px-3">{{ __('Device') }}</th>
+                                    <th class="py-2 px-3">{{ __('User') }}</th>
+                                    <th class="py-2 px-3">{{ __('Scope') }}</th>
+                                    <th class="py-2 px-3 text-right">{{ __('Status') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
+                                @forelse ($this->inspectedTeam->deviceTokens as $device)
+                                    <tr>
+                                        <td class="py-2 px-3 font-semibold text-slate-800 dark:text-zinc-200">{{ $device->name }} ({{ $device->client_platform ?? 'unknown' }})</td>
+                                        <td class="py-2 px-3 text-slate-500">{{ $device->user?->name }}</td>
+                                        <td class="py-2 px-3 text-slate-500">{{ $device->access_scope }}</td>
+                                        <td class="py-2 px-3 text-right">
+                                            @if ($device->is_wiped)
+                                                <span class="text-rose-600 font-bold text-[10px]">{{ __('WIPED') }}</span>
+                                            @else
+                                                <span class="text-emerald-600 font-bold text-[10px]">{{ __('ACTIVE') }}</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="py-4 text-center text-slate-400 italic">{{ __('No devices paired.') }}</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <flux:modal.close>
+                        <flux:button variant="ghost" size="sm">{{ __('Close') }}</flux:button>
+                    </flux:modal.close>
+                </div>
+            </div>
+        @endif
     </flux:modal>
 </div>

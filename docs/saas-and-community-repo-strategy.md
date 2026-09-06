@@ -119,3 +119,26 @@ php artisan tinker --execute 'App\Models\User::where("email", "your-email@domain
 4. A persistent gradient banner displays at the top:
    `"Support Impersonation Mode: You are viewing Synkk as [User Name]"`
 5. Click **"Exit Impersonation"** to safely restore your Super Admin session.
+
+### Tenant Deep-Dive & Emergency Fleet Revocation
+1. In the **Tenants** tab of `/admin`, click **"Inspect"** on any organization.
+2. View real-time tenant stats: active vaults, total files, storage consumed, team members, and the complete connected device fleet.
+3. If a team experiences a credential leak or device compromise, click **"Emergency Revoke All Devices"** to instantly wipe all active tokens and disconnect the fleet.
+
+### Real-Time Fleet Telemetry & In-App DLP Audit
+1. Navigate to the **Telemetry & DLP** tab (`/admin`).
+2. Live streaming audit log of all vault sync events across the entire platform.
+3. Toggle **"Secrets Only"** to isolate changes where secrets (AWS access keys, OpenAI tokens, private SSH keys) were detected in notes.
+4. Review affected vault paths and device origins, and click **"Acknowledge & Dismiss"** once resolved.
+
+### Commercial License Generator & Batch Provisioning
+1. Navigate to the **Licenses** tab (`/admin`).
+2. Choose tier (`Pro LTD` or `Cloud Managed SaaS`).
+3. Generate individual keys or batch-generate up to 50 license keys simultaneously for enterprise distributor or lifetime deal campaigns.
+4. Directly activate or revoke licenses on specific tenants.
+
+### System & Infrastructure Operations
+1. Navigate to the **System & Ops** tab (`/admin`).
+2. **Flush Application Cache**: Instant 1-click execution of `cache:clear` to purge stale route, config, and Redis caches.
+3. **Prune Deleted Snapshots**: Execute automated pruning of soft-deleted vault file versions older than 30 days (`vaults:prune-deleted --days=30`).
+4. **Database Table Metrics**: Live row counts across tenants, vaults, file versions, sync logs, and device tokens.
