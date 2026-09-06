@@ -7,6 +7,7 @@ use App\Actions\Vaults\SyncUploadAction;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceToken;
 use App\Models\Vault;
+use App\Services\PlanService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -259,6 +260,24 @@ class VaultSyncController extends Controller
             ], 403);
         }
 
+        if ($deviceToken->team->isSuspended()) {
+            return response()->json([
+                'error' => 'Team Suspended',
+                'message' => 'This team workspace is currently suspended. Please contact your platform administrator.',
+            ], 403);
+        }
+
+        $planService = app(PlanService::class);
+        $fileSize = $request->hasFile('file') ? (int) $request->file('file')->getSize() : strlen((string) $request->input('content', ''));
+        if (! $planService->canUploadStorage($deviceToken->team, $fileSize)) {
+            return response()->json([
+                'error' => 'Quota Exceeded',
+                'code' => 'STORAGE_QUOTA_EXCEEDED',
+                'message' => 'Team storage quota exceeded. Upgrade to Synkk Pro or Cloud to increase capacity.',
+                'storage_limit_mb' => $planService->getStorageLimitMb($deviceToken->team),
+            ], 402);
+        }
+
         // Get file contents (supports multipart 'file' or raw base64 / text)
         if ($request->hasFile('file')) {
             $uploadedFile = $request->file('file');
@@ -305,6 +324,23 @@ class VaultSyncController extends Controller
                 'error' => 'Permission Denied',
                 'message' => 'This device token has read-only access and cannot execute batch sync modifications.',
             ], 403);
+        }
+
+        if ($deviceToken->team->isSuspended()) {
+            return response()->json([
+                'error' => 'Team Suspended',
+                'message' => 'This team workspace is currently suspended. Please contact your platform administrator.',
+            ], 403);
+        }
+
+        $planService = app(PlanService::class);
+        if (! $planService->canUploadStorage($deviceToken->team)) {
+            return response()->json([
+                'error' => 'Quota Exceeded',
+                'code' => 'STORAGE_QUOTA_EXCEEDED',
+                'message' => 'Team storage quota exceeded. Upgrade to Synkk Pro or Cloud to increase capacity.',
+                'storage_limit_mb' => $planService->getStorageLimitMb($deviceToken->team),
+            ], 402);
         }
 
         $maxBatch = config('synkk.max_batch_size', 100);

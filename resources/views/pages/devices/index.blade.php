@@ -33,6 +33,18 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
     {
         $team = Auth::user()->currentTeam;
 
+        $planService = app(\App\Services\PlanService::class);
+        if (! $planService->canAddDevice($team)) {
+            Flux::toast(
+                variant: 'danger',
+                text: __('Device limit reached (:limit devices). Upgrade to Pro LTD or Synkk Cloud to pair more devices.', [
+                    'limit' => $planService->getDeviceLimit($team),
+                ]),
+            );
+
+            return;
+        }
+
         $this->validate([
             'deviceName' => ['required', 'string', 'max:255'],
             'devicePlatform' => ['required', 'in:mac,windows,ios,android,linux'],

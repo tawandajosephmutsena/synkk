@@ -4,6 +4,23 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-[#F4F6F8] text-slate-900 dark:bg-[#0C0F12] dark:text-zinc-100 antialiased selection:bg-[#0D3B29] selection:text-white">
+        @if (session()->has('impersonator_id'))
+            <div class="sticky top-0 z-50 flex items-center justify-between gap-4 bg-gradient-to-r from-amber-600 via-rose-600 to-amber-700 px-4 py-2.5 text-xs font-semibold text-white shadow-md">
+                <div class="flex items-center gap-2">
+                    <flux:icon icon="exclamation-triangle" class="size-4 shrink-0 text-amber-200" />
+                    <span>
+                        {{ __('Support Impersonation Mode: You are viewing Synkk as') }} <strong class="underline">{{ auth()->user()->name }}</strong> ({{ auth()->user()->email }}).
+                    </span>
+                </div>
+                <form method="POST" action="{{ route('admin.stop-impersonation') }}" class="shrink-0">
+                    @csrf
+                    <button type="submit" class="rounded-full bg-white px-3 py-1 text-xs font-bold text-rose-700 shadow-sm hover:bg-rose-50 transition-colors cursor-pointer">
+                        {{ __('Exit Impersonation') }}
+                    </button>
+                </form>
+            </div>
+        @endif
+
         <flux:sidebar sticky collapsible class="border-e border-gray-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             <flux:sidebar.header class="pb-2 flex items-center justify-between">
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
@@ -26,6 +43,14 @@
                         {{ __('Devices & Tokens') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                @if (auth()->user()?->isSuperAdmin())
+                    <flux:sidebar.group :heading="__('PLATFORM')">
+                        <flux:sidebar.item icon="shield-check" :href="route('admin.dashboard')" :current="request()->routeIs('admin.*')" wire:navigate class="text-amber-600 dark:text-amber-400 font-semibold">
+                            {{ __('Super Admin') }}
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @endif
 
                 <flux:sidebar.group :heading="__('RESOURCES')">
                     <flux:sidebar.item icon="book-open-text" :href="route('docs')" :current="request()->routeIs('docs')" wire:navigate>

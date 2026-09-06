@@ -70,4 +70,19 @@ Route::prefix('{current_team}')
         Route::livewire('docs', 'pages::docs.index')->name('docs');
     });
 
+use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Middleware\EnsureSuperAdmin;
+
+Route::prefix('admin')
+    ->middleware(['auth', 'verified', EnsureSuperAdmin::class])
+    ->group(function () {
+        Route::livewire('/', 'pages::admin.dashboard')->name('admin.dashboard');
+        Route::livewire('dashboard', 'pages::admin.dashboard');
+        Route::post('impersonate/{user}', [ImpersonationController::class, 'start'])->name('admin.impersonate');
+    });
+
+Route::post('admin/stop-impersonation', [ImpersonationController::class, 'stop'])
+    ->middleware(['auth'])
+    ->name('admin.stop-impersonation');
+
 require __DIR__.'/settings.php';

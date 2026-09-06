@@ -1,0 +1,51 @@
+name: Sync Community Edition (CE)
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'resources/views/pages/admin/**'
+      - 'app/Http/Controllers/Admin/**'
+      - 'docs/saas-*.md'
+
+jobs:
+  sync-to-public-community-repo:
+    name: Package & Push to Public CE Repo
+    runs-on: ubuntu-latest
+    if: github.repository == 'tawandajosephmutsena/synkk-saas'
+
+    steps:
+      - name: Checkout Commercial SaaS Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, zip, pdo_sqlite
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-interaction --optimize-autoloader
+
+      - name: Build Sanitized Community Edition Package
+        run: php artisan synkk:package-ce
+
+      - name: Unpack Sanitized CE Tree
+        run: |
+          mkdir -p /tmp/community-dist
+          unzip -q storage/app/exports/synkk-community-ce.zip -d /tmp/community-dist
+
+      - name: Push to Public Community Repository
+        uses: cpina/github-action-push-to-another-repository@v1.7.2
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.COMMUNITY_SYNC_TOKEN }}
+        with:
+          source-directory: '/tmp/community-dist'
+          destination-github-username: 'tawandajosephmutsena'
+          destination-repository-name: 'synkk'
+          user-email: 'tawandajosephmutsena@gmail.com'
+          commit-message: 'sync(ce): automated community sync from commercial core'
+          target-branch: 'main'

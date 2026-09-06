@@ -5,6 +5,7 @@ use App\Models\Team;
 use App\Models\Vault;
 use App\Models\VaultChangeLog;
 use App\Models\VaultFile;
+use App\Services\PlanService;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +26,19 @@ new #[Title('Dashboard')] class extends Component {
     public function createVault(): void
     {
         $team = Auth::user()->currentTeam;
+
+        $planService = app(\App\Services\PlanService::class);
+        if (! $planService->canCreateVault($team)) {
+            $this->dispatch('close-modal', name: 'create-vault');
+            Flux::toast(
+                variant: 'danger',
+                text: __('Vault limit reached (:limit vaults). Upgrade to Pro LTD or Synkk Cloud to create more vaults.', [
+                    'limit' => $planService->getVaultLimit($team),
+                ]),
+            );
+
+            return;
+        }
 
         $this->validate([
             'vaultName' => ['required', 'string', 'max:255'],
@@ -330,6 +344,20 @@ new #[Title('Dashboard')] class extends Component {
 
         return $this->team->members()->take(4)->get();
     }
+
+    #[Computed]
+    public function teamPlanSummary(): array
+    {
+        if (! $this->team) {
+            return [
+                'plan_badge' => 'Free CE',
+                'storage' => ['used_mb' => 0, 'limit_mb' => 1000, 'percentage' => 0],
+                'devices' => ['used' => 0, 'limit' => 3],
+            ];
+        }
+
+        return app(PlanService::class)->getUsageSummary($this->team);
+    }
 }; ?>
 
 <div x-data="{ drawerOpen: false, drawerTab: 'notifications' }" class="flex h-full w-full flex-1 flex-col gap-7 font-sans text-slate-900 dark:text-slate-100">
@@ -454,6 +482,20 @@ new #[Title('Dashboard')] class extends Component {
             <p class="mt-1 text-sm text-gray-500 dark:text-zinc-400">
                 {{ __('Plan, prioritize, and accomplish your vault sync with ease.') }}
             </p>
+            <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold {{ $this->team?->plan === 'cloud' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300' : ($this->team?->plan === 'pro_ltd' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300') }}">
+                    <span class="size-1.5 rounded-full {{ $this->team?->plan === 'cloud' ? 'bg-indigo-500' : ($this->team?->plan === 'pro_ltd' ? 'bg-emerald-500' : 'bg-slate-500') }}"></span>
+                    {{ $this->teamPlanSummary['plan_badge'] }}
+                </span>
+                <span class="text-xs text-slate-500 dark:text-zinc-400">
+                    {{ $this->teamPlanSummary['storage']['used_mb'] }} MB / {{ $this->teamPlanSummary['storage']['limit_mb'] }} MB Storage • {{ $this->teamPlanSummary['devices']['used'] }}/{{ $this->teamPlanSummary['devices']['limit'] }} Devices • {{ $this->teamPlanSummary['vaults']['used'] }}/{{ $this->teamPlanSummary['vaults']['limit'] }} Vaults
+                </span>
+                @if ($this->team?->plan === 'free')
+                    <a href="{{ route('home') }}#pricing" class="text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-400 ml-1">
+                        {{ __('Upgrade Plan →') }}
+                    </a>
+                @endif
+            </div>
         </div>
 
         <div class="flex items-center gap-3">

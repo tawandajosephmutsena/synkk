@@ -21,6 +21,12 @@ use Illuminate\Support\Carbon;
  * @property bool $is_personal
  * @property string|null $license_key
  * @property string $license_status
+ * @property string $plan
+ * @property string $status
+ * @property int|null $storage_limit_mb
+ * @property int|null $max_devices
+ * @property int|null $max_vaults
+ * @property int|null $max_members
  * @property Carbon|null $license_activated_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -29,14 +35,50 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Membership> $memberships
  * @property-read Collection<int, User> $members
  */
-#[Fillable(['name', 'slug', 'is_personal', 'license_key', 'license_status', 'license_activated_at'])]
+#[Fillable([
+    'name',
+    'slug',
+    'is_personal',
+    'license_key',
+    'license_status',
+    'license_activated_at',
+    'plan',
+    'status',
+    'storage_limit_mb',
+    'max_devices',
+    'max_vaults',
+    'max_members',
+])]
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
     use GeneratesUniqueTeamSlugs, HasFactory, SoftDeletes;
 
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function planName(): string
+    {
+        return match ($this->plan) {
+            'pro_ltd' => 'Pro Lifetime',
+            'cloud' => 'Synkk Cloud',
+            default => 'Community Free',
+        };
+    }
+
     public function hasActiveLicense(): bool
     {
+        if ($this->plan === 'free') {
+            return true;
+        }
+
         if (! config('synkk.lemon_squeezy.enforce_license', false)) {
             return true;
         }
@@ -136,6 +178,11 @@ class Team extends Model
     {
         return [
             'is_personal' => 'boolean',
+            'storage_limit_mb' => 'integer',
+            'max_devices' => 'integer',
+            'max_vaults' => 'integer',
+            'max_members' => 'integer',
+            'license_activated_at' => 'datetime',
         ];
     }
 

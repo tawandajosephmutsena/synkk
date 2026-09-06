@@ -47,4 +47,75 @@ return [
         'api_url' => 'https://api.lemonsqueezy.com/v1/licenses/activate',
         'enforce_license' => env('SYNKK_ENFORCE_LICENSE', false),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Subscription Plans & Limitation Matrix
+    |--------------------------------------------------------------------------
+    |
+    | Defines quotas, member limits, storage capacities, and unlocked features
+    | for Community Free, Pro Lifetime Deal (LTD), and Synkk Cloud SaaS.
+    |
+    */
+    'plans' => [
+        'free' => [
+            'name' => 'Community Free',
+            'badge' => 'Free CE',
+            'max_devices' => env('SYNKK_FREE_MAX_DEVICES', 3),
+            'max_vaults' => env('SYNKK_FREE_MAX_VAULTS', 1),
+            'max_members' => env('SYNKK_FREE_MAX_MEMBERS', 3),
+            'storage_limit_mb' => env('SYNKK_FREE_STORAGE_LIMIT_MB', 1000), // 1 GB
+            'features' => [
+                'basic_sync',
+                'web_editor',
+                'interactive_graph',
+                'atomic_abort_guard',
+            ],
+        ],
+        'pro_ltd' => [
+            'name' => 'Pro Lifetime Deal',
+            'badge' => 'Pro LTD',
+            'max_devices' => env('SYNKK_PRO_MAX_DEVICES', 25),
+            'max_vaults' => env('SYNKK_PRO_MAX_VAULTS', 15),
+            'max_members' => env('SYNKK_PRO_MAX_MEMBERS', 10),
+            'storage_limit_mb' => env('SYNKK_PRO_STORAGE_LIMIT_MB', 15000), // 15 GB
+            'features' => [
+                'basic_sync',
+                'web_editor',
+                'interactive_graph',
+                'atomic_abort_guard',
+                'path_acls',
+                'dlp_scan',
+                'remote_wipe',
+                'ip_whitelisting',
+                'read_only_tokens',
+                'plugin_suite_sync',
+            ],
+        ],
+        'cloud' => [
+            'name' => 'Synkk Cloud Managed SaaS',
+            'badge' => 'Cloud SaaS',
+            'max_devices' => env('SYNKK_CLOUD_MAX_DEVICES', 100),
+            'max_vaults' => env('SYNKK_CLOUD_MAX_VAULTS', 50),
+            'max_members' => env('SYNKK_CLOUD_MAX_MEMBERS', 50),
+            'storage_limit_mb' => env('SYNKK_CLOUD_STORAGE_LIMIT_MB', 50000), // 50 GB
+            'features' => [
+                'basic_sync',
+                'web_editor',
+                'interactive_graph',
+                'atomic_abort_guard',
+                'path_acls',
+                'dlp_scan',
+                'remote_wipe',
+                'ip_whitelisting',
+                'read_only_tokens',
+                'plugin_suite_sync',
+                'crdt_multiplayer',
+                'e2ee_team',
+                'rag_vector_search',
+                'cloud_backup',
+                'priority_support',
+            ],
+        ],
+    ],
 ];

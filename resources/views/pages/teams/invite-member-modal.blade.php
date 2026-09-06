@@ -28,6 +28,19 @@ new class extends Component {
     {
         Gate::authorize('inviteMember', $this->team);
 
+        $planService = app(\App\Services\PlanService::class);
+        if (! $planService->canInviteMember($this->team)) {
+            $this->dispatch('close-modal', name: 'invite-member');
+            Flux::toast(
+                variant: 'danger',
+                text: __('Team member limit reached (:limit members). Upgrade to Pro LTD or Synkk Cloud to add more members.', [
+                    'limit' => $planService->getMemberLimit($this->team),
+                ]),
+            );
+
+            return;
+        }
+
         $validated = $this->validate([
             'inviteEmail' => ['required', 'string', 'email', 'max:255', new UniqueTeamInvitation($this->team)],
             'inviteRole' => ['required', 'string', Rule::enum(TeamRole::class)],

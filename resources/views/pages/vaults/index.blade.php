@@ -19,6 +19,19 @@ new #[Title('Vaults')] class extends Component {
     {
         $team = Auth::user()->currentTeam;
 
+        $planService = app(\App\Services\PlanService::class);
+        if (! $planService->canCreateVault($team)) {
+            $this->dispatch('close-modal', name: 'create-vault');
+            Flux::toast(
+                variant: 'danger',
+                text: __('Vault limit reached (:limit vaults). Upgrade to Pro LTD or Synkk Cloud to create more vaults.', [
+                    'limit' => $planService->getVaultLimit($team),
+                ]),
+            );
+
+            return;
+        }
+
         $this->validate([
             'vaultName' => ['required', 'string', 'max:255'],
             'vaultDescription' => ['nullable', 'string', 'max:1000'],
