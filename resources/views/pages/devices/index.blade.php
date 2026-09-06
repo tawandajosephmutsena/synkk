@@ -2,6 +2,12 @@
 
 use App\Models\DeviceToken;
 use App\Models\Team;
+use BaconQrCode\Renderer\Color\Rgb;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\Fill;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -12,11 +18,16 @@ use Livewire\Component;
 new #[Title('Devices & Sync Tokens')] class extends Component {
     public string $deviceName = '';
     public string $devicePlatform = 'mac';
+    public string $accessScope = 'full_access';
+    public string $allowedIpSubnets = '';
     public ?string $generatedPlainToken = null;
+    public ?string $generatedQrCodeSvg = null;
 
     public ?int $editingTokenId = null;
     public string $editName = '';
     public string $editPlatform = 'mac';
+    public string $editAccessScope = 'full_access';
+    public string $editAllowedSubnets = '';
 
     public function generateToken(): void
     {
@@ -25,27 +36,60 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         $this->validate([
             'deviceName' => ['required', 'string', 'max:255'],
             'devicePlatform' => ['required', 'in:mac,windows,ios,android,linux'],
+            'accessScope' => ['required', 'in:full_access,read_only'],
+            'allowedIpSubnets' => ['nullable', 'string'],
         ]);
+
+        $subnets = null;
+        if (filled($this->allowedIpSubnets)) {
+            $subnets = array_values(array_filter(array_map('trim', explode(',', $this->allowedIpSubnets))));
+        }
 
         $result = DeviceToken::createToken(
             Auth::user(),
             $team,
             $this->deviceName,
             $this->devicePlatform,
+            $this->accessScope,
+            $subnets,
         );
 
         $this->generatedPlainToken = $result['plain_token'];
-        $this->reset('deviceName');
+
+        // Generate instant pairing QR code payload
+        try {
+            $qrPayload = json_encode([
+                'v' => 1,
+                'name' => $this->deviceName,
+                'server' => url('/api/v1'),
+                'token' => $result['plain_token'],
+                'vault' => $team->vaults()->first()?->slug ?? '',
+            ], JSON_UNESCAPED_SLASHES);
+
+            $renderer = new ImageRenderer(
+                new RendererStyle(220, 1, null, null, Fill::uniformColor(new Rgb(255, 255, 255), new Rgb(24, 24, 27))),
+                new SvgImageBackEnd
+            );
+            $writer = new Writer($renderer);
+            $svg = $writer->writeString($qrPayload);
+            $this->generatedQrCodeSvg = trim(substr($svg, strpos($svg, "\n") + 1));
+        } catch (\Throwable $e) {
+            $this->generatedQrCodeSvg = null;
+        }
+
+        $this->reset('deviceName', 'allowedIpSubnets');
         $this->devicePlatform = 'mac';
+        $this->accessScope = 'full_access';
         $this->dispatch('modal-close', name: 'create-device-token');
         $this->dispatch('modal-show', name: 'show-token-modal');
 
-        Flux::toast(variant: 'success', text: __('Sync token generated.'));
+        Flux::toast(variant: 'success', text: __('Sync token & instant QR pairing generated.'));
     }
 
     public function clearGeneratedToken(): void
     {
         $this->generatedPlainToken = null;
+        $this->generatedQrCodeSvg = null;
         $this->dispatch('modal-close', name: 'show-token-modal');
     }
 
@@ -58,6 +102,8 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         $this->editingTokenId = $token->id;
         $this->editName = $token->name;
         $this->editPlatform = $token->client_platform ?? 'mac';
+        $this->editAccessScope = $token->access_scope ?? 'full_access';
+        $this->editAllowedSubnets = ! empty($token->allowed_ip_subnets) ? implode(', ', $token->allowed_ip_subnets) : '';
 
         $this->dispatch('modal-show', name: 'edit-device-token');
     }
@@ -67,16 +113,25 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         $this->validate([
             'editName' => ['required', 'string', 'max:255'],
             'editPlatform' => ['required', 'in:mac,windows,ios,android,linux'],
+            'editAccessScope' => ['required', 'in:full_access,read_only'],
+            'editAllowedSubnets' => ['nullable', 'string'],
         ]);
+
+        $subnets = null;
+        if (filled($this->editAllowedSubnets)) {
+            $subnets = array_values(array_filter(array_map('trim', explode(',', $this->editAllowedSubnets))));
+        }
 
         DeviceToken::where('id', $this->editingTokenId)
             ->where('team_id', Auth::user()->currentTeam?->id)
             ->update([
                 'name' => $this->editName,
                 'client_platform' => $this->editPlatform,
+                'access_scope' => $this->editAccessScope,
+                'allowed_ip_subnets' => $subnets,
             ]);
 
-        $this->reset('editingTokenId', 'editName', 'editPlatform');
+        $this->reset('editingTokenId', 'editName', 'editPlatform', 'editAccessScope', 'editAllowedSubnets');
         $this->dispatch('modal-close', name: 'edit-device-token');
 
         Flux::toast(variant: 'success', text: __('Device updated.'));
@@ -236,12 +291,20 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                                 </flux:table.cell>
 
                                 <flux:table.cell class="py-3.5 px-4">
-                                    <div class="flex items-center gap-1.5">
+                                    <div class="flex flex-wrap items-center gap-1.5">
                                         <flux:badge color="zinc" size="sm" class="uppercase font-mono text-[10px] font-bold">{{ $token->client_platform ?? 'client' }}</flux:badge>
+                                        @if ($token->access_scope === 'read_only')
+                                            <flux:badge color="amber" size="sm" class="font-semibold">{{ __('Read-Only') }}</flux:badge>
+                                        @else
+                                            <flux:badge color="blue" size="sm" class="font-semibold">{{ __('Read/Write') }}</flux:badge>
+                                        @endif
                                         @if ($token->is_wiped)
                                             <flux:badge color="red" size="sm" icon="no-symbol" class="font-bold">{{ __('Wiped') }}</flux:badge>
                                         @else
                                             <flux:badge color="emerald" size="sm" class="font-semibold">{{ __('Active') }}</flux:badge>
+                                        @endif
+                                        @if (! empty($token->allowed_ip_subnets))
+                                            <flux:badge color="purple" size="sm" class="font-mono text-[10px]">{{ __('IP Guarded') }}</flux:badge>
                                         @endif
                                     </div>
                                 </flux:table.cell>
@@ -316,11 +379,11 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         <form wire:submit="generateToken" class="space-y-5">
             <div>
                 <flux:heading size="lg">{{ __('Connect Device') }}</flux:heading>
-                <flux:subheading class="text-xs">{{ __('Generate a sync token for your Obsidian application.') }}</flux:subheading>
+                <flux:subheading class="text-xs">{{ __('Generate a secure sync token or instant QR code for your Obsidian device.') }}</flux:subheading>
             </div>
 
             <div class="space-y-4">
-                <flux:input wire:model="deviceName" :label="__('Device Name')" placeholder="e.g. MacBook Pro, iPhone 15, Home Desktop" required />
+                <flux:input wire:model="deviceName" :label="__('Device Name')" placeholder="e.g. MacBook Pro, iPhone 15, Work PC" required />
 
                 <flux:select wire:model="devicePlatform" :label="__('Operating System')">
                     <flux:select.option value="mac">{{ __('macOS') }}</flux:select.option>
@@ -329,13 +392,20 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                     <flux:select.option value="android">{{ __('Android Phone / Tablet') }}</flux:select.option>
                     <flux:select.option value="linux">{{ __('Linux') }}</flux:select.option>
                 </flux:select>
+
+                <flux:select wire:model="accessScope" :label="__('Access Scope')">
+                    <flux:select.option value="full_access">{{ __('Full Read & Write Access') }}</flux:select.option>
+                    <flux:select.option value="read_only">{{ __('Read-Only (Viewer / Contractor Device)') }}</flux:select.option>
+                </flux:select>
+
+                <flux:input wire:model="allowedIpSubnets" :label="__('Allowed IP Subnets (Optional)')" placeholder="e.g. 192.168.1.*, 10.0.* (leave empty for any IP)" />
             </div>
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
                     <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
                 </flux:modal.close>
-                <flux:button variant="primary" type="submit">{{ __('Generate Token') }}</flux:button>
+                <flux:button variant="primary" type="submit">{{ __('Generate Token & QR') }}</flux:button>
             </div>
         </form>
     </flux:modal>
@@ -345,7 +415,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         <form wire:submit="updateToken" class="space-y-5">
             <div>
                 <flux:heading size="lg">{{ __('Edit Device') }}</flux:heading>
-                <flux:subheading class="text-xs">{{ __('Update the name or platform for this device.') }}</flux:subheading>
+                <flux:subheading class="text-xs">{{ __('Update governance settings, scope, or platform for this device.') }}</flux:subheading>
             </div>
 
             <div class="space-y-4">
@@ -358,6 +428,13 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                     <flux:select.option value="android">{{ __('Android Phone / Tablet') }}</flux:select.option>
                     <flux:select.option value="linux">{{ __('Linux') }}</flux:select.option>
                 </flux:select>
+
+                <flux:select wire:model="editAccessScope" :label="__('Access Scope')">
+                    <flux:select.option value="full_access">{{ __('Full Read & Write Access') }}</flux:select.option>
+                    <flux:select.option value="read_only">{{ __('Read-Only (Viewer / Contractor Device)') }}</flux:select.option>
+                </flux:select>
+
+                <flux:input wire:model="editAllowedSubnets" :label="__('Allowed IP Subnets (Optional)')" placeholder="e.g. 192.168.1.*, 10.0.* (leave empty for any IP)" />
             </div>
 
             <div class="flex justify-end gap-2">
@@ -369,16 +446,18 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         </form>
     </flux:modal>
 
-    <!-- Display Token Modal (Shows Plaintext Once) -->
+    <!-- Display Token Modal (Shows Plaintext Once + Instant QR Pairing) -->
     <flux:modal name="show-token-modal" focusable class="max-w-lg" :closable="false" :dismissible="false" :escapable="false">
         <div
             class="space-y-5"
             x-data="{
+                activeTab: 'qr',
                 copyState: 'idle',
                 confirmed: false,
                 resetCopyState() {
                     this.copyState = 'idle';
                     this.confirmed = false;
+                    this.activeTab = 'qr';
                     this.$nextTick(() => {
                         this.$refs.tokenInput?.focus();
                         this.$refs.tokenInput?.select();
@@ -408,14 +487,62 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                 <div class="flex items-start gap-2.5">
                     <flux:icon icon="exclamation-triangle" class="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                        <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">{{ __('Copy this token now — you won\'t see it again') }}</p>
-                        <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">{{ __('For security, the full token is only displayed once. Store it somewhere safe before closing this dialog.') }}</p>
+                        <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">{{ __('Save this token or scan QR now — it won\'t be shown again') }}</p>
+                        <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">{{ __('For maximum cryptographic safety, this token is only displayed once. Scan the QR code with mobile or store the token safely.') }}</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Token Display -->
-            <div class="space-y-2">
+            <!-- Tab Switcher: QR Code vs Manual Token -->
+            <div class="flex rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
+                <button
+                    type="button"
+                    class="flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors"
+                    x-bind:class="activeTab === 'qr' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-700 dark:text-white' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400'"
+                    x-on:click="activeTab = 'qr'"
+                >
+                    <span class="flex items-center justify-center gap-1.5">
+                        <flux:icon icon="qr-code" class="size-4" />
+                        {{ __('Instant QR Pairing') }}
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    class="flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors"
+                    x-bind:class="activeTab === 'token' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-700 dark:text-white' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400'"
+                    x-on:click="activeTab = 'token'"
+                >
+                    <span class="flex items-center justify-center gap-1.5">
+                        <flux:icon icon="key" class="size-4" />
+                        {{ __('Manual Token String') }}
+                    </span>
+                </button>
+            </div>
+
+            <!-- View 1: Instant QR Code Pairing -->
+            <div x-show="activeTab === 'qr'" class="space-y-4 text-center">
+                @if ($generatedQrCodeSvg)
+                    <div class="inline-block rounded-xl bg-white p-4 shadow-sm border border-zinc-200 dark:border-zinc-700">
+                        <div class="size-48 mx-auto flex items-center justify-center [&>svg]:size-full">
+                            {!! $generatedQrCodeSvg !!}
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{{ __('Scan with Obsidian Mobile Camera') }}</p>
+                        <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{{ __('Instantly pairs your server endpoint, target vault, and authentication token in seconds.') }}</p>
+                    </div>
+                @else
+                    <div class="p-6 text-center text-xs text-zinc-400">
+                        {{ __('QR generation unavailable. Use manual token below.') }}
+                    </div>
+                @endif
+                <button type="button" class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold underline underline-offset-4" x-on:click="confirmed = true">
+                    {{ __('I have scanned the QR code') }}
+                </button>
+            </div>
+
+            <!-- View 2: Manual Token Display -->
+            <div x-show="activeTab === 'token'" class="space-y-3">
                 <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{{ __('Device Sync Token') }}</label>
                 <div class="flex items-center gap-2">
                     <input
@@ -467,25 +594,25 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                         </button>
                     </div>
                 </div>
+
+                <!-- Next Steps in Obsidian -->
+                <div class="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600 dark:bg-white/5 dark:text-zinc-300 space-y-1">
+                    <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ __('Next Steps in Obsidian:') }}</p>
+                    <ol class="list-decimal list-inside space-y-0.5 text-zinc-500 dark:text-zinc-400">
+                        <li>{{ __('Open Settings -> Synkk Vault Sync') }}</li>
+                        <li>{{ __('Paste the Server API URL: ') }} <code class="font-mono font-bold">{{ url('/api/v1') }}</code></li>
+                        <li>{{ __('Paste this Device Sync Token') }}</li>
+                        <li>{{ __('Click "Verify & Load Vaults", then choose your Target Vault') }}</li>
+                    </ol>
+                </div>
             </div>
 
-            <!-- Next Steps -->
-            <div class="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600 dark:bg-white/5 dark:text-zinc-300 space-y-1">
-                <p class="font-semibold text-zinc-900 dark:text-zinc-100">{{ __('Next Steps in Obsidian:') }}</p>
-                <ol class="list-decimal list-inside space-y-0.5 text-zinc-500 dark:text-zinc-400">
-                    <li>{{ __('Open Settings -> Synkk Vault Sync') }}</li>
-                    <li>{{ __('Paste the Server API URL shown on this page') }}</li>
-                    <li>{{ __('Paste this Device Sync Token') }}</li>
-                    <li>{{ __('Click "Verify & Load Vaults", then choose your Target Vault') }}</li>
-                </ol>
-            </div>
-
-            <!-- Close Button (only enabled after copy) -->
-            <div class="flex items-center justify-between">
-                <p class="text-xs text-zinc-400" x-show="!confirmed">{{ __('Copy the token above to continue') }}</p>
-                <p class="text-xs text-emerald-600 dark:text-emerald-400" x-show="confirmed" x-cloak>
+            <!-- Close Button (only enabled after copy or QR scan) -->
+            <div class="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-white/10">
+                <p class="text-xs text-zinc-400" x-show="!confirmed">{{ __('Copy token or scan QR above to finish') }}</p>
+                <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium" x-show="confirmed" x-cloak>
                     <flux:icon icon="check-circle" class="size-3.5 inline -mt-0.5" />
-                    {{ __('Token saved and ready to use') }}
+                    {{ __('Device configuration confirmed') }}
                 </p>
                 <flux:button
                     type="button"

@@ -133,3 +133,20 @@ test('the landing page links to checkout only when every Lemon Squeezy value is 
         ->assertSee('Get Lifetime License')
         ->assertDontSee('Checkout opens after launch checks');
 });
+
+test('the landing page renders the comprehensive obsidian sync comparison matrix', function () {
+    $response = $this->get(route('home'));
+
+    $response
+        ->assertOk()
+        ->assertSee('What makes Synkk better than existing Obsidian sync tools?')
+        ->assertSee('Team Standard')
+        ->assertSee('Official Obsidian Sync')
+        ->assertSee('Obsidian Git')
+        ->assertSee('Remotely Save (S3/WebDAV)')
+        ->assertSee('Self-Hosted LiveSync')
+        ->assertSee('100% Self-Hosted')
+        ->assertSee('Path-Level ACLs')
+        ->assertSee('Data Loss Prevention (DLP)')
+        ->assertSee('Atomic Safety Shield');
+});

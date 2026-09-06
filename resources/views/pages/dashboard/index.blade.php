@@ -871,6 +871,22 @@ new #[Title('Dashboard')] class extends Component {
                     </div>
                 </div>
 
+                <!-- Enterprise Telemetry Badges -->
+                <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                    <span class="inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200 border border-white/10">
+                        <flux:icon icon="shield-check" class="size-3" />
+                        {{ __('DLP Secret Scanner') }}
+                    </span>
+                    <span class="inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200 border border-white/10">
+                        <flux:icon icon="bolt" class="size-3" />
+                        {{ __('10% Deletion Guard') }}
+                    </span>
+                    <span class="inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200 border border-white/10">
+                        <flux:icon icon="qr-code" class="size-3" />
+                        {{ __('Instant QR Pairing') }}
+                    </span>
+                </div>
+
                 <!-- Secondary Status Message -->
                 <div class="mt-3 flex items-center gap-1.5 text-xs">
                     @if ($this->conflictCount > 0)

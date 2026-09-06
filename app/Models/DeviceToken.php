@@ -95,8 +95,14 @@ class DeviceToken extends Model
      *
      * @return array{plain_token: string, device_token: self}
      */
-    public static function createToken(User $user, Team $team, string $name, ?string $platform = null): array
-    {
+    public static function createToken(
+        User $user,
+        Team $team,
+        string $name,
+        ?string $platform = null,
+        string $accessScope = 'full_access',
+        ?array $allowedIpSubnets = null
+    ): array {
         $plainText = 'synkk_'.Str::random(40);
         $hash = hash('sha256', $plainText);
         $preview = substr($plainText, 0, 12).'...';
@@ -108,6 +114,8 @@ class DeviceToken extends Model
             'token_hash' => $hash,
             'token_preview' => $preview,
             'client_platform' => $platform,
+            'access_scope' => $accessScope,
+            'allowed_ip_subnets' => $allowedIpSubnets,
         ]);
 
         return [

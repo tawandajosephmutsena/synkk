@@ -44,6 +44,7 @@
                     <a href="#product">Product</a>
                     <a href="#workflow">How it works</a>
                     <a href="#safety">Safety</a>
+                    <a href="#comparison">Why Synkk</a>
                     <a href="#pricing">Pricing</a>
                     <a href="#roadmap">Roadmap</a>
                     <a href="{{ route('docs.redirect') }}">Docs</a>
@@ -64,8 +65,9 @@
                             <a href="#product">Product <span>01</span></a>
                             <a href="#workflow">How it works <span>02</span></a>
                             <a href="#safety">Safety <span>03</span></a>
-                            <a href="#pricing">Pricing <span>04</span></a>
-                            <a href="#roadmap">Roadmap <span>05</span></a>
+                            <a href="#comparison">Why Synkk <span>04</span></a>
+                            <a href="#pricing">Pricing <span>05</span></a>
+                            <a href="#roadmap">Roadmap <span>06</span></a>
                             <a href="{{ route('docs.redirect') }}">Documentation <span>↗</span></a>
                             @guest
                                 <a href="{{ route('login') }}">Log in <span>↗</span></a>
@@ -512,14 +514,362 @@
                 </div>
             </section>
 
+            <section id="comparison" class="synkk-comparison synkk-viewport-section" aria-labelledby="comparison-heading">
+                <div class="synkk-shell">
+                    <header class="synkk-section-heading">
+                        <div>
+                            <p class="synkk-eyebrow">05 / The Sovereign Standard</p>
+                            <h2 id="comparison-heading">What makes Synkk better than existing Obsidian sync tools?</h2>
+                        </div>
+                        <p>Most sync alternatives force a painful compromise: fragile DIY git setups, complex CouchDB database maintenance, or closed proprietary cloud silos with recurring monthly seat taxes. Synkk gives your team a local-first brain with path-level security, secret leak prevention, and 100% data sovereignty on hardware you own.</p>
+                    </header>
+
+                    <div class="synkk-comparison-table-wrapper">
+                        <table class="synkk-comparison-table" aria-label="Obsidian Sync tools feature comparison matrix">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="synkk-col-dim">
+                                        <span class="synkk-th-label">Architecture &amp; Security</span>
+                                        <small class="synkk-th-sub">Core capabilities</small>
+                                    </th>
+                                    <th scope="col" class="synkk-col-featured">
+                                        <div class="synkk-col-featured-header">
+                                            <div class="synkk-featured-badge-row">
+                                                <span class="synkk-comparison-badge-synkk">Team Standard</span>
+                                                <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                                            </div>
+                                            <span class="synkk-th-title">Synkk</span>
+                                            <small class="synkk-th-sub">Local-First Server</small>
+                                        </div>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="synkk-th-title">Official Obsidian Sync</span>
+                                        <small class="synkk-th-sub">Proprietary Cloud</small>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="synkk-th-title">Obsidian Git</span>
+                                        <small class="synkk-th-sub">Community Plugin</small>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="synkk-th-title">Remotely Save (S3/WebDAV)</span>
+                                        <small class="synkk-th-sub">Object Storage</small>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="synkk-th-title">Self-Hosted LiveSync</span>
+                                        <small class="synkk-th-sub">CouchDB Replication</small>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>100% Self-Hosted</strong>
+                                        <p class="synkk-cell-dim-desc">Complete data sovereignty. Run on private VPS, Docker, or bare metal.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> 100% Local-First</strong>
+                                            <span class="synkk-cell-sub">Private SQLite WAL engine. Your data never touches third-party clouds.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Hosted on proprietary Obsidian cloud infrastructure.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Partial</strong>
+                                            <span class="synkk-cell-sub">Requires GitHub, GitLab, or self-maintained Git server.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Partial</strong>
+                                            <span class="synkk-cell-sub">Relies on commercial S3 (AWS/Cloudflare) or custom WebDAV.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Yes</strong>
+                                            <span class="synkk-cell-sub">Self-hosted Apache CouchDB or IBM Cloudant database.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Path-Level ACLs</strong>
+                                        <p class="synkk-cell-dim-desc">Granular team directory rules. Share specific folders while keeping private notes hidden.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Native Path ACLs</strong>
+                                            <span class="synkk-cell-sub">Per-member glob rules: Read-write, Read-only, or Hidden boundaries.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> None</strong>
+                                            <span class="synkk-cell-sub">All-or-nothing vault sync. Every collaborator has full access to all files.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> None</strong>
+                                            <span class="synkk-cell-sub">Git repository permissions are repo-wide. No folder-level masking.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> None</strong>
+                                            <span class="synkk-cell-sub">Client receives full bucket contents without user permission filters.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> None</strong>
+                                            <span class="synkk-cell-sub">CouchDB replicates entire database documents with no folder boundaries.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Data Loss Prevention (DLP)</strong>
+                                        <p class="synkk-cell-dim-desc">Automatic secret &amp; credential scanning before notes leave local storage.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> In-App DLP Shield</strong>
+                                            <span class="synkk-cell-sub">Detects AWS, OpenAI, Stripe, and private keys. Warns and blocks leaks locally.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Transmits any text without inspection. Leaked secrets sync to cloud.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">No pre-commit hook in plugin. Secrets are committed to Git history.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Blind file upload to remote S3 bucket.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Direct replication to CouchDB without secret analysis.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Atomic Safety Shield</strong>
+                                        <p class="synkk-cell-dim-desc">Protection against accidental bulk deletion from rogue scripts or misconfigured clients.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> 10% Abort Guard</strong>
+                                            <span class="synkk-cell-sub">Automatically halts sync if &gt;10% of notes are queued for deletion. Vault preserved.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Deletions immediately replicate across all devices.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Manual</strong>
+                                            <span class="synkk-cell-sub">Git can revert commits, but requires terminal commands and recovery know-how.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Deletions immediately remove files from S3 bucket.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">CouchDB doc deletions replicate immediately to all clients.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Conflict Handling</strong>
+                                        <p class="synkk-cell-dim-desc">Safety when multiple teammates edit the same document simultaneously.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Safe Forking</strong>
+                                            <span class="synkk-cell-sub">Creates non-destructive *.sync-conflict-*.md copies. Zero overwritten work.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Last-Write-Wins</strong>
+                                            <span class="synkk-cell-sub">Silent file overwrite; requires manual version history recovery.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> Broken Markers</strong>
+                                            <span class="synkk-cell-sub">Raw Git merge conflicts inject &lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD into markdown.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> Overwrite Risk</strong>
+                                            <span class="synkk-cell-sub">Timestamp race conditions frequently clobber parallel edits.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Complex Merge</strong>
+                                            <span class="synkk-cell-sub">CouchDB revision trees require technical manual resolution modal.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Web Workspace &amp; Graph</strong>
+                                        <p class="synkk-cell-dim-desc">Edit notes and explore connections in a browser without installing Obsidian.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Full Web Workspace</strong>
+                                            <span class="synkk-cell-sub">Rich Markdown editor and interactive 2D force graph built-in.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Requires Obsidian desktop or mobile application for all users.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> GitHub UI Only</strong>
+                                            <span class="synkk-cell-sub">Basic code editing in browser. No Obsidian graph visualization.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Raw cloud storage bucket. No web reading or editing interface.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Fauxton admin dashboard only displays raw CouchDB JSON.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Mobile Onboarding</strong>
+                                        <p class="synkk-cell-dim-desc">Speed of provisioning new iOS and Android devices.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> 1-Click QR Scan</strong>
+                                            <span class="synkk-cell-sub">Scan camera QR from dashboard. Device paired and syncing in seconds.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Email Login</strong>
+                                            <span class="synkk-cell-sub">Log in with email/password and select remote vault to clone.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> Painful</strong>
+                                            <span class="synkk-cell-sub">Requires SSH key generation, Personal Access Tokens, or Termux workarounds.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> Tedious</strong>
+                                            <span class="synkk-cell-sub">Manual input of S3 endpoint, bucket, access key ID, and secret on mobile.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> Extreme Friction</strong>
+                                            <span class="synkk-cell-sub">Manual CouchDB credentials, base64 encryption keys, and sync URI setup.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Cost for a Team of 15</strong>
+                                        <p class="synkk-cell-dim-desc">3-year total software cost for a 15-person engineering or research group.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> $65 Total</strong>
+                                            <span class="synkk-cell-sub">Buy server license once. Unlimited seats, unlimited devices, zero subscriptions.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> $4,320+</strong>
+                                            <span class="synkk-cell-sub">$8/seat/mo ($96/yr/seat) × 15 seats × 3 years recurring bill.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Free (High Dev Time)</strong>
+                                            <span class="synkk-cell-sub">Hidden cost in engineer time debugging broken merge commits.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> S3 API Costs</strong>
+                                            <span class="synkk-cell-sub">Recurring monthly S3 PUT/GET request fees and bandwidth charges.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> VPS Overhead</strong>
+                                            <span class="synkk-cell-sub">Requires persistent CouchDB clustering and database maintenance.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <section id="pricing" class="synkk-pricing synkk-viewport-section" aria-labelledby="pricing-heading">
                 <div class="synkk-shell">
                     <header class="synkk-section-heading">
                         <div>
-                            <p class="synkk-eyebrow">05 / Simple pricing</p>
-                            <h2 id="pricing-heading">Simple, transparent pricing. No recurring trap.</h2>
+                            <p class="synkk-eyebrow">06 / Zero Seat Tax</p>
+                            <h2 id="pricing-heading">Own your team brain. No recurring seat tax.</h2>
                         </div>
-                        <p>Own the self-hosted server on your terms. The Obsidian plugin is free, while commercial licenses give you software updates and direct support.</p>
+                        <p>Obsidian Sync charges $48–$96/year per seat for a closed cloud sync. Synkk gives your entire team local-first speed, path ACLs, and 100% data sovereignty on your private server. Pay once, own it forever.</p>
                     </header>
 
                     <div class="synkk-pricing-grid">
@@ -528,14 +878,16 @@
                                 <span>1-YEAR UPDATE LICENSE</span>
                                 <p><strong>$45</strong><small>1-year update license</small></p>
                             </div>
-                            <h3>Self-host with one full year of updates.</h3>
+                            <h3>Self-host your personal knowledge engine.</h3>
                             <ul>
                                 <li>1 year of software updates &amp; new feature releases</li>
                                 <li>Perpetual access to the purchased version forever</li>
                                 <li>Self-host on your own infrastructure or Docker</li>
+                                <li>Local-first sync with instant QR mobile pairing</li>
+                                <li>Web Markdown workspace &amp; 2D interactive graph</li>
+                                <li>Atomic Safety Shield (aborts on &gt;10% mass wipe)</li>
                                 <li>Unlimited vaults, notes, and local devices</li>
                                 <li>Obsidian plugin v1.0.0 integration included</li>
-                                <li>Community support &amp; documentation access</li>
                             </ul>
                             @if ($storeReady)
                                 <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Get 1-Year License <span aria-hidden="true">↗</span></a>
@@ -547,20 +899,22 @@
                         <article class="is-featured">
                             <div class="synkk-price-featured-badge">
                                 <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
-                                <span>LIFETIME LICENSE · BEST VALUE</span>
+                                <span>LIFETIME LICENSE · SOVEREIGN TEAM BRAIN</span>
                             </div>
                             <div class="synkk-price-heading">
                                 <span>LIFETIME LICENSE</span>
                                 <p><strong>$65</strong><small>lifetime license · pay once, own forever</small></p>
                             </div>
-                            <h3>Own Synkk forever. Every update included.</h3>
+                            <h3>The complete team knowledge base. Zero seat fees.</h3>
                             <ul>
                                 <li>Lifetime software updates — never pay a renewal fee</li>
-                                <li>All future v1.x, v2.x, and major milestone releases</li>
-                                <li>Self-host on unlimited servers you control</li>
-                                <li>Priority access to CRDT collaboration &amp; E2EE betas</li>
+                                <li>Zero recurring per-seat fees — save $1,440/yr vs SaaS</li>
+                                <li>Granular Path-Level ACLs (Inbox vs Client vs Internal)</li>
+                                <li>In-app DLP Secret Scanner (blocks leaked API keys)</li>
+                                <li>Multi-member Web Workspace &amp; full interactive graph</li>
+                                <li>1-Click Quick Connect QR code mobile onboarding</li>
+                                <li>Priority access to CRDT live collaboration &amp; E2EE betas</li>
                                 <li>Direct priority support from core maintainers</li>
-                                <li>Full commercial and personal use rights</li>
                             </ul>
                             @if ($storeReady)
                                 <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Get Lifetime License <span aria-hidden="true">↗</span></a>
@@ -576,11 +930,12 @@
                             </div>
                             <h3>Deploy Synkk across your team or company.</h3>
                             <ul>
-                                <li>Custom deployment assistance (Docker, K8s, Bare Metal)</li>
-                                <li>Granular path permission &amp; team onboarding architecture</li>
+                                <li>Custom Kubernetes &amp; air-gapped Docker deployments</li>
+                                <li>Enterprise fleet governance &amp; 1-click device remote wipe</li>
+                                <li>IP subnet restriction &amp; read-only contractor tokens</li>
+                                <li>Audit trail logging &amp; SOC2 compliance assistance</li>
                                 <li>Dedicated support channel with core maintainers</li>
                                 <li>Custom SLA, invoice billing, and security audit review</li>
-                                <li>Unlimited team members, devices, and enterprise vaults</li>
                             </ul>
                             <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Book a meeting <span aria-hidden="true">↗</span></a>
                         </article>
@@ -836,6 +1191,8 @@
                     <nav aria-label="Footer navigation">
                         <a href="#product">Product</a>
                         <a href="#workflow">How it works</a>
+                        <a href="#safety">Safety</a>
+                        <a href="#comparison">Why Synkk</a>
                         <a href="#pricing">Pricing</a>
                         <a href="#roadmap">Roadmap</a>
                         <a href="#faq">FAQ</a>

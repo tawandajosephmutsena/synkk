@@ -747,7 +747,7 @@ new #[Title('Vault Details')] class extends Component {
     </div>
 
     <!-- Mini Stat Summary Row -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <flux:card variant="soft" class="py-3 px-4 rounded-2xl border-gray-200/80 dark:border-zinc-800">
             <div class="flex items-center justify-between">
                 <flux:text class="text-xs text-zinc-400">{{ __('Accessible Notes') }}</flux:text>
@@ -778,6 +778,20 @@ new #[Title('Vault Details')] class extends Component {
             <div class="mt-1 flex items-baseline gap-2">
                 <span class="text-xl font-bold text-zinc-900 dark:text-zinc-100">v{{ $vault->latestVersion() }}</span>
                 <span class="text-xs text-emerald-600 dark:text-emerald-400">{{ __('Latest sync state') }}</span>
+            </div>
+        </flux:card>
+
+        <flux:card variant="soft" class="py-3 px-4 rounded-2xl border-gray-200/80 dark:border-zinc-800">
+            <div class="flex items-center justify-between">
+                <flux:text class="text-xs text-zinc-400">{{ __('Safety & DLP Guard') }}</flux:text>
+                <flux:icon icon="shield-check" class="size-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div class="mt-1 flex items-baseline gap-2">
+                <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                    <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {{ __('Active') }}
+                </span>
+                <span class="text-[11px] text-zinc-400">{{ __('10% guard · Secret scan') }}</span>
             </div>
         </flux:card>
     </div>
@@ -1694,15 +1708,23 @@ new #[Title('Vault Details')] class extends Component {
                         @foreach ($this->activities as $act)
                             <flux:table.row :key="$act->id">
                                 <flux:table.cell>
-                                    @if ($act->action === 'created')
-                                        <flux:badge color="emerald" size="sm">{{ __('Created') }}</flux:badge>
-                                    @elseif ($act->action === 'updated')
-                                        <flux:badge color="blue" size="sm">{{ __('Updated') }}</flux:badge>
-                                    @elseif ($act->action === 'deleted')
-                                        <flux:badge color="red" size="sm">{{ __('Deleted') }}</flux:badge>
-                                    @elseif ($act->action === 'conflict')
-                                        <flux:badge color="amber" size="sm">{{ __('Conflict Branched') }}</flux:badge>
-                                    @endif
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        @if ($act->action === 'created')
+                                            <flux:badge color="emerald" size="sm">{{ __('Created') }}</flux:badge>
+                                        @elseif ($act->action === 'updated')
+                                            <flux:badge color="blue" size="sm">{{ __('Updated') }}</flux:badge>
+                                        @elseif ($act->action === 'deleted')
+                                            <flux:badge color="red" size="sm">{{ __('Deleted') }}</flux:badge>
+                                        @elseif ($act->action === 'conflict')
+                                            <flux:badge color="amber" size="sm">{{ __('Conflict Branched') }}</flux:badge>
+                                        @endif
+
+                                        @if ($act->has_secrets)
+                                            <flux:badge color="red" size="sm" icon="exclamation-triangle" class="font-bold">
+                                                {{ __('DLP Secret Detected') }}: {{ implode(', ', $act->detected_secrets ?? [__('Credential')]) }}
+                                            </flux:badge>
+                                        @endif
+                                    </div>
                                 </flux:table.cell>
 
                                 <flux:table.cell class="font-mono text-xs">

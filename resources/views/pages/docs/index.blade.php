@@ -156,10 +156,10 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                     <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 space-y-2">
                         <div class="flex items-center gap-2">
                             <span class="flex size-6 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-mono text-xs font-bold">4</span>
-                            <flux:heading size="sm">Connect & Sync</flux:heading>
+                            <flux:heading size="sm">Connect & Sync (Instant QR or Token)</flux:heading>
                         </div>
                         <flux:text size="sm">
-                            In Obsidian Settings → <strong>Synkk Vault Sync</strong>, set Server URL to <code>{{ url('/api/v1') }}</code>, paste your Device Token, click <strong>Verify & Load Vaults</strong>, and choose your target vault!
+                            Open Obsidian Settings → <strong>Synkk Vault Sync</strong>. Either scan or paste into <strong>⚡ Instant Quick Connect</strong> for 1-second automated pairing, or enter Server URL <code>{{ url('/api/v1') }}</code> and your Device Token!
                         </flux:text>
                     </div>
                 </div>
@@ -243,7 +243,7 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                         <flux:heading size="base">Background execution is not guaranteed</flux:heading>
                     </div>
                     <flux:text size="sm">
-                        The Foundation plugin syncs while Obsidian is open. iOS and Android may suspend background work, so confirm a recent revision after opening the app. Native bridges, QR pairing, and on-demand attachment hydration are roadmap work.
+                        Use the <strong>Instant QR Pairing</strong> code generated in your web dashboard to pair mobile devices in seconds. The Foundation plugin syncs while Obsidian is open. iOS and Android may suspend background execution when inactive, so verify your latest sync pulse upon opening the app.
                     </flux:text>
                 </div>
             </flux:card>
@@ -507,18 +507,18 @@ volumes:
                 <div class="grid gap-4 md:grid-cols-3">
                     <div class="rounded-2xl border border-lime-500/30 bg-lime-500/10 p-5">
                         <flux:badge color="lime">Available now</flux:badge>
-                        <flux:heading size="sm" class="mt-3">Atomic Safety Shield</flux:heading>
-                        <flux:text size="sm" class="mt-2">Selective folders, optional plugin/config categories, a configurable deletion threshold, one-time confirmation, and local snapshots before remote mutations.</flux:text>
+                        <flux:heading size="sm" class="mt-3">Safety Shield, DLP & Instant QR</flux:heading>
+                        <flux:text size="sm" class="mt-2">Instant QR mobile pairing, real-time DLP secret scanning, 10% mass-deletion guard, selective folder sync, and 1-click enterprise remote wipe.</flux:text>
                     </div>
                     <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800/40">
-                        <flux:badge color="zinc">Next</flux:badge>
-                        <flux:heading size="sm" class="mt-3">Pairing & encrypted transport</flux:heading>
-                        <flux:text size="sm" class="mt-2">QR pairing, client-side encryption research, and relay architecture validation are planned private-preview work.</flux:text>
+                        <flux:badge color="zinc">Next milestone</flux:badge>
+                        <flux:heading size="sm" class="mt-3">Zero-Knowledge E2EE</flux:heading>
+                        <flux:text size="sm" class="mt-2">Client-side encryption using device keys (XChaCha20-Poly1305) and zero-knowledge encrypted transport options for compliance-heavy teams.</flux:text>
                     </div>
                     <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800/40">
-                        <flux:badge color="zinc">Future research</flux:badge>
-                        <flux:heading size="sm" class="mt-3">CRDT collaboration</flux:heading>
-                        <flux:text size="sm" class="mt-2">Character-level merging, peer-assisted transport, delta attachments, virtual files, and a conflict sandbox are not part of this release.</flux:text>
+                        <flux:badge color="zinc">Viral moonshot</flux:badge>
+                        <flux:heading size="sm" class="mt-3">Yjs CRDT & Agentic Graph</flux:heading>
+                        <flux:text size="sm" class="mt-2">Real-time character-level multiplayer editing via Yjs, MCP AI server endpoints, and agentic knowledge retrieval over your team graph.</flux:text>
                     </div>
                 </div>
             </flux:card>
