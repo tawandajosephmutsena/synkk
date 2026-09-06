@@ -55,3 +55,67 @@ test('saves one local buffer and clears dirty state only after success', async (
     assert.equal(editor.isDirty, false);
     assert.equal(editor.initialContent, 'Updated');
 });
+
+test('renders expanded Obsidian callout themes, math formulas, and highlights', () => {
+    const markdown = `> [!BUG] Memory leak in sync
+> Identified circular buffer references.
+
+> [!SUCCESS] Verification passed
+> All tests green.
+
+> [!DANGER] Critical threshold
+> Do not delete files.
+
+Here is an inline math formula $E = mc^2$ and ==highlighted text==.
+
+$$
+\\sum_{i=1}^{n} x_i = X
+$$`;
+
+    const html = renderMarkdownPreview(markdown);
+
+    assert.match(html, /class="synkk-callout synkk-callout--bug"/);
+    assert.match(html, /Memory leak in sync/);
+    assert.match(html, /class="synkk-callout synkk-callout--success"/);
+    assert.match(html, /Verification passed/);
+    assert.match(html, /class="synkk-callout synkk-callout--danger"/);
+    assert.match(html, /class="synkk-math-inline"/);
+    assert.match(html, /E = mc\^2/);
+    assert.match(html, /class="synkk-highlight">highlighted text<\/mark>/);
+    assert.match(html, /class="synkk-math-block"/);
+    assert.match(html, /\\sum_\{i=1\}\^\{n\} x_i = X/);
+});
+
+test('renders Mermaid diagrams, Dataview queries, and Kanban boards', () => {
+    const markdown = `\`\`\`mermaid
+graph TD
+    A[Client] --> B[Synkk Server]
+\`\`\`
+
+\`\`\`dataview
+TABLE file.mtime AS "Modified" FROM "Projects"
+\`\`\`
+
+\`\`\`kanban
+## Backlog
+- [ ] Task 1
+- [ ] Task 2
+## In Progress
+- [ ] Task 3
+\`\`\``;
+
+    const html = renderMarkdownPreview(markdown);
+
+    assert.match(html, /class="synkk-mermaid-block"/);
+    assert.match(html, /MERMAID DIAGRAM/);
+    assert.match(html, /graph TD/);
+
+    assert.match(html, /class="synkk-dataview-block"/);
+    assert.match(html, /DATAVIEW/);
+    assert.match(html, /class="synkk-dataview-type">TABLE<\/span>/);
+
+    assert.match(html, /class="synkk-kanban-board"/);
+    assert.match(html, /class="synkk-kanban-col-header"><strong>Backlog<\/strong>/);
+    assert.match(html, /Task 1/);
+    assert.match(html, /Task 3/);
+});

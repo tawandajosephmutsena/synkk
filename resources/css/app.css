@@ -245,41 +245,298 @@ select:focus[data-flux-control] {
 .synkk-markdown-preview .synkk-callout {
     background: rgb(14 165 233 / 0.08);
     border: 1px solid rgb(56 189 248 / 0.25);
-    border-left-width: 3px;
+    border-left-width: 4px;
     border-radius: 0.9rem;
-    padding: 0.9rem 1rem;
+    padding: 0.9rem 1.1rem;
 }
 
-.synkk-markdown-preview .synkk-callout > strong {
+.synkk-markdown-preview .synkk-callout-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.synkk-markdown-preview .synkk-callout-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.synkk-markdown-preview .synkk-callout strong {
     color: #7dd3fc;
-    display: block;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
 .synkk-markdown-preview .synkk-callout p {
     margin: 0.45rem 0 0;
+    color: #dbeafe;
+    line-height: 1.5;
 }
 
-.synkk-markdown-preview .synkk-callout--warning,
-.synkk-markdown-preview .synkk-callout--caution {
+/* Callout Themes matching Obsidian */
+.synkk-markdown-preview .synkk-callout--note {
+    background: rgb(14 165 233 / 0.08);
+    border-color: rgb(56 189 248 / 0.25);
+}
+.synkk-markdown-preview .synkk-callout--note strong,
+.synkk-markdown-preview .synkk-callout--note .synkk-callout-icon { color: #7dd3fc; }
+
+.synkk-markdown-preview .synkk-callout--info,
+.synkk-markdown-preview .synkk-callout--abstract {
+    background: rgb(99 102 241 / 0.08);
+    border-color: rgb(129 140 248 / 0.28);
+}
+.synkk-markdown-preview .synkk-callout--info strong,
+.synkk-markdown-preview .synkk-callout--abstract strong,
+.synkk-markdown-preview .synkk-callout--info .synkk-callout-icon,
+.synkk-markdown-preview .synkk-callout--abstract .synkk-callout-icon { color: #a5b4fc; }
+
+.synkk-markdown-preview .synkk-callout--tip,
+.synkk-markdown-preview .synkk-callout--todo {
+    background: rgb(16 185 129 / 0.08);
+    border-color: rgb(52 211 153 / 0.28);
+}
+.synkk-markdown-preview .synkk-callout--tip strong,
+.synkk-markdown-preview .synkk-callout--todo strong,
+.synkk-markdown-preview .synkk-callout--tip .synkk-callout-icon,
+.synkk-markdown-preview .synkk-callout--todo .synkk-callout-icon { color: #6ee7b7; }
+
+.synkk-markdown-preview .synkk-callout--success {
+    background: rgb(34 197 94 / 0.08);
+    border-color: rgb(74 222 128 / 0.28);
+}
+.synkk-markdown-preview .synkk-callout--success strong,
+.synkk-markdown-preview .synkk-callout--success .synkk-callout-icon { color: #86efac; }
+
+.synkk-markdown-preview .synkk-callout--question {
     background: rgb(245 158 11 / 0.08);
     border-color: rgb(251 191 36 / 0.28);
 }
+.synkk-markdown-preview .synkk-callout--question strong,
+.synkk-markdown-preview .synkk-callout--question .synkk-callout-icon { color: #fcd34d; }
 
-.synkk-markdown-preview .synkk-callout--warning > strong,
-.synkk-markdown-preview .synkk-callout--caution > strong {
-    color: #fcd34d;
+.synkk-markdown-preview .synkk-callout--warning,
+.synkk-markdown-preview .synkk-callout--caution {
+    background: rgb(249 115 22 / 0.08);
+    border-color: rgb(251 146 60 / 0.28);
+}
+.synkk-markdown-preview .synkk-callout--warning strong,
+.synkk-markdown-preview .synkk-callout--caution strong,
+.synkk-markdown-preview .synkk-callout--warning .synkk-callout-icon,
+.synkk-markdown-preview .synkk-callout--caution .synkk-callout-icon { color: #fdba74; }
+
+.synkk-markdown-preview .synkk-callout--failure,
+.synkk-markdown-preview .synkk-callout--danger,
+.synkk-markdown-preview .synkk-callout--bug {
+    background: rgb(239 68 68 / 0.08);
+    border-color: rgb(248 113 113 / 0.28);
+}
+.synkk-markdown-preview .synkk-callout--failure strong,
+.synkk-markdown-preview .synkk-callout--danger strong,
+.synkk-markdown-preview .synkk-callout--bug strong,
+.synkk-markdown-preview .synkk-callout--failure .synkk-callout-icon,
+.synkk-markdown-preview .synkk-callout--danger .synkk-callout-icon,
+.synkk-markdown-preview .synkk-callout--bug .synkk-callout-icon { color: #fca5a5; }
+
+.synkk-markdown-preview .synkk-callout--example,
+.synkk-markdown-preview .synkk-callout--quote {
+    background: rgb(168 85 247 / 0.08);
+    border-color: rgb(192 132 252 / 0.28);
+}
+.synkk-markdown-preview .synkk-callout--example strong,
+.synkk-markdown-preview .synkk-callout--quote strong,
+.synkk-markdown-preview .synkk-callout--example .synkk-callout-icon,
+.synkk-markdown-preview .synkk-callout--quote .synkk-callout-icon { color: #d8b4fe; }
+
+/* Highlights ==text== */
+.synkk-markdown-preview .synkk-highlight {
+    background: rgb(234 179 8 / 0.22);
+    color: #fef08a;
+    border-radius: 0.25rem;
+    padding: 0.08rem 0.3rem;
 }
 
-.synkk-markdown-preview .synkk-callout--important {
-    background: rgb(244 63 94 / 0.08);
-    border-color: rgb(251 113 133 / 0.28);
+/* Math blocks and inline math */
+.synkk-markdown-preview .synkk-math-block {
+    position: relative;
+    background: #0f131a;
+    border: 1px solid #28303f;
+    border-radius: 0.9rem;
+    padding: 1.25rem 1.4rem;
+    margin: 1.25rem 0;
+    overflow-x: auto;
+}
+.synkk-markdown-preview .synkk-math-badge {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.75rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #1e2638;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+}
+.synkk-markdown-preview .synkk-math-block code {
+    background: transparent;
+    border: none;
+    color: #e2e8f0;
+    font-size: 0.95rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.synkk-markdown-preview .synkk-math-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #182030;
+    border: 1px solid #283650;
+    border-radius: 0.4rem;
+    padding: 0.08rem 0.38rem;
+    margin: 0 0.15rem;
+}
+.synkk-markdown-preview .synkk-math-symbol {
+    font-size: 0.72rem;
+    font-style: italic;
+    font-weight: 700;
+    color: #38bdf8;
+}
+.synkk-markdown-preview .synkk-math-inline code {
+    background: transparent;
+    border: none;
+    color: #bae6fd;
+    padding: 0;
 }
 
-.synkk-markdown-preview .synkk-callout--important > strong {
-    color: #fda4af;
+/* Mermaid block */
+.synkk-markdown-preview .synkk-mermaid-block {
+    background: #0a0d14;
+    border: 1px solid #202634;
+    border-radius: 1rem;
+    overflow: hidden;
+    margin: 1.25rem 0;
+}
+.synkk-markdown-preview .synkk-diagram-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #131822;
+    padding: 0.5rem 0.9rem;
+    border-bottom: 1px solid #202634;
+}
+.synkk-markdown-preview .synkk-diagram-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #38bdf8;
+    letter-spacing: 0.06em;
+}
+.synkk-markdown-preview .synkk-mermaid-source {
+    background: transparent;
+    border: none;
+    margin: 0;
+    border-radius: 0;
+}
+
+/* Dataview query block */
+.synkk-markdown-preview .synkk-dataview-block {
+    background: #0d121d;
+    border: 1px solid #222d42;
+    border-radius: 1rem;
+    overflow: hidden;
+    margin: 1.25rem 0;
+}
+.synkk-markdown-preview .synkk-dataview-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #151d2e;
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid #222d42;
+}
+.synkk-markdown-preview .synkk-dataview-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    background: #6366f1;
+    color: #ffffff;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+}
+.synkk-markdown-preview .synkk-dataview-type {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #a5b4fc;
+    text-transform: uppercase;
+}
+.synkk-markdown-preview .synkk-dataview-content pre {
+    background: transparent;
+    border: none;
+    margin: 0;
+    border-radius: 0;
+}
+
+/* Kanban board */
+.synkk-markdown-preview .synkk-kanban-board {
+    display: flex;
+    gap: 0.9rem;
+    overflow-x: auto;
+    padding: 0.5rem 0 1rem;
+    margin: 1.25rem 0;
+}
+.synkk-markdown-preview .synkk-kanban-col {
+    min-width: 220px;
+    max-width: 280px;
+    flex: 1 0 220px;
+    background: #11151f;
+    border: 1px solid #242c3c;
+    border-radius: 0.85rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+.synkk-markdown-preview .synkk-kanban-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid #202634;
+}
+.synkk-markdown-preview .synkk-kanban-col-header strong {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+.synkk-markdown-preview .synkk-kanban-count {
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: #1e2636;
+    color: #94a3b8;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+}
+.synkk-markdown-preview .synkk-kanban-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+.synkk-markdown-preview .synkk-kanban-card {
+    background: #1a2130;
+    border: 1px solid #2b364c;
+    border-radius: 0.55rem;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    line-height: 1.4;
 }
 
 .synkk-markdown-preview .synkk-empty-note {
