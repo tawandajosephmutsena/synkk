@@ -88,19 +88,22 @@ export const initializeMobileMenu = (menu) => {
 export const initializeThemeSwitcher = () => {
     const STORAGE_KEY = 'synkk-theme';
 
-    const getStoredTheme = () => localStorage.getItem(STORAGE_KEY) || 'system';
+    const getStoredTheme = () => localStorage.getItem(STORAGE_KEY) || 'dark';
 
     const applyTheme = (theme) => {
         const isDark =
             theme === 'dark' ||
             (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
+        const meta = document.getElementById('synkk-theme-color');
         if (isDark) {
             document.documentElement.classList.add('dark');
             document.documentElement.setAttribute('data-theme', 'dark');
+            if (meta) meta.setAttribute('content', '#080c14');
         } else {
             document.documentElement.classList.remove('dark');
             document.documentElement.setAttribute('data-theme', 'light');
+            if (meta) meta.setAttribute('content', '#f7f8f3');
         }
 
         document.querySelectorAll('[data-theme-set]').forEach((btn) => {

@@ -173,3 +173,14 @@ test('the landing page renders the comprehensive obsidian sync comparison matrix
         ->assertSee('Data Loss Prevention (DLP)')
         ->assertSee('Atomic Safety Shield');
 });
+
+test('the landing page defaults to dark mode on initial load', function () {
+    $response = $this->get(route('home'));
+
+    $response
+        ->assertOk()
+        ->assertSee('class="scroll-smooth dark"', escape: false)
+        ->assertSee('data-theme="dark"', escape: false)
+        ->assertSee("localStorage.getItem('synkk-theme') || 'dark'", escape: false)
+        ->assertSee('data-theme-set="dark" title="Dark mode" aria-label="Dark mode" class="is-active" aria-pressed="true"', escape: false);
+});
