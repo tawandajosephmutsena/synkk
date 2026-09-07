@@ -142,3 +142,23 @@ php artisan tinker --execute 'App\Models\User::where("email", "your-email@domain
 2. **Flush Application Cache**: Instant 1-click execution of `cache:clear` to purge stale route, config, and Redis caches.
 3. **Prune Deleted Snapshots**: Execute automated pruning of soft-deleted vault file versions older than 30 days (`vaults:prune-deleted --days=30`).
 4. **Database Table Metrics**: Live row counts across tenants, vaults, file versions, sync logs, and device tokens.
+
+---
+
+## 6. Customer Self-Serve Licensing & In-App Upgrades
+
+Customers do not need super admin intervention to activate lifetime deals or enterprise licenses:
+
+### A. Redeeming via Workspace Dashboard
+1. On the user dashboard, free tier teams see an **"Upgrade Plan →"** button in their header.
+2. Clicking the button triggers an interactive **"Upgrade Workspace Plan"** modal.
+3. Users can review the tier comparison (Community Free vs. Pro LTD vs. Cloud SaaS) or enter their license key directly into the input field (`SYNK-PRO-XXXX-XXXX-XXXX`).
+4. The dashboard validates the key with `LicenseValidationService` and unlocks Pro LTD or Cloud features instantly in real-time.
+
+### B. Redeeming via Team Settings
+1. Navigate to **Team Settings** (`/settings/teams/{team}`).
+2. Review the **"Plan & Subscription"** cards displaying real-time utilization for Storage, Vaults, Connected Devices, and Team Seats.
+3. In the **Redeem Commercial License** form, enter the license key.
+4. Once active, the masked license key (`SYNK-PRO-••••-••••-XXXX`) and activation date are securely stored on the team.
+5. Duplicate protection ensures an active commercial license key cannot be redeemed by another team simultaneously.
+6. Owners can deactivate their license at any time to release it or revert to Community Free.

@@ -119,3 +119,19 @@ test('sidebar user card renders team and settings dropdown and removes bottom us
         ->assertSee(route('appearance.edit'))
         ->assertDontSee('data-test="sidebar-menu-button"', escape: false);
 });
+
+test('authenticated user can redeem license key directly from dashboard', function () {
+    $user = User::factory()->create();
+    $team = $user->personalTeam();
+    $team->update(['plan' => 'free']);
+
+    Livewire::actingAs($user)
+        ->test('pages::dashboard.index', ['current_team' => $team->slug])
+        ->set('upgradeLicenseKey', 'SYNK-PRO-DASH-TEST-1234')
+        ->call('redeemLicenseKeyInDashboard')
+        ->assertHasNoErrors();
+
+    expect($team->fresh()->plan)->toBe('pro_ltd')
+        ->and($team->fresh()->license_status)->toBe('active')
+        ->and($team->fresh()->license_key)->toBe('SYNK-PRO-DASH-TEST-1234');
+});

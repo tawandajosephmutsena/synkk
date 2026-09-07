@@ -29,6 +29,50 @@ new class extends Component
 
     public bool $isCurrentTeam = false;
 
+    public string $licenseKeyInput = '';
+
+    public function redeemLicense(): void
+    {
+        Gate::authorize('update', $this->teamModel);
+
+        $this->validate([
+            'licenseKeyInput' => ['required', 'string', 'min:8', 'max:100'],
+        ]);
+
+        $service = app(\App\Services\LicenseValidationService::class);
+        $result = $service->activateLicenseKey($this->teamModel, $this->licenseKeyInput);
+
+        if (! $result['success']) {
+            $this->addError('licenseKeyInput', $result['message']);
+            Flux::toast(variant: 'danger', text: $result['message']);
+
+            return;
+        }
+
+        $this->licenseKeyInput = '';
+        $this->populateTeamData();
+
+        Flux::toast(variant: 'success', text: $result['message']);
+    }
+
+    public function deactivateLicense(): void
+    {
+        Gate::authorize('update', $this->teamModel);
+
+        $service = app(\App\Services\LicenseValidationService::class);
+        $result = $service->deactivateLicenseKey($this->teamModel);
+
+        $this->populateTeamData();
+
+        Flux::toast(variant: 'warning', text: $result['message']);
+    }
+
+    #[Computed]
+    public function planSummary(): array
+    {
+        return app(\App\Services\PlanService::class)->getUsageSummary($this->teamModel);
+    }
+
     public function mount(Team $team): void
     {
         $this->teamModel = $team;
@@ -91,6 +135,11 @@ new class extends Component
             'name' => $team->name,
             'slug' => $team->slug,
             'is_personal' => $team->is_personal,
+            'plan' => $team->plan ?? 'free',
+            'plan_name' => $team->planName(),
+            'license_key' => $team->license_key,
+            'license_status' => $team->license_status,
+            'license_activated_at' => $team->license_activated_at?->format('M j, Y'),
         ];
 
         $this->members = $team->members()->get()->map(fn ($member) => [
@@ -159,6 +208,152 @@ new class extends Component
                     <div>
                         <flux:heading>{{ $teamData['name'] }}</flux:heading>
                     </div>
+                @endif
+            </div>
+
+            <!-- PLAN & COMMERCIAL SUBSCRIPTION SECTION -->
+            <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <flux:heading>{{ __('Plan & Subscription') }}</flux:heading>
+                        <flux:subheading>{{ __('Monitor storage & device fleet quotas or activate lifetime commercial licenses') }}</flux:subheading>
+                    </div>
+
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider {{ $this->teamData['plan'] === 'cloud' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800' : ($this->teamData['plan'] === 'pro_ltd' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300') }}">
+                        <span class="size-2 rounded-full {{ $this->teamData['plan'] === 'cloud' ? 'bg-indigo-500' : ($this->teamData['plan'] === 'pro_ltd' ? 'bg-emerald-500' : 'bg-slate-500') }}"></span>
+                        {{ $this->planSummary['plan_badge'] }}
+                    </span>
+                </div>
+
+                <!-- 4 Quota Utilization Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    <!-- Storage -->
+                    <div class="rounded-2xl border border-gray-100 bg-[#FBFBFA] p-4 shadow-2xs dark:border-zinc-800/80 dark:bg-zinc-800/40">
+                        <div class="flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-zinc-400">
+                            <span>{{ __('Storage') }}</span>
+                            <span class="font-bold text-gray-900 dark:text-white">{{ $this->planSummary['storage']['percentage'] }}%</span>
+                        </div>
+                        <div class="mt-2 text-base font-black text-gray-900 dark:text-white">
+                            {{ $this->planSummary['storage']['used_mb'] }} <span class="text-xs font-normal text-gray-500">/ {{ $this->planSummary['storage']['limit_mb'] }} MB</span>
+                        </div>
+                        <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
+                            <div class="h-full rounded-full bg-[#0D3B29] dark:bg-emerald-500" style="width: {{ $this->planSummary['storage']['percentage'] }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Vaults -->
+                    <div class="rounded-2xl border border-gray-100 bg-[#FBFBFA] p-4 shadow-2xs dark:border-zinc-800/80 dark:bg-zinc-800/40">
+                        <div class="flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-zinc-400">
+                            <span>{{ __('Vaults') }}</span>
+                            <span class="font-bold text-gray-900 dark:text-white">{{ $this->planSummary['vaults']['used'] }}/{{ $this->planSummary['vaults']['limit'] }}</span>
+                        </div>
+                        <div class="mt-2 text-base font-black text-gray-900 dark:text-white">
+                            {{ $this->planSummary['vaults']['used'] }} <span class="text-xs font-normal text-gray-500">of {{ $this->planSummary['vaults']['limit'] }} allowed</span>
+                        </div>
+                        <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
+                            <div class="h-full rounded-full bg-[#0D3B29] dark:bg-emerald-500" style="width: {{ $this->planSummary['vaults']['percentage'] }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Devices -->
+                    <div class="rounded-2xl border border-gray-100 bg-[#FBFBFA] p-4 shadow-2xs dark:border-zinc-800/80 dark:bg-zinc-800/40">
+                        <div class="flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-zinc-400">
+                            <span>{{ __('Connected Devices') }}</span>
+                            <span class="font-bold text-gray-900 dark:text-white">{{ $this->planSummary['devices']['used'] }}/{{ $this->planSummary['devices']['limit'] }}</span>
+                        </div>
+                        <div class="mt-2 text-base font-black text-gray-900 dark:text-white">
+                            {{ $this->planSummary['devices']['used'] }} <span class="text-xs font-normal text-gray-500">of {{ $this->planSummary['devices']['limit'] }} paired</span>
+                        </div>
+                        <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
+                            <div class="h-full rounded-full bg-[#0D3B29] dark:bg-emerald-500" style="width: {{ $this->planSummary['devices']['percentage'] }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Members -->
+                    <div class="rounded-2xl border border-gray-100 bg-[#FBFBFA] p-4 shadow-2xs dark:border-zinc-800/80 dark:bg-zinc-800/40">
+                        <div class="flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-zinc-400">
+                            <span>{{ __('Team Seats') }}</span>
+                            <span class="font-bold text-gray-900 dark:text-white">{{ $this->planSummary['members']['used'] }}/{{ $this->planSummary['members']['limit'] }}</span>
+                        </div>
+                        <div class="mt-2 text-base font-black text-gray-900 dark:text-white">
+                            {{ $this->planSummary['members']['used'] }} <span class="text-xs font-normal text-gray-500">of {{ $this->planSummary['members']['limit'] }} seats</span>
+                        </div>
+                        <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
+                            <div class="h-full rounded-full bg-[#0D3B29] dark:bg-emerald-500" style="width: {{ $this->planSummary['members']['percentage'] }}%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- License Status or Redemption Box -->
+                @if ($this->permissions->canUpdateTeam)
+                    @if ($this->teamData['license_status'] === 'active' && filled($this->teamData['license_key']))
+                        <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex size-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
+                                        <flux:icon icon="check-badge" class="size-5" />
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-sm text-emerald-900 dark:text-emerald-200">
+                                            {{ __('Commercial License Active') }} ({{ $this->teamData['plan_name'] }})
+                                        </div>
+                                        <div class="text-xs text-emerald-700 dark:text-emerald-400 font-mono mt-0.5">
+                                            {{ substr($this->teamData['license_key'], 0, 9) . '••••-••••-' . substr($this->teamData['license_key'], -4) }}
+                                            @if ($this->teamData['license_activated_at'])
+                                                • {{ __('Activated on :date', ['date' => $this->teamData['license_activated_at']]) }}
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    wire:click="deactivateLicense"
+                                    wire:confirm="{{ __('Are you sure you want to deactivate this license? Your team will revert to Community Free quotas.') }}"
+                                    class="text-xs font-semibold text-red-600 hover:text-red-700 dark:text-red-400 hover:underline cursor-pointer"
+                                >
+                                    {{ __('Deactivate License') }}
+                                </button>
+                            </div>
+                        </div>
+                    @else
+                        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <div class="font-bold text-sm text-gray-900 dark:text-white">
+                                        {{ __('Redeem Commercial License') }}
+                                    </div>
+                                    <p class="text-xs text-gray-500 dark:text-zinc-400 mt-1 max-w-xl">
+                                        {{ __('Have an AppSumo, LemonSqueezy, or founder lifetime key? Enter it below to unlock higher quotas, In-App DLP secret scanning, and path-level permissions.') }}
+                                    </p>
+                                </div>
+                                <a
+                                    href="{{ route('home') }}#pricing"
+                                    class="shrink-0 text-xs font-bold text-[#0D3B29] hover:underline dark:text-emerald-400"
+                                >
+                                    {{ __('Purchase License →') }}
+                                </a>
+                            </div>
+
+                            <form wire:submit="redeemLicense" class="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                                <div class="flex-1">
+                                    <flux:input
+                                        wire:model="licenseKeyInput"
+                                        placeholder="SYNK-PRO-XXXX-XXXX-XXXX"
+                                        class="font-mono uppercase text-xs"
+                                        required
+                                    />
+                                </div>
+                                <flux:button
+                                    variant="primary"
+                                    type="submit"
+                                    class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full px-5 font-bold text-xs shrink-0"
+                                >
+                                    {{ __('Redeem Key') }}
+                                </flux:button>
+                            </form>
+                        </div>
+                    @endif
                 @endif
             </div>
 

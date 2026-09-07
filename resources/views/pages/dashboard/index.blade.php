@@ -22,6 +22,34 @@ new #[Title('Dashboard')] class extends Component {
     public string $vaultDefaultPermission = 'read_write';
     public string $activityFilter = 'all';
     public string $activitySearch = '';
+    public string $upgradeLicenseKey = '';
+
+    public function redeemLicenseKeyInDashboard(): void
+    {
+        $team = $this->team;
+        if (! $team) {
+            return;
+        }
+
+        $this->validate([
+            'upgradeLicenseKey' => ['required', 'string', 'min:8', 'max:100'],
+        ]);
+
+        $service = app(\App\Services\LicenseValidationService::class);
+        $result = $service->activateLicenseKey($team, $this->upgradeLicenseKey);
+
+        if (! $result['success']) {
+            $this->addError('upgradeLicenseKey', $result['message']);
+            Flux::toast(variant: 'danger', text: $result['message']);
+
+            return;
+        }
+
+        $this->upgradeLicenseKey = '';
+        $this->dispatch('close-modal', name: 'upgrade-plan-modal');
+
+        Flux::toast(variant: 'success', text: $result['message']);
+    }
 
     public function createVault(): void
     {
@@ -491,9 +519,11 @@ new #[Title('Dashboard')] class extends Component {
                     {{ $this->teamPlanSummary['storage']['used_mb'] }} MB / {{ $this->teamPlanSummary['storage']['limit_mb'] }} MB Storage • {{ $this->teamPlanSummary['devices']['used'] }}/{{ $this->teamPlanSummary['devices']['limit'] }} Devices • {{ $this->teamPlanSummary['vaults']['used'] }}/{{ $this->teamPlanSummary['vaults']['limit'] }} Vaults
                 </span>
                 @if ($this->team?->plan === 'free')
-                    <a href="{{ route('home') }}#pricing" class="text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-400 ml-1">
-                        {{ __('Upgrade Plan →') }}
-                    </a>
+                    <flux:modal.trigger name="upgrade-plan-modal">
+                        <button type="button" class="text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-400 ml-1 cursor-pointer">
+                            {{ __('Upgrade Plan →') }}
+                        </button>
+                    </flux:modal.trigger>
                 @endif
             </div>
         </div>
@@ -1135,6 +1165,103 @@ new #[Title('Dashboard')] class extends Component {
                 <flux:button type="submit" variant="primary">{{ __('Create Vault') }}</flux:button>
             </div>
         </form>
+    </flux:modal>
+
+    <!-- Upgrade Plan & Redeem License Modal -->
+    <flux:modal name="upgrade-plan-modal" focusable class="max-w-2xl">
+        <div class="space-y-6">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">{{ __('Commercial Licensing') }}</span>
+                    <flux:heading size="lg">{{ __('Upgrade Workspace Plan') }}</flux:heading>
+                </div>
+                <flux:subheading class="mt-1">
+                    {{ __('Elevate your team vault with expanded storage, more devices, In-App DLP secret scanning, and granular path ACLs.') }}
+                </flux:subheading>
+            </div>
+
+            <!-- Tier Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <!-- Free -->
+                <div class="rounded-2xl border border-slate-200 p-4 bg-slate-50/50 dark:border-zinc-800 dark:bg-zinc-800/30">
+                    <div class="font-bold text-sm text-slate-800 dark:text-zinc-200">{{ __('Community Free') }}</div>
+                    <div class="text-xl font-black text-slate-900 dark:text-white mt-1">$0</div>
+                    <div class="text-[11px] text-slate-500 mt-2 space-y-1">
+                        <div>• 1 Vault</div>
+                        <div>• 3 Connected Devices</div>
+                        <div>• 1 GB Local Storage</div>
+                        <div>• 3 Team Seats</div>
+                    </div>
+                </div>
+
+                <!-- Pro LTD -->
+                <div class="rounded-2xl border-2 border-emerald-500 p-4 bg-emerald-50/30 dark:border-emerald-500/60 dark:bg-emerald-950/20 relative">
+                    <span class="absolute -top-2.5 right-3 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-black uppercase text-white tracking-wider">
+                        {{ __('Popular LTD') }}
+                    </span>
+                    <div class="font-bold text-sm text-emerald-950 dark:text-emerald-200">{{ __('Pro Lifetime') }}</div>
+                    <div class="text-xl font-black text-emerald-900 dark:text-white mt-1">$79 <span class="text-xs font-normal text-slate-500">one-time</span></div>
+                    <div class="text-[11px] text-slate-600 dark:text-zinc-300 mt-2 space-y-1">
+                        <div>• <strong>15 Vaults</strong></div>
+                        <div>• <strong>25 Connected Devices</strong></div>
+                        <div>• <strong>15 GB Storage</strong></div>
+                        <div>• <strong>In-App DLP Secret Scan</strong></div>
+                        <div>• <strong>Granular Path ACLs</strong></div>
+                    </div>
+                </div>
+
+                <!-- Cloud SaaS -->
+                <div class="rounded-2xl border border-indigo-200 p-4 bg-indigo-50/30 dark:border-indigo-800/60 dark:bg-indigo-950/20">
+                    <div class="font-bold text-sm text-indigo-950 dark:text-indigo-200">{{ __('Cloud Managed') }}</div>
+                    <div class="text-xl font-black text-indigo-900 dark:text-white mt-1">$12 <span class="text-xs font-normal text-slate-500">/month</span></div>
+                    <div class="text-[11px] text-slate-600 dark:text-zinc-300 mt-2 space-y-1">
+                        <div>• <strong>50+ Vaults</strong></div>
+                        <div>• <strong>100 Connected Devices</strong></div>
+                        <div>• <strong>50 GB Cloud Storage</strong></div>
+                        <div>• <strong>Live Multiplayer CRDT</strong></div>
+                        <div>• <strong>Priority Support</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- In-Modal Redeem Form -->
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                <div class="text-xs font-bold text-slate-900 dark:text-white">{{ __('Have a License Key?') }}</div>
+                <p class="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">{{ __('Enter your AppSumo, LemonSqueezy, or enterprise key to instantly activate your plan.') }}</p>
+
+                <div class="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div class="flex-1">
+                        <flux:input
+                            wire:model="upgradeLicenseKey"
+                            placeholder="SYNK-PRO-XXXX-XXXX-XXXX"
+                            class="font-mono uppercase text-xs"
+                        />
+                    </div>
+                    <flux:button
+                        wire:click="redeemLicenseKeyInDashboard"
+                        variant="primary"
+                        class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full px-5 font-bold text-xs shrink-0"
+                    >
+                        {{ __('Redeem Key') }}
+                    </flux:button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <a
+                    href="{{ route('home') }}#pricing"
+                    target="_blank"
+                    class="text-xs font-bold text-[#0D3B29] hover:underline dark:text-emerald-400 flex items-center gap-1"
+                >
+                    {{ __('View Full Pricing & Buy License') }}
+                    <flux:icon icon="arrow-top-right-on-square" class="size-3.5" />
+                </a>
+
+                <flux:modal.close>
+                    <flux:button variant="ghost" size="sm">{{ __('Close') }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
     </flux:modal>
 
     <!-- SLIDE-OVER NOTIFICATIONS & MESSAGES DRAWER -->
