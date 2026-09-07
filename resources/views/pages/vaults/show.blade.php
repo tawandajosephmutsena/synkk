@@ -324,6 +324,17 @@ new #[Title('Vault Details')] class extends Component {
     {
         $this->authorize('managePermissions', $this->vault);
 
+        $planService = app(\App\Services\PlanService::class);
+        if (! $planService->hasFeature($this->vault->team, 'path_acls')) {
+            $this->dispatch('modal-close', name: 'add-path-permission');
+            Flux::toast(
+                variant: 'danger',
+                text: __('Granular Path ACLs require a Pro Lifetime or Synkk Cloud plan. Upgrade to unlock path-level permissions.'),
+            );
+
+            return;
+        }
+
         $this->validate([
             'rulePath' => ['required', 'string', 'max:500'],
             'rulePermission' => ['required', 'in:read_write,read_only,hidden'],
@@ -1518,6 +1529,23 @@ new #[Title('Vault Details')] class extends Component {
     <!-- TAB 3: Permissions Matrix (Granular Folder/File rules) -->
     @if ($activeTab === 'permissions')
         <div class="space-y-4">
+            @if ($vault->team->plan === 'free')
+                <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/40 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300 shrink-0">
+                            <flux:icon icon="lock-closed" class="size-5" />
+                        </div>
+                        <div>
+                            <div class="font-bold text-xs text-amber-900 dark:text-amber-200">{{ __('Granular Path ACLs (Pro Lifetime & Cloud Feature)') }}</div>
+                            <div class="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">{{ __('Upgrade your workspace to set custom folder and note permissions, hide sensitive subdirectories, and create read-only paths.') }}</div>
+                        </div>
+                    </div>
+                    <a href="{{ route('home') }}#pricing" target="_blank" class="shrink-0 rounded-full bg-[#0D3B29] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#0D3B29]/90 dark:bg-emerald-600">
+                        {{ __('Upgrade Workspace →') }}
+                    </a>
+                </div>
+            @endif
+
             <!-- How it works Callout -->
             <flux:card variant="soft" class="border-blue-200/50 bg-blue-50/20 dark:border-blue-900/30 dark:bg-blue-950/20">
                 <div class="flex items-start gap-3">

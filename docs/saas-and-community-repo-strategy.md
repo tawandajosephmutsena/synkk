@@ -162,3 +162,11 @@ Customers do not need super admin intervention to activate lifetime deals or ent
 4. Once active, the masked license key (`SYNK-PRO-••••-••••-XXXX`) and activation date are securely stored on the team.
 5. Duplicate protection ensures an active commercial license key cannot be redeemed by another team simultaneously.
 6. Owners can deactivate their license at any time to release it or revert to Community Free.
+
+### C. Tiered Feature Gate Enforcement
+The platform actively enforces feature flags defined in `config/synkk.php` (`PlanService::hasFeature`):
+- **Granular Path ACLs (`path_acls`)**: Adding or modifying custom folder/note permissions (`addPathPermission`) is restricted to Pro LTD and Cloud tiers. Free tier workspaces see an in-app upgrade banner.
+- **IP Subnet Filtering (`ip_whitelisting`)**: Device token creation and updates reject custom CIDR/IP subnet whitelist parameters unless on Pro LTD or Cloud.
+- **Read-Only Token Scopes (`read_only_tokens`)**: Restricting paired devices to read-only mode requires Pro LTD or Cloud tier.
+- **Instant Remote Wipe (`remote_wipe`)**: Issuing instant cryptographic remote wipe commands to paired devices requires an active commercial license.
+

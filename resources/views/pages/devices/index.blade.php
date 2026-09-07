@@ -31,7 +31,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
 
     public function generateToken(): void
     {
-        $team = Auth::user()->currentTeam;
+        $team = $this->team;
 
         $planService = app(\App\Services\PlanService::class);
         if (! $planService->canAddDevice($team)) {
@@ -51,6 +51,20 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
             'accessScope' => ['required', 'in:full_access,read_only'],
             'allowedIpSubnets' => ['nullable', 'string'],
         ]);
+
+        if (filled($this->allowedIpSubnets) && ! $planService->hasFeature($team, 'ip_whitelisting')) {
+            $this->addError('allowedIpSubnets', __('IP Whitelisting & Subnet filtering requires a Pro LTD or Cloud license.'));
+            Flux::toast(variant: 'danger', text: __('IP Whitelisting requires a Pro LTD or Cloud license.'));
+
+            return;
+        }
+
+        if ($this->accessScope === 'read_only' && ! $planService->hasFeature($team, 'read_only_tokens')) {
+            $this->addError('accessScope', __('Read-Only Device Tokens require a Pro LTD or Cloud license.'));
+            Flux::toast(variant: 'danger', text: __('Read-Only Device Tokens require a Pro LTD or Cloud license.'));
+
+            return;
+        }
 
         $subnets = null;
         if (filled($this->allowedIpSubnets)) {
@@ -122,12 +136,29 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
 
     public function updateToken(): void
     {
+        $team = $this->team;
+        $planService = app(\App\Services\PlanService::class);
+
         $this->validate([
             'editName' => ['required', 'string', 'max:255'],
             'editPlatform' => ['required', 'in:mac,windows,ios,android,linux'],
             'editAccessScope' => ['required', 'in:full_access,read_only'],
             'editAllowedSubnets' => ['nullable', 'string'],
         ]);
+
+        if (filled($this->editAllowedSubnets) && ! $planService->hasFeature($team, 'ip_whitelisting')) {
+            $this->addError('editAllowedSubnets', __('IP Whitelisting & Subnet filtering requires a Pro LTD or Cloud license.'));
+            Flux::toast(variant: 'danger', text: __('IP Whitelisting requires a Pro LTD or Cloud license.'));
+
+            return;
+        }
+
+        if ($this->editAccessScope === 'read_only' && ! $planService->hasFeature($team, 'read_only_tokens')) {
+            $this->addError('editAccessScope', __('Read-Only Device Tokens require a Pro LTD or Cloud license.'));
+            Flux::toast(variant: 'danger', text: __('Read-Only Device Tokens require a Pro LTD or Cloud license.'));
+
+            return;
+        }
 
         $subnets = null;
         if (filled($this->editAllowedSubnets)) {
@@ -160,6 +191,16 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
 
     public function triggerRemoteWipe(int $tokenId): void
     {
+        $planService = app(\App\Services\PlanService::class);
+        if (! $planService->hasFeature($this->team, 'remote_wipe')) {
+            Flux::toast(
+                variant: 'danger',
+                text: __('Instant Remote Wipe is a Pro LTD and Cloud feature. Please upgrade to remotely wipe devices.'),
+            );
+
+            return;
+        }
+
         $token = DeviceToken::where('id', $tokenId)
             ->where('team_id', Auth::user()->currentTeam?->id)
             ->firstOrFail();

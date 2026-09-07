@@ -176,3 +176,101 @@ test('sync upload endpoint rejects requests for suspended teams', function () {
             'error' => 'Team Suspended',
         ]);
 });
+
+test('free plan prevents configuring custom path permission rules', function () {
+    $user = User::factory()->create();
+    $team = $user->personalTeam();
+    $team->update(['plan' => 'free']);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Free Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    Livewire::actingAs($user)
+        ->test('pages::vaults.show', ['vault' => $vault])
+        ->set('rulePath', 'confidential/')
+        ->set('rulePermission', 'hidden')
+        ->call('addPathPermission');
+
+    expect($vault->permissions()->count())->toBe(0);
+
+    // Switch team to pro_ltd and verify it now succeeds
+    $team->update(['plan' => 'pro_ltd']);
+    $user->refresh();
+
+    Livewire::actingAs($user)
+        ->test('pages::vaults.show', ['vault' => $vault])
+        ->set('rulePath', 'confidential/')
+        ->set('rulePermission', 'hidden')
+        ->call('addPathPermission')
+        ->assertHasNoErrors();
+
+    expect($vault->permissions()->count())->toBe(1);
+});
+
+test('free plan prevents configuring ip subnet whitelist and read only device tokens', function () {
+    $user = User::factory()->create();
+    $team = $user->personalTeam();
+    $team->update(['plan' => 'free']);
+
+    // Attempt IP whitelisting on free plan
+    Livewire::actingAs($user)
+        ->test('pages::devices.index', ['current_team' => $team->slug])
+        ->set('deviceName', 'Guarded Mac')
+        ->set('devicePlatform', 'mac')
+        ->set('allowedIpSubnets', '192.168.1.*')
+        ->call('generateToken')
+        ->assertHasErrors(['allowedIpSubnets']);
+
+    // Attempt Read-Only token on free plan
+    Livewire::actingAs($user)
+        ->test('pages::devices.index', ['current_team' => $team->slug])
+        ->set('deviceName', 'Contractor Mac')
+        ->set('devicePlatform', 'mac')
+        ->set('accessScope', 'read_only')
+        ->call('generateToken')
+        ->assertHasErrors(['accessScope']);
+
+    // Upgrade to pro_ltd and verify both now succeed
+    $team->update(['plan' => 'pro_ltd']);
+    $user->refresh();
+
+    Livewire::actingAs($user)
+        ->test('pages::devices.index', ['current_team' => $team->slug])
+        ->set('deviceName', 'Pro Guarded Mac')
+        ->set('devicePlatform', 'mac')
+        ->set('accessScope', 'read_only')
+        ->set('allowedIpSubnets', '10.0.0.*')
+        ->call('generateToken')
+        ->assertHasNoErrors();
+
+    expect($team->deviceTokens()->count())->toBe(1);
+});
+
+test('free plan prevents triggering remote wipe on devices', function () {
+    $user = User::factory()->create();
+    $team = $user->personalTeam();
+    $team->update(['plan' => 'free']);
+
+    $tokenResult = DeviceToken::createToken($user, $team, 'Test Device', 'mac');
+    $token = $tokenResult['device_token'];
+
+    Livewire::actingAs($user)
+        ->test('pages::devices.index', ['current_team' => $team->slug])
+        ->call('triggerRemoteWipe', $token->id);
+
+    expect($token->fresh()->is_wiped)->toBeFalse();
+
+    // Upgrade to pro_ltd and verify remote wipe triggers
+    $team->update(['plan' => 'pro_ltd']);
+    $user->refresh();
+
+    Livewire::actingAs($user)
+        ->test('pages::devices.index', ['current_team' => $team->slug])
+        ->call('triggerRemoteWipe', $token->id);
+
+    expect($token->fresh()->is_wiped)->toBeTrue();
+});
