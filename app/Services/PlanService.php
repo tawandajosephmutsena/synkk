@@ -34,7 +34,7 @@ class PlanService
      */
     public function getDeviceLimit(Team $team): int
     {
-        return $team->max_devices ?? (int) ($this->getPlanConfig($team)['max_devices'] ?? 3);
+        return $team->max_devices ?? (int) $this->getPlanConfig($team)['max_devices'];
     }
 
     /**
@@ -42,7 +42,7 @@ class PlanService
      */
     public function getVaultLimit(Team $team): int
     {
-        return $team->max_vaults ?? (int) ($this->getPlanConfig($team)['max_vaults'] ?? 1);
+        return $team->max_vaults ?? (int) $this->getPlanConfig($team)['max_vaults'];
     }
 
     /**
@@ -50,7 +50,7 @@ class PlanService
      */
     public function getMemberLimit(Team $team): int
     {
-        return $team->max_members ?? (int) ($this->getPlanConfig($team)['max_members'] ?? 3);
+        return $team->max_members ?? (int) $this->getPlanConfig($team)['max_members'];
     }
 
     /**
@@ -58,7 +58,7 @@ class PlanService
      */
     public function getStorageLimitMb(Team $team): int
     {
-        return $team->storage_limit_mb ?? (int) ($this->getPlanConfig($team)['storage_limit_mb'] ?? 1000);
+        return $team->storage_limit_mb ?? (int) $this->getPlanConfig($team)['storage_limit_mb'];
     }
 
     /**
@@ -144,7 +144,7 @@ class PlanService
         }
 
         $config = $this->getPlanConfig($team);
-        $features = $config['features'] ?? [];
+        $features = $config['features'];
 
         return in_array($feature, $features, true);
     }
@@ -172,8 +172,8 @@ class PlanService
 
         return [
             'plan_key' => $team->plan ?? 'free',
-            'plan_name' => $config['name'] ?? 'Community Free',
-            'plan_badge' => $config['badge'] ?? 'Free CE',
+            'plan_name' => $config['name'],
+            'plan_badge' => $config['badge'],
             'is_suspended' => $team->isSuspended(),
             'devices' => [
                 'used' => $devicesUsed,
@@ -199,7 +199,7 @@ class PlanService
                 'percentage' => $storageLimitMb > 0 ? min(100, round(($totalMb / $storageLimitMb) * 100)) : 0,
                 'can_upload' => $totalMb < $storageLimitMb,
             ],
-            'features' => $config['features'] ?? [],
+            'features' => $config['features'],
         ];
     }
 }

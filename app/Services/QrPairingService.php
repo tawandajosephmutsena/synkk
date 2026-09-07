@@ -24,17 +24,26 @@ class QrPairingService
      * Create a new temporary QR pairing session and render high-contrast SVG.
      *
      * @return array{
+     *     session: string,
      *     session_id: string,
      *     pairing_url: string,
      *     qr_svg: string,
      *     json_payload: string,
+     *     payload: array<string, mixed>,
      *     expires_at: int
      * }
      */
     public function createPairingSession(User $user, Team $team, Vault|string|null $vault = null): array
     {
         $sessionId = 'synkk_pair_'.Str::random(32);
-        $vaultSlug = is_string($vault) ? $vault : ($vault?->slug ?? $team->vaults()->first()?->slug ?? '');
+        if (is_string($vault)) {
+            $vaultSlug = $vault;
+        } elseif ($vault instanceof Vault) {
+            $vaultSlug = $vault->slug;
+        } else {
+            $firstVault = $team->vaults()->first();
+            $vaultSlug = $firstVault instanceof Vault ? $firstVault->slug : '';
+        }
         $serverUrl = url('/api/v1');
 
         $payloadData = [
@@ -47,7 +56,7 @@ class QrPairingService
             'user' => $user->name,
         ];
 
-        $jsonPayload = json_encode($payloadData, JSON_UNESCAPED_SLASHES);
+        $jsonPayload = json_encode($payloadData, JSON_UNESCAPED_SLASHES) ?: '{}';
         $pairingUrl = 'synkk://pair?server='.urlencode($serverUrl).'&session='.urlencode($sessionId).'&vault='.urlencode($vaultSlug);
 
         // Render QR Code SVG using BaconQrCode
@@ -89,9 +98,12 @@ class QrPairingService
      * @return array{
      *     status: string,
      *     token: string,
+     *     plain_token: string,
+     *     device_id: int,
      *     server_url: string,
      *     vault_slug: string,
      *     device_name: string,
+     *     team_slug: string,
      *     user: array{id: int, name: string, email: string},
      *     team: array{id: int, name: string, slug: string}
      * }
@@ -99,6 +111,7 @@ class QrPairingService
     public function exchange(string $sessionId, string $deviceName, string $platform = 'mobile'): array
     {
         $cacheKey = "pairing_session_{$sessionId}";
+        /** @var array{user_id: int, team_id: int, status?: string, server_url: string, vault_slug: string, claimed_device_name?: string|null, device_token_id?: int|null, claimed_at?: int}|null $session */
         $session = Cache::get($cacheKey);
 
         if (! $session) {
@@ -109,8 +122,8 @@ class QrPairingService
             throw new RuntimeException('Pairing session has already been used.');
         }
 
-        $user = User::findOrFail($session['user_id']);
-        $team = Team::findOrFail($session['team_id']);
+        $user = User::query()->whereKey($session['user_id'])->firstOrFail();
+        $team = Team::query()->whereKey($session['team_id'])->firstOrFail();
 
         $tokenResult = DeviceToken::createToken(
             user: $user,

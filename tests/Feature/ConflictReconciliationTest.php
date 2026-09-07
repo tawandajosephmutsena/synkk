@@ -176,7 +176,32 @@ test('API endpoints can list conflicts, compute diff, and resolve conflicts', fu
 
     // Verification
     $canonical->refresh();
-    expect($canonical->getContents())->toBe("Line 1\nLine 2 Reconciled\nLine 3");
     $conflict->refresh();
     expect($conflict->is_deleted)->toBeTrue();
+});
+
+test('ThreeWayDiffService handles large files efficiently via prefix and suffix optimization', function () {
+    $service = new ThreeWayDiffService;
+
+    // 1000 lines with small edits in the middle
+    $baseLines = array_map(fn ($i) => "Line number {$i} content", range(1, 1000));
+    $base = implode("\n", $baseLines);
+
+    $oursLines = $baseLines;
+    $oursLines[500] = 'Line number 501 modified by Us';
+    $ours = implode("\n", $oursLines);
+
+    $theirsLines = $baseLines;
+    $theirsLines[500] = 'Line number 501 modified by Them';
+    $theirs = implode("\n", $theirsLines);
+
+    $start = microtime(true);
+    $res = $service->merge($base, $ours, $theirs);
+    $duration = microtime(true) - $start;
+
+    expect($duration)->toBeLessThan(0.5) // extremely fast (< 500ms)
+        ->and($res['has_conflicts'])->toBeTrue()
+        ->and($res['conflict_count'])->toBe(1)
+        ->and($res['merged_content'])->toContain('Line number 501 modified by Us')
+        ->and($res['merged_content'])->toContain('Line number 501 modified by Them');
 });

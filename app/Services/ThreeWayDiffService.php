@@ -103,7 +103,7 @@ class ThreeWayDiffService
         foreach ($hunks as $hunk) {
             $choice = $hunk['choice'] ?? 'ours';
 
-            if (($hunk['type'] ?? '') === 'clean') {
+            if ($hunk['type'] === 'clean') {
                 foreach ($hunk['resolved_lines'] ?? $hunk['our_lines'] as $line) {
                     $lines[] = $line;
                 }
@@ -223,7 +223,7 @@ class ThreeWayDiffService
             }
 
             // Case 3: Only Theirs modified this line
-            if (! $hasOur && $hasTheir) {
+            if (! $hasOur) {
                 $baseBlock = [];
                 $theirBlock = [];
 
@@ -295,8 +295,8 @@ class ThreeWayDiffService
         }
 
         // Check trailing additions
-        $trailingOur = $diffOur['trailing'] ?? [];
-        $trailingTheir = $diffTheir['trailing'] ?? [];
+        $trailingOur = $diffOur['trailing']['lines'] ?? [];
+        $trailingTheir = $diffTheir['trailing']['lines'] ?? [];
 
         if (! empty($trailingOur) || ! empty($trailingTheir)) {
             if ($trailingOur === $trailingTheir) {
@@ -362,7 +362,7 @@ class ThreeWayDiffService
         $modCount = count($modified);
 
         if ($baseCount === 0) {
-            return ['trailing' => $modified];
+            return ['trailing' => ['lines' => $modified]];
         }
 
         $lcs = $this->longestCommonSubsequence($base, $modified);
@@ -420,7 +420,7 @@ class ThreeWayDiffService
         }
 
         if (! empty($trailingInserted)) {
-            $result['trailing'] = $trailingInserted;
+            $result['trailing'] = ['lines' => $trailingInserted];
         }
 
         return $result;
@@ -438,14 +438,63 @@ class ThreeWayDiffService
         $n = count($a);
         $m = count($b);
 
-        $matrix = [];
-        for ($i = 0; $i <= $n; $i++) {
-            $matrix[$i] = array_fill(0, $m + 1, 0);
+        if ($n === 0 || $m === 0) {
+            return [];
         }
 
-        for ($i = 1; $i <= $n; $i++) {
-            for ($j = 1; $j <= $m; $j++) {
-                if ($a[$i - 1] === $b[$j - 1]) {
+        // Fast path: strip common prefix
+        $prefixLen = 0;
+        $minLen = min($n, $m);
+        while ($prefixLen < $minLen && $a[$prefixLen] === $b[$prefixLen]) {
+            $prefixLen++;
+        }
+
+        // Fast path: strip common suffix
+        $suffixLen = 0;
+        while (
+            $suffixLen < ($n - $prefixLen) &&
+            $suffixLen < ($m - $prefixLen) &&
+            $a[$n - 1 - $suffixLen] === $b[$m - 1 - $suffixLen]
+        ) {
+            $suffixLen++;
+        }
+
+        $prefixMatches = [];
+        for ($k = 0; $k < $prefixLen; $k++) {
+            $prefixMatches[] = ['base' => $k, 'mod' => $k];
+        }
+
+        $suffixMatches = [];
+        for ($k = 0; $k < $suffixLen; $k++) {
+            $suffixMatches[] = [
+                'base' => $n - $suffixLen + $k,
+                'mod' => $m - $suffixLen + $k,
+            ];
+        }
+
+        $nSlice = $n - $prefixLen - $suffixLen;
+        $mSlice = $m - $prefixLen - $suffixLen;
+
+        if ($nSlice <= 0 || $mSlice <= 0) {
+            return array_merge($prefixMatches, $suffixMatches);
+        }
+
+        // Memory safety cap: avoid matrix allocation overflow if slice is enormous (> 16M cells)
+        if ($nSlice * $mSlice > 16_000_000) {
+            return array_merge($prefixMatches, $suffixMatches);
+        }
+
+        $aSlice = array_slice($a, $prefixLen, $nSlice);
+        $bSlice = array_slice($b, $prefixLen, $mSlice);
+
+        $matrix = [];
+        for ($i = 0; $i <= $nSlice; $i++) {
+            $matrix[$i] = array_fill(0, $mSlice + 1, 0);
+        }
+
+        for ($i = 1; $i <= $nSlice; $i++) {
+            for ($j = 1; $j <= $mSlice; $j++) {
+                if ($aSlice[$i - 1] === $bSlice[$j - 1]) {
                     $matrix[$i][$j] = $matrix[$i - 1][$j - 1] + 1;
                 } else {
                     $matrix[$i][$j] = max($matrix[$i - 1][$j], $matrix[$i][$j - 1]);
@@ -454,13 +503,16 @@ class ThreeWayDiffService
         }
 
         // Backtrack
-        $result = [];
-        $i = $n;
-        $j = $m;
+        $innerMatches = [];
+        $i = $nSlice;
+        $j = $mSlice;
 
         while ($i > 0 && $j > 0) {
-            if ($a[$i - 1] === $b[$j - 1]) {
-                $result[] = ['base' => $i - 1, 'mod' => $j - 1];
+            if ($aSlice[$i - 1] === $bSlice[$j - 1]) {
+                $innerMatches[] = [
+                    'base' => ($i - 1) + $prefixLen,
+                    'mod' => ($j - 1) + $prefixLen,
+                ];
                 $i--;
                 $j--;
             } elseif ($matrix[$i - 1][$j] >= $matrix[$i][$j - 1]) {
@@ -470,7 +522,9 @@ class ThreeWayDiffService
             }
         }
 
-        return array_reverse($result);
+        $innerMatches = array_reverse($innerMatches);
+
+        return array_merge($prefixMatches, $innerMatches, $suffixMatches);
     }
 
     /**

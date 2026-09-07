@@ -1,9 +1,11 @@
 <?php
 
+use App\Jobs\IndexVaultRagJob;
 use App\Models\DeviceToken;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Vault;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -121,4 +123,67 @@ test('RAG API returns 403 when device token is not authorized for vault', functi
         ]);
 
     $res->assertForbidden();
+});
+
+test('RAG progress endpoint reports live indexing status and percentage', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create(['plan' => 'cloud']);
+    $team->members()->attach($user, ['role' => 'owner']);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Progress Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $tokenResult = DeviceToken::createToken($user, $team, 'MacBook Pro', 'desktop');
+    $plainToken = $tokenResult['plain_token'];
+
+    $res = $this->withHeader('Authorization', "Bearer {$plainToken}")
+        ->getJson("/api/v1/vaults/{$vault->slug}/rag/progress");
+
+    $res->assertOk()
+        ->assertJsonStructure([
+            'status',
+            'vault',
+            'percentage',
+            'total_files',
+            'indexed_files',
+            'chunks_count',
+        ]);
+});
+
+test('RAG index dispatches IndexVaultRagJob to queue when asynchronous', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $team = Team::factory()->create(['plan' => 'cloud']);
+    $team->members()->attach($user, ['role' => 'owner']);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Async Queue Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $tokenResult = DeviceToken::createToken($user, $team, 'MacBook Pro', 'desktop');
+    $plainToken = $tokenResult['plain_token'];
+
+    $res = $this->withHeader('Authorization', "Bearer {$plainToken}")
+        ->postJson("/api/v1/vaults/{$vault->slug}/rag/index", [
+            'force' => true,
+        ]);
+
+    $res->assertStatus(202)
+        ->assertJson([
+            'status' => 'queued',
+            'vault' => $vault->slug,
+        ])
+        ->assertJsonStructure(['progress_url']);
+
+    Queue::assertPushed(IndexVaultRagJob::class, function ($job) use ($vault) {
+        return $job->vault->id === $vault->id && $job->force === true;
+    });
 });

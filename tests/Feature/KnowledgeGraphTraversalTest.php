@@ -129,3 +129,48 @@ test('KnowledgeGraphService expands context along 1-hop and 2-hop connected back
     $paths = array_column($expanded, 'path');
     expect($paths)->toContain('Security.md');
 });
+
+test('KnowledgeGraphService getInteractiveGraph generates index-based graph format for UI components', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => 'owner']);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'UI Graph Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $contentA = "# Alpha\nPoints to [[Beta]].";
+    Storage::disk('local')->put("vaults/{$vault->id}/alpha.md", $contentA);
+    $vault->files()->create([
+        'path' => 'Alpha.md',
+        'storage_path' => "vaults/{$vault->id}/alpha.md",
+        'sha256' => hash('sha256', $contentA),
+        'size' => strlen($contentA),
+        'version' => 1,
+        'is_deleted' => false,
+    ]);
+
+    $contentB = "# Beta\nTerminal node.";
+    Storage::disk('local')->put("vaults/{$vault->id}/beta.md", $contentB);
+    $vault->files()->create([
+        'path' => 'Beta.md',
+        'storage_path' => "vaults/{$vault->id}/beta.md",
+        'sha256' => hash('sha256', $contentB),
+        'size' => strlen($contentB),
+        'version' => 1,
+        'is_deleted' => false,
+    ]);
+
+    $service = app(KnowledgeGraphService::class);
+    $interactive = $service->getInteractiveGraph($vault);
+
+    expect($interactive['nodes'])->toHaveCount(2)
+        ->and($interactive['edges'])->toHaveCount(1)
+        ->and($interactive['edges'][0]['source'])->toBe(0)
+        ->and($interactive['edges'][0]['target'])->toBe(1)
+        ->and($interactive['nodes'][0]['linksCount'])->toBe(1)
+        ->and($interactive['nodes'][1]['linksCount'])->toBe(1);
+});

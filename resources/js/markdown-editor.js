@@ -338,12 +338,29 @@ export function createMarkdownEditor(options = {}) {
         saveFailed: false,
         beforeUnloadHandler: null,
 
-        init() {
+        // E2EE Zero-Knowledge State
+        vaultSlug: options.vaultSlug || '',
+        isEncrypted: Boolean(options.isEncrypted),
+        encryptionIv: options.encryptionIv || '',
+        encryptionTag: options.encryptionTag || '',
+        vaultSalt: options.vaultSalt || '',
+        vaultTestCipher: options.vaultTestCipher || '',
+        isUnlocked: !Boolean(options.isEncrypted) || (Boolean(window.VaultCrypto) && window.VaultCrypto.hasSessionKey(options.vaultSlug || '')),
+        passphraseInput: '',
+        unlockError: '',
+        isDerivingKey: false,
+
+        async init() {
             if (typeof window !== 'undefined' && window.innerWidth < 1024 && this.viewMode === 'split') {
                 this.viewMode = 'source';
             }
 
-            this.updateMetrics();
+            if (this.isEncrypted && window.VaultCrypto && window.VaultCrypto.hasSessionKey(this.vaultSlug)) {
+                await this.decryptCurrentNote();
+            } else {
+                this.updateMetrics();
+            }
+
             this.$watch('content', (value) => {
                 this.updateMetrics();
                 this.isDirty = this.initialContent === null || value !== this.initialContent;
@@ -362,6 +379,60 @@ export function createMarkdownEditor(options = {}) {
 
             if (typeof window !== 'undefined') {
                 window.addEventListener('beforeunload', this.beforeUnloadHandler);
+            }
+        },
+
+        async decryptCurrentNote() {
+            if (!this.isEncrypted || !window.VaultCrypto) return;
+            const key = window.VaultCrypto.getSessionKey(this.vaultSlug);
+            if (!key) return;
+
+            try {
+                const plaintext = await window.VaultCrypto.decryptText(
+                    this.content,
+                    this.encryptionIv,
+                    this.encryptionTag,
+                    key
+                );
+                this.content = plaintext;
+                this.initialContent = plaintext;
+                this.isUnlocked = true;
+                this.updateMetrics();
+            } catch (err) {
+                console.error('Failed to decrypt note:', err);
+                this.unlockError = 'Failed to decrypt note with session key.';
+                this.isUnlocked = false;
+            }
+        },
+
+        async unlockWithPassphrase() {
+            if (!this.passphraseInput || this.isDerivingKey || !window.VaultCrypto) return;
+            this.isDerivingKey = true;
+            this.unlockError = '';
+
+            try {
+                const result = await window.VaultCrypto.verifyPassphrase(
+                    this.passphraseInput,
+                    this.vaultSalt,
+                    this.vaultTestCipher
+                );
+
+                if (!result.success) {
+                    this.unlockError = result.error || 'Incorrect passphrase.';
+                    return;
+                }
+
+                window.VaultCrypto.setSessionKey(this.vaultSlug, result.key);
+                this.isUnlocked = true;
+                this.passphraseInput = '';
+
+                if (this.content && this.encryptionIv) {
+                    await this.decryptCurrentNote();
+                }
+            } catch (err) {
+                this.unlockError = err.message || 'Key derivation failed.';
+            } finally {
+                this.isDerivingKey = false;
             }
         },
 
@@ -502,14 +573,31 @@ export function createMarkdownEditor(options = {}) {
             const savedContent = this.content;
 
             try {
-                this.$wire.editorContent = savedContent;
-                await this.$wire.saveFile();
+                if (this.isEncrypted && window.VaultCrypto) {
+                    const key = window.VaultCrypto.getSessionKey(this.vaultSlug);
+                    if (!key) {
+                        this.isUnlocked = false;
+                        this.unlockError = 'Session key missing. Please unlock with passphrase before saving.';
+                        this.isSaving = false;
+                        return false;
+                    }
+
+                    const encrypted = await window.VaultCrypto.encryptText(savedContent, key);
+                    await this.$wire.saveEncryptedFile(encrypted.ciphertextBase64, encrypted.ivHex, encrypted.tagHex);
+                    this.encryptionIv = encrypted.ivHex;
+                    this.encryptionTag = encrypted.tagHex;
+                } else {
+                    this.$wire.editorContent = savedContent;
+                    await this.$wire.saveFile();
+                }
+
                 this.initialContent = savedContent;
                 this.isDirty = false;
                 this.$wire.editorIsDirty = false;
 
                 return true;
-            } catch {
+            } catch (err) {
+                console.error('Failed to save note:', err);
                 this.saveFailed = true;
 
                 return false;

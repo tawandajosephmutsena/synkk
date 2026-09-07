@@ -49,7 +49,8 @@ class ImpersonationController extends Controller
             return redirect()->route('home');
         }
 
-        $superAdmin = User::find($impersonatorId);
+        /** @var User|null $superAdmin */
+        $superAdmin = User::query()->whereKey($impersonatorId)->first();
 
         if (! $superAdmin || ! $superAdmin->isSuperAdmin()) {
             session()->forget('impersonator_id');

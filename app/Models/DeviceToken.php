@@ -93,6 +93,7 @@ class DeviceToken extends Model
     /**
      * Generate a new device token.
      *
+     * @param  array<int, string>|null  $allowedIpSubnets
      * @return array{plain_token: string, device_token: self}
      */
     public static function createToken(

@@ -2,12 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultChangeLog;
 use App\Models\VaultFile;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Number;
 
 class VaultAnalyticsService
@@ -28,39 +29,19 @@ class VaultAnalyticsService
     {
         $since = $this->resolveTimeframeCarbon($timeframe);
 
-        $files = VaultFile::where('is_deleted', false)->get();
-        $totalFiles = $files->count();
-        $totalStorageBytes = (int) $files->sum('size');
-
-        $notes = $files->filter(fn (VaultFile $f) => $f->isMarkdown());
-        $notesCount = $notes->count();
-        $notesStorageBytes = (int) $notes->sum('size');
+        $fileMetrics = $this->computeFileMetrics(VaultFile::where('is_deleted', false));
+        $totalFiles = $fileMetrics['total_files'];
+        $totalStorageBytes = $fileMetrics['total_storage_bytes'];
+        $notesCount = $fileMetrics['notes_count'];
+        $notesStorageBytes = $fileMetrics['notes_storage_bytes'];
+        $imagesCount = $fileMetrics['images_count'];
+        $imagesSizeBytes = $fileMetrics['images_size_bytes'];
+        $imageBreakdown = $fileMetrics['image_breakdown'];
+        $canvasCount = $fileMetrics['canvas_count'];
 
         $estimatedTotalWords = (int) round($notesStorageBytes / 5.5);
         $readingTimeMinutes = max(1, (int) ceil($estimatedTotalWords / 200));
         $totalCharacters = $notesStorageBytes;
-
-        $images = $files->filter(function (VaultFile $f) {
-            $ext = strtolower(pathinfo($f->path, PATHINFO_EXTENSION));
-
-            return in_array($ext, self::IMAGE_EXTENSIONS, true);
-        });
-
-        $imagesCount = $images->count();
-        $imagesSizeBytes = (int) $images->sum('size');
-
-        $imageBreakdown = [];
-        foreach (self::IMAGE_EXTENSIONS as $ext) {
-            $formatFiles = $images->filter(fn (VaultFile $f) => strtolower(pathinfo($f->path, PATHINFO_EXTENSION)) === $ext);
-            $imageBreakdown[$ext] = [
-                'count' => $formatFiles->count(),
-                'size_bytes' => (int) $formatFiles->sum('size'),
-                'size_formatted' => $this->formatBytes((int) $formatFiles->sum('size')),
-            ];
-        }
-
-        $canvasFiles = $files->filter(fn (VaultFile $f) => str_ends_with(strtolower($f->path), '.canvas'));
-        $canvasCount = $canvasFiles->count();
 
         // Activity metrics
         $activityQuery = VaultChangeLog::query();
@@ -108,45 +89,22 @@ class VaultAnalyticsService
         $vault = $vault instanceof Vault ? $vault : Vault::findOrFail($vault);
         $since = $this->resolveTimeframeCarbon($timeframe);
 
-        $files = $vault->files()->where('is_deleted', false)->get();
-        $totalFiles = $files->count();
-        $totalStorageBytes = (int) $files->sum('size');
+        $fileMetrics = $this->computeFileMetrics($vault->files()->where('is_deleted', false));
+        $totalFiles = $fileMetrics['total_files'];
+        $totalStorageBytes = $fileMetrics['total_storage_bytes'];
+        $notesCount = $fileMetrics['notes_count'];
+        $notesStorageBytes = $fileMetrics['notes_storage_bytes'];
+        $imagesCount = $fileMetrics['images_count'];
+        $imagesStorageBytes = $fileMetrics['images_size_bytes'];
+        $imageBreakdown = $fileMetrics['image_breakdown'];
+        $canvasCount = $fileMetrics['canvas_count'];
 
         // Note analytics
-        $notes = $files->filter(fn (VaultFile $f) => $f->isMarkdown());
-        $notesCount = $notes->count();
-        $notesStorageBytes = (int) $notes->sum('size');
         $averageNoteSizeBytes = $notesCount > 0 ? (int) round($notesStorageBytes / $notesCount) : 0;
-
-        // Estimate word count (approx. 5.5 chars per word)
         $estimatedTotalWords = (int) round($notesStorageBytes / 5.5);
         $averageWordsPerNote = $notesCount > 0 ? (int) round($estimatedTotalWords / $notesCount) : 0;
         $readingTimeMinutes = max(1, (int) ceil($estimatedTotalWords / 200));
         $totalCharacters = $notesStorageBytes;
-
-        // Media breakdown
-        $images = $files->filter(function (VaultFile $f) {
-            $ext = strtolower(pathinfo($f->path, PATHINFO_EXTENSION));
-
-            return in_array($ext, self::IMAGE_EXTENSIONS, true);
-        });
-
-        $imagesCount = $images->count();
-        $imagesStorageBytes = (int) $images->sum('size');
-
-        $imageBreakdown = [];
-        foreach (self::IMAGE_EXTENSIONS as $ext) {
-            $formatFiles = $images->filter(fn (VaultFile $f) => strtolower(pathinfo($f->path, PATHINFO_EXTENSION)) === $ext);
-            $imageBreakdown[$ext] = [
-                'count' => $formatFiles->count(),
-                'size_bytes' => (int) $formatFiles->sum('size'),
-                'size_formatted' => $this->formatBytes((int) $formatFiles->sum('size')),
-            ];
-        }
-
-        // Canvas & Other
-        $canvasFiles = $files->filter(fn (VaultFile $f) => str_ends_with(strtolower($f->path), '.canvas'));
-        $canvasCount = $canvasFiles->count();
 
         // Activity query
         $activityQuery = $vault->changeLogs();
@@ -331,9 +289,10 @@ class VaultAnalyticsService
         $leaderboard = [];
 
         foreach ($grouped as $userId => $logs) {
-            $user = $userId ? User::find($userId) : null;
-            $userName = $user?->name ?? __('Obsidian Sync Device');
-            $userEmail = $user?->email ?? __('Local Token Session');
+            $firstLog = $logs->first();
+            $user = $firstLog?->user;
+            $userName = $user ? $user->name : __('Obsidian Sync Device');
+            $userEmail = $user ? $user->email : __('Local Token Session');
 
             $actionCounts = $logs->groupBy('action')->map->count();
             $createdCount = $actionCounts->get('created', 0);
@@ -463,6 +422,63 @@ class VaultAnalyticsService
         }
 
         return $query->limit($limit)->get();
+    }
+
+    /**
+     * Compute aggregated file and storage statistics from a base VaultFile query.
+     *
+     * @param  Builder<VaultFile>|HasMany<VaultFile, covariant Vault>  $query
+     * @return array{
+     *     total_files: int,
+     *     total_storage_bytes: int,
+     *     notes_count: int,
+     *     notes_storage_bytes: int,
+     *     images_count: int,
+     *     images_size_bytes: int,
+     *     image_breakdown: array<string, array{count: int, size_bytes: int, size_formatted: string}>,
+     *     canvas_count: int
+     * }
+     */
+    protected function computeFileMetrics(Builder|HasMany $query): array
+    {
+        $totalFiles = (clone $query)->count();
+        $totalStorageBytes = (int) (clone $query)->sum('size');
+
+        $notesQuery = (clone $query)->where('path', 'like', '%.md');
+        $notesCount = (clone $notesQuery)->count();
+        $notesStorageBytes = (int) (clone $notesQuery)->sum('size');
+
+        $canvasCount = (clone $query)->where('path', 'like', '%.canvas')->count();
+
+        $imagesCount = 0;
+        $imagesSizeBytes = 0;
+        $imageBreakdown = [];
+
+        foreach (self::IMAGE_EXTENSIONS as $ext) {
+            $extQuery = (clone $query)->where('path', 'like', "%.{$ext}");
+            $extCount = (clone $extQuery)->count();
+            $extSize = (int) (clone $extQuery)->sum('size');
+
+            $imageBreakdown[$ext] = [
+                'count' => $extCount,
+                'size_bytes' => $extSize,
+                'size_formatted' => $this->formatBytes($extSize),
+            ];
+
+            $imagesCount += $extCount;
+            $imagesSizeBytes += $extSize;
+        }
+
+        return [
+            'total_files' => $totalFiles,
+            'total_storage_bytes' => $totalStorageBytes,
+            'notes_count' => $notesCount,
+            'notes_storage_bytes' => $notesStorageBytes,
+            'images_count' => $imagesCount,
+            'images_size_bytes' => $imagesSizeBytes,
+            'image_breakdown' => $imageBreakdown,
+            'canvas_count' => $canvasCount,
+        ];
     }
 
     /**

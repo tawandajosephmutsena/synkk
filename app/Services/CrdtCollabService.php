@@ -7,6 +7,17 @@ use App\Models\Vault;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * @phpstan-type CollabPeer array{
+ *     peer_id: string,
+ *     user_id: int,
+ *     name: string,
+ *     email: string,
+ *     color: string,
+ *     cursor: array{line: int, col: int},
+ *     last_seen: int
+ * }
+ */
 class CrdtCollabService
 {
     protected const PEER_TTL_SECONDS = 45;
@@ -38,45 +49,44 @@ class CrdtCollabService
      *     status: string,
      *     room_id: string,
      *     clock: int,
-     *     peers: array<string, array{
-     *         peer_id: string,
-     *         user_id: int,
-     *         name: string,
-     *         email: string,
-     *         color: string,
-     *         cursor: array{line: int, col: int},
-     *         last_seen: int
-     *     }>,
+     *     peers: list<CollabPeer>,
      *     deltas: array<int, mixed>
      * }
      */
     public function join(Vault $vault, User $user, string $path, string $peerId): array
     {
         $roomKey = $this->roomKey($vault, $path);
-        $room = $this->getRoom($roomKey);
+        $lockKey = $roomKey.'_lock';
 
-        $color = $this->avatarColors[$user->id % count($this->avatarColors)];
+        /** @var array{status: string, room_id: string, clock: int, peers: list<CollabPeer>, deltas: array<int, mixed>} $result */
+        $result = Cache::lock($lockKey, 5)->block(2, function () use ($roomKey, $user, $peerId) {
+            $room = $this->getRoom($roomKey);
 
-        $room['peers'][$peerId] = [
-            'peer_id' => $peerId,
-            'user_id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'color' => $color,
-            'cursor' => ['line' => 1, 'col' => 0],
-            'last_seen' => time(),
-        ];
+            $color = $this->avatarColors[$user->id % count($this->avatarColors)];
 
-        $room['peers'] = $this->pruneStalePeers($room['peers']);
-        $this->saveRoom($roomKey, $room);
+            $room['peers'][$peerId] = [
+                'peer_id' => $peerId,
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'color' => $color,
+                'cursor' => ['line' => 1, 'col' => 0],
+                'last_seen' => time(),
+            ];
 
-        return [
-            'status' => 'joined',
-            'room_id' => $roomKey,
-            'clock' => $room['clock'],
-            'peers' => array_values($room['peers']),
-            'deltas' => array_slice($room['deltas'], -50),
-        ];
+            $room['peers'] = $this->pruneStalePeers($room['peers']);
+            $this->saveRoom($roomKey, $room);
+
+            return [
+                'status' => 'joined',
+                'room_id' => $roomKey,
+                'clock' => $room['clock'],
+                'peers' => array_values($room['peers']),
+                'deltas' => array_slice($room['deltas'], -50),
+            ];
+        });
+
+        return $result;
     }
 
     /**
@@ -96,14 +106,7 @@ class CrdtCollabService
      *         len?: int,
      *         timestamp: int
      *     }>,
-     *     peers: array<int, array{
-     *         peer_id: string,
-     *         user_id: int,
-     *         name: string,
-     *         color: string,
-     *         cursor: array{line: int, col: int},
-     *         last_seen: int
-     *     }>
+     *     peers: list<CollabPeer>
      * }
      */
     public function sync(
@@ -116,58 +119,65 @@ class CrdtCollabService
         int $sinceClock = 0
     ): array {
         $roomKey = $this->roomKey($vault, $path);
-        $room = $this->getRoom($roomKey);
+        $lockKey = $roomKey.'_lock';
 
-        $color = $this->avatarColors[$user->id % count($this->avatarColors)];
+        /** @var array{status: string, clock: int, incoming_deltas: array<int, array{clock: int, peer_id: string, type: string, pos: int, text?: string, len?: int, timestamp: int}>, peers: list<CollabPeer>} $result */
+        $result = Cache::lock($lockKey, 5)->block(2, function () use ($roomKey, $user, $peerId, $localDeltas, $cursor, $sinceClock) {
+            $room = $this->getRoom($roomKey);
 
-        // Update heartbeat and cursor
-        $room['peers'][$peerId] = [
-            'peer_id' => $peerId,
-            'user_id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'color' => $color,
-            'cursor' => $cursor ?? ($room['peers'][$peerId]['cursor'] ?? ['line' => 1, 'col' => 0]),
-            'last_seen' => time(),
-        ];
+            $color = $this->avatarColors[$user->id % count($this->avatarColors)];
 
-        // Ingest new local deltas into room stream
-        foreach ($localDeltas as $delta) {
-            $room['clock']++;
-            $room['deltas'][] = [
-                'clock' => $room['clock'],
+            // Update heartbeat and cursor
+            $room['peers'][$peerId] = [
                 'peer_id' => $peerId,
                 'user_id' => $user->id,
-                'type' => $delta['type'] ?? 'insert',
-                'pos' => (int) ($delta['pos'] ?? 0),
-                'text' => (string) ($delta['text'] ?? ''),
-                'len' => (int) ($delta['len'] ?? 0),
-                'timestamp' => time(),
+                'name' => $user->name,
+                'email' => $user->email,
+                'color' => $color,
+                'cursor' => $cursor ?? ($room['peers'][$peerId]['cursor'] ?? ['line' => 1, 'col' => 0]),
+                'last_seen' => time(),
             ];
-        }
 
-        // Cap history to prevent memory bloat
-        if (count($room['deltas']) > self::MAX_DELTAS_RETAINED) {
-            $room['deltas'] = array_slice($room['deltas'], -self::MAX_DELTAS_RETAINED);
-        }
-
-        $room['peers'] = $this->pruneStalePeers($room['peers']);
-        $this->saveRoom($roomKey, $room);
-
-        // Filter incoming deltas originating from OTHER peers since $sinceClock
-        $incomingDeltas = [];
-        foreach ($room['deltas'] as $delta) {
-            if ($delta['clock'] > $sinceClock && $delta['peer_id'] !== $peerId) {
-                $incomingDeltas[] = $delta;
+            // Ingest new local deltas into room stream
+            foreach ($localDeltas as $delta) {
+                $room['clock']++;
+                $room['deltas'][] = [
+                    'clock' => $room['clock'],
+                    'peer_id' => $peerId,
+                    'user_id' => $user->id,
+                    'type' => $delta['type'],
+                    'pos' => (int) $delta['pos'],
+                    'text' => (string) ($delta['text'] ?? ''),
+                    'len' => (int) ($delta['len'] ?? 0),
+                    'timestamp' => time(),
+                ];
             }
-        }
 
-        return [
-            'status' => 'synced',
-            'clock' => $room['clock'],
-            'incoming_deltas' => $incomingDeltas,
-            'peers' => array_values($room['peers']),
-        ];
+            // Cap history to prevent memory bloat
+            if (count($room['deltas']) > self::MAX_DELTAS_RETAINED) {
+                $room['deltas'] = array_slice($room['deltas'], -self::MAX_DELTAS_RETAINED);
+            }
+
+            $room['peers'] = $this->pruneStalePeers($room['peers']);
+            $this->saveRoom($roomKey, $room);
+
+            // Filter incoming deltas originating from OTHER peers since $sinceClock
+            $incomingDeltas = [];
+            foreach ($room['deltas'] as $delta) {
+                if ($delta['clock'] > $sinceClock && $delta['peer_id'] !== $peerId) {
+                    $incomingDeltas[] = $delta;
+                }
+            }
+
+            return [
+                'status' => 'synced',
+                'clock' => $room['clock'],
+                'incoming_deltas' => $incomingDeltas,
+                'peers' => array_values($room['peers']),
+            ];
+        });
+
+        return $result;
     }
 
     /**
@@ -176,25 +186,22 @@ class CrdtCollabService
     public function leave(Vault $vault, string $path, string $peerId): void
     {
         $roomKey = $this->roomKey($vault, $path);
-        $room = $this->getRoom($roomKey);
+        $lockKey = $roomKey.'_lock';
 
-        unset($room['peers'][$peerId]);
-        $room['peers'] = $this->pruneStalePeers($room['peers']);
+        Cache::lock($lockKey, 5)->block(2, function () use ($roomKey, $peerId) {
+            $room = $this->getRoom($roomKey);
 
-        $this->saveRoom($roomKey, $room);
+            unset($room['peers'][$peerId]);
+            $room['peers'] = $this->pruneStalePeers($room['peers']);
+
+            $this->saveRoom($roomKey, $room);
+        });
     }
 
     /**
      * Get active presence list for a note.
      *
-     * @return array<int, array{
-     *     peer_id: string,
-     *     user_id: int,
-     *     name: string,
-     *     color: string,
-     *     cursor: array{line: int, col: int},
-     *     last_seen: int
-     * }>
+     * @return list<CollabPeer>
      */
     public function getPresence(Vault $vault, string $path): array
     {
@@ -208,7 +215,7 @@ class CrdtCollabService
     /**
      * Get active peers in a room as a collection.
      *
-     * @return Collection<int, array{peer_id: string, user_id: int, name: string, color: string, cursor: array{line: int, col: int}, last_seen: int}>
+     * @return Collection<int, CollabPeer>
      */
     public function getRoomPeers(Vault $vault, string $path = 'general'): Collection
     {
@@ -223,8 +230,8 @@ class CrdtCollabService
     public function applyDeltasToContent(string $content, array $deltas): string
     {
         foreach ($deltas as $op) {
-            $pos = max(0, min(strlen($content), (int) ($op['pos'] ?? 0)));
-            $type = $op['type'] ?? 'insert';
+            $pos = max(0, min(strlen($content), (int) $op['pos']));
+            $type = $op['type'];
 
             if ($type === 'insert') {
                 $text = (string) ($op['text'] ?? '');
@@ -253,7 +260,7 @@ class CrdtCollabService
      *
      * @return array{
      *     clock: int,
-     *     peers: array<string, mixed>,
+     *     peers: array<string, CollabPeer>,
      *     deltas: array<int, mixed>
      * }
      */
@@ -269,7 +276,7 @@ class CrdtCollabService
     /**
      * Save room state to cache.
      *
-     * @param  array{clock: int, peers: array<string, mixed>, deltas: array<int, mixed>}  $room
+     * @param  array{clock: int, peers: array<string, CollabPeer>, deltas: array<int, mixed>}  $room
      */
     protected function saveRoom(string $roomKey, array $room): void
     {
@@ -279,13 +286,13 @@ class CrdtCollabService
     /**
      * Filter out peers who haven't pinged in the last TTL seconds.
      *
-     * @param  array<string, array{last_seen: int}>  $peers
-     * @return array<string, array{last_seen: int}>
+     * @param  array<string, CollabPeer>  $peers
+     * @return array<string, CollabPeer>
      */
     protected function pruneStalePeers(array $peers): array
     {
         $cutoff = time() - self::PEER_TTL_SECONDS;
 
-        return array_filter($peers, fn ($p) => ($p['last_seen'] ?? 0) >= $cutoff);
+        return array_filter($peers, fn (array $p): bool => $p['last_seen'] >= $cutoff);
     }
 }

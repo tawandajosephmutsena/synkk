@@ -127,6 +127,28 @@ class BatchSyncAction
                     $baseVersion
                 );
 
+                $isEncrypted = ! empty($item['is_encrypted']);
+                $isGhost = ! empty($item['is_ghost']);
+
+                if ($isEncrypted || $isGhost) {
+                    $savedPath = (isset($res['path']) && is_string($res['path'])) ? $res['path'] : $path;
+                    $savedFile = $vault->files()->where('path', $savedPath)->where('is_deleted', false)->first();
+                    if ($savedFile) {
+                        $updates = [];
+                        if ($isEncrypted) {
+                            $updates['is_encrypted'] = true;
+                            $updates['encryption_iv'] = isset($item['encryption_iv']) ? (string) $item['encryption_iv'] : null;
+                            $updates['encryption_tag'] = isset($item['encryption_tag']) ? (string) $item['encryption_tag'] : null;
+                        }
+                        if ($isGhost) {
+                            $updates['is_ghost'] = true;
+                            $updates['original_size'] = isset($item['original_size']) ? (int) $item['original_size'] : $savedFile->size;
+                            $updates['mime_type'] = isset($item['mime_type']) ? (string) $item['mime_type'] : null;
+                        }
+                        $savedFile->update($updates);
+                    }
+                }
+
                 if (($res['status'] ?? '') === 'conflict') {
                     $conflicts++;
                 } elseif (($res['status'] ?? '') === 'created' || ($res['status'] ?? '') === 'updated') {

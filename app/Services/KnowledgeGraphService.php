@@ -4,9 +4,178 @@ namespace App\Services;
 
 use App\Models\Vault;
 use App\Models\VaultFile;
+use Illuminate\Support\Str;
 
 class KnowledgeGraphService
 {
+    /**
+     * Build the interactive graph topology for canvas/SVG visualization in the UI.
+     *
+     * @param  iterable<VaultFile>|null  $markdownFiles
+     * @return array{
+     *     nodes: array<int, array{id: int, name: string, path: string, size: int, version: int, updated_at: string, linksCount: int}>,
+     *     edges: array<int, array{source: int, target: int}>
+     * }
+     */
+    public function getInteractiveGraph(Vault $vault, ?iterable $markdownFiles = null): array
+    {
+        $files = $markdownFiles ?? VaultFile::where('vault_id', $vault->id)
+            ->where('is_deleted', false)
+            ->where('path', 'like', '%.md')
+            ->get();
+
+        $nodes = [];
+        $edges = [];
+        $exactPathMap = [];
+        $basenameMap = [];
+
+        foreach ($files as $file) {
+            $basename = pathinfo($file->path, PATHINFO_FILENAME);
+            $nodes[] = [
+                'id' => $file->id,
+                'name' => $basename,
+                'path' => $file->path,
+                'size' => $file->size,
+                'version' => $file->version,
+                'updated_at' => $file->updated_at?->diffForHumans() ?? '',
+                'linksCount' => 0,
+            ];
+            $nodeIndex = count($nodes) - 1;
+            $normalizedPath = $this->normalizeGraphPath($file->path);
+            $extensionlessPath = preg_replace('/\.md$/i', '', $normalizedPath) ?? $normalizedPath;
+            $normalizedBasename = Str::lower($basename);
+
+            $exactPathMap[$normalizedPath] = $nodeIndex;
+            $exactPathMap[$extensionlessPath] = $nodeIndex;
+            $basenameMap[$normalizedBasename][] = $nodeIndex;
+        }
+
+        $createdEdges = [];
+        /** @var list<VaultFile> $fileList */
+        $fileList = is_array($files) ? array_values($files) : array_values(iterator_to_array($files));
+        $linkCounts = array_fill(0, count($nodes), 0);
+
+        foreach ($fileList as $sourceIndex => $file) {
+            $content = $file->getContents() ?? '';
+            if (empty($content)) {
+                continue;
+            }
+
+            preg_match_all('/\[\[(.*?)\]\]/', $content, $wikiMatches);
+            $targets = [];
+            if (! empty($wikiMatches[1])) {
+                foreach ($wikiMatches[1] as $rawTarget) {
+                    $targets[] = $rawTarget;
+                }
+            }
+
+            preg_match_all('/\[[^\]]*\]\(([^)]+\.md(?:#[^)]*)?)\)/i', $content, $mdMatches);
+            if (! empty($mdMatches[1])) {
+                foreach ($mdMatches[1] as $rawMdTarget) {
+                    $targets[] = $rawMdTarget;
+                }
+            }
+
+            foreach ($targets as $rawTarget) {
+                $targetIndex = $this->resolveGraphTarget($rawTarget, $file->path, $exactPathMap, $basenameMap);
+
+                if ($targetIndex === null || $targetIndex === $sourceIndex) {
+                    continue;
+                }
+
+                $edgeKey = $sourceIndex.'-'.$targetIndex;
+                if (! isset($createdEdges[$edgeKey])) {
+                    $createdEdges[$edgeKey] = true;
+                    $edges[] = [
+                        'source' => $sourceIndex,
+                        'target' => $targetIndex,
+                    ];
+                    $linkCounts[$sourceIndex] = ($linkCounts[$sourceIndex] ?? 0) + 1;
+                    $linkCounts[$targetIndex] = ($linkCounts[$targetIndex] ?? 0) + 1;
+                }
+            }
+        }
+
+        foreach ($nodes as $index => &$node) {
+            $node['linksCount'] = $linkCounts[$index] ?? 0;
+        }
+        unset($node);
+
+        return [
+            'nodes' => $nodes,
+            'edges' => $edges,
+        ];
+    }
+
+    public function normalizeGraphPath(string $path): string
+    {
+        $segments = [];
+
+        foreach (explode('/', str_replace('\\', '/', urldecode(trim($path)))) as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+
+            if ($segment === '..') {
+                array_pop($segments);
+
+                continue;
+            }
+
+            $segments[] = $segment;
+        }
+
+        return Str::lower(implode('/', $segments));
+    }
+
+    /**
+     * @param  array<string, int>  $exactPathMap
+     * @param  array<string, list<int>>  $basenameMap
+     */
+    public function resolveGraphTarget(string $rawTarget, string $sourcePath, array $exactPathMap, array $basenameMap): ?int
+    {
+        $target = trim(explode('|', $rawTarget, 2)[0]);
+        $target = trim(explode('#', $target, 2)[0]);
+        $target = trim(explode('?', $target, 2)[0]);
+
+        if ($target === '') {
+            return null;
+        }
+
+        $sourceDirectory = pathinfo(str_replace('\\', '/', $sourcePath), PATHINFO_DIRNAME);
+        $targetIsRelative = str_starts_with($target, './') || str_starts_with($target, '../');
+        $candidates = [];
+
+        if ($sourceDirectory !== '.' && ($targetIsRelative || ! str_contains($target, '/'))) {
+            $candidates[] = $this->normalizeGraphPath($sourceDirectory.'/'.$target);
+        }
+
+        $candidates[] = $this->normalizeGraphPath($target);
+
+        foreach (array_unique($candidates) as $candidate) {
+            $extensionlessCandidate = preg_replace('/\.md$/i', '', $candidate) ?? $candidate;
+
+            if (isset($exactPathMap[$candidate])) {
+                return $exactPathMap[$candidate];
+            }
+
+            if (isset($exactPathMap[$extensionlessCandidate])) {
+                return $exactPathMap[$extensionlessCandidate];
+            }
+        }
+
+        if (! str_contains($target, '/')) {
+            $basename = Str::lower(pathinfo($target, PATHINFO_FILENAME));
+            $matches = $basenameMap[$basename] ?? [];
+
+            if (count($matches) === 1) {
+                return $matches[0];
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Build the complete graph topology for a vault.
      *

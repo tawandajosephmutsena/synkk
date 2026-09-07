@@ -11,6 +11,8 @@ use App\Actions\Vaults\ResolveConflictAction;
 use App\Models\VaultFileVersion;
 use App\Models\VaultPermission;
 use App\Services\CrdtCollabService;
+use App\Services\E2eeVaultService;
+use App\Services\KnowledgeGraphService;
 use App\Services\ThreeWayDiffService;
 use App\Services\VaultAnalyticsService;
 use Flux\Flux;
@@ -156,7 +158,12 @@ new #[Title('Vault Details')] class extends Component {
         $this->activeFile = $file;
         $this->file = $file->id;
         $this->path = $file->path;
-        $this->editorContent = $file->getContents() ?? '';
+        $raw = $file->getContents() ?? '';
+        if ($file->is_encrypted || $this->vault->is_e2ee) {
+            $this->editorContent = base64_encode($raw);
+        } else {
+            $this->editorContent = $raw;
+        }
         $this->editorTitle = pathinfo($file->path, PATHINFO_FILENAME);
         $this->editorBaseVersion = $file->version;
         $this->editorIsDirty = false;
@@ -225,6 +232,86 @@ new #[Title('Vault Details')] class extends Component {
         }
 
         Flux::toast(variant: 'success', text: __('Note saved as revision v:version.', ['version' => $this->activeFile->version]));
+    }
+
+    /**
+     * Save client-side WebCrypto AES-GCM encrypted note without the server ever seeing plaintext.
+     */
+    public function saveEncryptedFile(string $ciphertextBase64, string $ivHex, string $tagHex, SyncUploadAction $uploader): void
+    {
+        if (! $this->activeFileId) {
+            return;
+        }
+
+        $activeFile = $this->vault->files()
+            ->where('is_deleted', false)
+            ->findOrFail($this->activeFileId);
+
+        $user = Auth::user();
+        $permission = $this->vault->permissionForPath($user, $activeFile->path);
+
+        if ($permission !== 'read_write') {
+            Flux::toast(variant: 'danger', text: __('You have read-only permissions for this note. Changes cannot be saved.'));
+
+            return;
+        }
+
+        $rawCiphertext = (string) base64_decode($ciphertextBase64);
+
+        $result = $uploader->execute(
+            vault: $this->vault,
+            user: $user,
+            deviceName: 'Web Editor (E2EE)',
+            path: $activeFile->path,
+            contents: $rawCiphertext,
+            baseVersion: $this->editorBaseVersion ?? $activeFile->version,
+        );
+
+        $savedPath = (isset($result['path']) && is_string($result['path'])) ? $result['path'] : $activeFile->path;
+        $savedFile = $this->vault->files()->where('path', $savedPath)->where('is_deleted', false)->first();
+        if ($savedFile) {
+            $savedFile->update([
+                'is_encrypted' => true,
+                'encryption_iv' => $ivHex,
+                'encryption_tag' => $tagHex,
+            ]);
+        }
+
+        if ($result['status'] === 'conflict') {
+            if ($savedFile) {
+                $this->selectFile($savedFile->id);
+            }
+
+            Flux::toast(variant: 'warning', text: __('A newer revision already exists. Your edit was preserved as :path.', ['path' => $savedPath]));
+
+            return;
+        }
+
+        $this->activeFile = $this->vault->files()->findOrFail($activeFile->id);
+        $this->editorBaseVersion = $this->activeFile->version;
+        $this->editorIsDirty = false;
+
+        Flux::toast(variant: 'success', text: __('Note encrypted & saved with client-side Zero-Knowledge WebCrypto.'));
+    }
+
+    public function enableE2ee(string $salt, string $testCipher, E2eeVaultService $e2eeService): void
+    {
+        abort_unless(Auth::user()->can('update', $this->vault), 403);
+
+        $e2eeService->enable($this->vault, $salt, $testCipher);
+        $this->vault->refresh();
+
+        Flux::toast(variant: 'success', text: __('Zero-Knowledge End-to-End Encryption enabled successfully!'));
+    }
+
+    public function disableE2ee(E2eeVaultService $e2eeService): void
+    {
+        abort_unless(Auth::user()->can('update', $this->vault), 403);
+
+        $e2eeService->disable($this->vault);
+        $this->vault->refresh();
+
+        Flux::toast(variant: 'warning', text: __('Zero-Knowledge Encryption disabled.'));
     }
 
     public function createNewNote(SyncUploadAction $uploader): void
@@ -549,6 +636,51 @@ new #[Title('Vault Details')] class extends Component {
         Flux::toast(variant: 'info', text: __("Attachment ':path' converted to on-demand ghost stub.", ['path' => $file->path]));
     }
 
+    public function exportVaultZip(): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\Response
+    {
+        $user = Auth::user();
+        abort_unless($user->can('view', $this->vault), 403);
+
+        $files = $this->vault->files()
+            ->where('is_deleted', false)
+            ->get()
+            ->filter(fn (VaultFile $file) => $this->vault->permissionForPath($user, $file->path) !== 'hidden');
+
+        if ($files->isEmpty()) {
+            Flux::toast(variant: 'warning', text: __('This vault contains no accessible files to export.'));
+
+            return response()->noContent();
+        }
+
+        $disk = config('synkk.storage_disk', 'local');
+        $tempFile = tempnam(sys_get_temp_dir(), 'synkk_vault_zip_');
+        $zip = new \ZipArchive();
+
+        if ($zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            Flux::toast(variant: 'danger', text: __('Failed to initialize zip archive on server.'));
+
+            return response()->noContent();
+        }
+
+        foreach ($files as $file) {
+            if (Storage::disk($disk)->exists($file->storage_path)) {
+                $contents = Storage::disk($disk)->get($file->storage_path);
+                $zip->addFromString($file->path, (string) $contents);
+            }
+        }
+
+        $zip->close();
+
+        $safeSlug = Str::slug($this->vault->name) ?: 'vault';
+        $filename = "{$safeSlug}-export-" . now()->format('Ymd-His') . ".zip";
+
+        Flux::toast(variant: 'success', text: __('Vault exported successfully. Download starting...'));
+
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
+    }
+
     #[Computed]
     public function accessibleFiles(): Collection
     {
@@ -651,149 +783,10 @@ new #[Title('Vault Details')] class extends Component {
     #[Computed]
     public function graphData(): array
     {
-        $markdownFiles = $this->accessibleMarkdownFiles;
-
-        $nodes = [];
-        $edges = [];
-        $exactPathMap = [];
-        $basenameMap = [];
-
-        foreach ($markdownFiles as $file) {
-            $basename = pathinfo($file->path, PATHINFO_FILENAME);
-            $nodes[] = [
-                'id' => $file->id,
-                'name' => $basename,
-                'path' => $file->path,
-                'size' => $file->size,
-                'version' => $file->version,
-                'updated_at' => $file->updated_at?->diffForHumans() ?? '',
-                'linksCount' => 0,
-            ];
-            $nodeIndex = count($nodes) - 1;
-            $normalizedPath = $this->normalizeGraphPath($file->path);
-            $extensionlessPath = preg_replace('/\.md$/i', '', $normalizedPath) ?? $normalizedPath;
-            $normalizedBasename = Str::lower($basename);
-
-            $exactPathMap[$normalizedPath] = $nodeIndex;
-            $exactPathMap[$extensionlessPath] = $nodeIndex;
-            $basenameMap[$normalizedBasename][] = $nodeIndex;
-        }
-
-        $createdEdges = [];
-        foreach ($markdownFiles as $sourceIndex => $file) {
-            $content = $file->getContents() ?? '';
-            if (empty($content)) {
-                continue;
-            }
-
-            preg_match_all('/\[\[(.*?)\]\]/', $content, $wikiMatches);
-            $targets = [];
-            if (! empty($wikiMatches[1])) {
-                foreach ($wikiMatches[1] as $rawTarget) {
-                    $targets[] = $rawTarget;
-                }
-            }
-
-            preg_match_all('/\[[^\]]*\]\(([^)]+\.md(?:#[^)]*)?)\)/i', $content, $mdMatches);
-            if (! empty($mdMatches[1])) {
-                foreach ($mdMatches[1] as $rawMdTarget) {
-                    $targets[] = $rawMdTarget;
-                }
-            }
-
-            foreach ($targets as $rawTarget) {
-                $targetIndex = $this->resolveGraphTarget($rawTarget, $file->path, $exactPathMap, $basenameMap);
-
-                if ($targetIndex === null || $targetIndex === $sourceIndex) {
-                    continue;
-                }
-
-                $edgeKey = $sourceIndex.'-'.$targetIndex;
-                if (! isset($createdEdges[$edgeKey])) {
-                    $createdEdges[$edgeKey] = true;
-                    $edges[] = [
-                        'source' => $sourceIndex,
-                        'target' => $targetIndex,
-                    ];
-                    $nodes[$sourceIndex]['linksCount']++;
-                    $nodes[$targetIndex]['linksCount']++;
-                }
-            }
-        }
-
-        return [
-            'nodes' => $nodes,
-            'edges' => $edges,
-        ];
-    }
-
-    protected function normalizeGraphPath(string $path): string
-    {
-        $segments = [];
-
-        foreach (explode('/', str_replace('\\', '/', urldecode(trim($path)))) as $segment) {
-            if ($segment === '' || $segment === '.') {
-                continue;
-            }
-
-            if ($segment === '..') {
-                array_pop($segments);
-
-                continue;
-            }
-
-            $segments[] = $segment;
-        }
-
-        return Str::lower(implode('/', $segments));
-    }
-
-    /**
-     * @param  array<string, int>  $exactPathMap
-     * @param  array<string, list<int>>  $basenameMap
-     */
-    protected function resolveGraphTarget(string $rawTarget, string $sourcePath, array $exactPathMap, array $basenameMap): ?int
-    {
-        $target = trim(explode('|', $rawTarget, 2)[0]);
-        $target = trim(explode('#', $target, 2)[0]);
-        $target = trim(explode('?', $target, 2)[0]);
-
-        if ($target === '') {
-            return null;
-        }
-
-        $sourceDirectory = pathinfo(str_replace('\\', '/', $sourcePath), PATHINFO_DIRNAME);
-        $targetIsRelative = str_starts_with($target, './') || str_starts_with($target, '../');
-        $candidates = [];
-
-        if ($sourceDirectory !== '.' && ($targetIsRelative || ! str_contains($target, '/'))) {
-            $candidates[] = $this->normalizeGraphPath($sourceDirectory.'/'.$target);
-        }
-
-        $candidates[] = $this->normalizeGraphPath($target);
-
-        foreach (array_unique($candidates) as $candidate) {
-            $extensionlessCandidate = preg_replace('/\.md$/i', '', $candidate) ?? $candidate;
-
-            if (isset($exactPathMap[$candidate])) {
-                return $exactPathMap[$candidate];
-            }
-
-            if (isset($exactPathMap[$extensionlessCandidate])) {
-                return $exactPathMap[$extensionlessCandidate];
-            }
-        }
-
-        if (! str_contains($target, '/')) {
-            $basename = Str::lower(pathinfo($target, PATHINFO_FILENAME));
-            $matches = $basenameMap[$basename] ?? [];
-
-            if (count($matches) === 1) {
-                return $matches[0];
-            }
-        }
-
-        return null;
+        return app(KnowledgeGraphService::class)->getInteractiveGraph(
+            $this->vault,
+            $this->accessibleMarkdownFiles
+        );
     }
 
     #[Computed]
@@ -1137,13 +1130,66 @@ new #[Title('Vault Details')] class extends Component {
                 viewMode: {{ Js::from($editorViewMode) }},
                 canEdit: {{ Js::from($this->canEditActiveFile) }},
                 initiallyDirty: {{ Js::from($editorIsDirty) }},
-                unsavedPrompt: {{ Js::from(__('Discard unsaved changes to this note?')) }}
+                unsavedPrompt: {{ Js::from(__('Discard unsaved changes to this note?')) }},
+                vaultSlug: {{ Js::from($vault->slug) }},
+                isEncrypted: {{ Js::from((bool) ($this->activeFile?->is_encrypted || $vault->is_e2ee)) }},
+                encryptionIv: {{ Js::from($this->activeFile?->encryption_iv) }},
+                encryptionTag: {{ Js::from($this->activeFile?->encryption_tag) }},
+                vaultSalt: {{ Js::from($vault->e2ee_salt) }},
+                vaultTestCipher: {{ Js::from($vault->e2ee_test_cipher) }}
             })"
             wire:key="vault-editor-{{ $this->activeFileId ?? 'empty' }}"
             data-vault-editor
             @keydown.window="handleWindowKeydown($event)"
             class="relative flex min-h-[680px] flex-col overflow-hidden rounded-[1.75rem] border border-[#303543] bg-[#12151d] text-zinc-100 shadow-2xl sm:min-h-[760px]"
         >
+            <!-- ZERO-KNOWLEDGE E2EE UNLOCK OVERLAY -->
+            <div
+                x-show="!isUnlocked"
+                x-cloak
+                class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#12151d]/95 backdrop-blur-md p-6 text-center"
+            >
+                <div class="max-w-md w-full rounded-2xl border border-emerald-500/30 bg-[#181A22] p-6 shadow-2xl space-y-4 text-left">
+                    <div class="flex items-center gap-3">
+                        <div class="size-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                            <flux:icon icon="lock-closed" class="size-5" />
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-white text-base">{{ __('Encrypted Note Locked') }}</h3>
+                            <p class="text-xs text-zinc-400">{{ __('Enter your vault passphrase to decrypt in-browser via WebCrypto.') }}</p>
+                        </div>
+                    </div>
+
+                    <div x-show="unlockError" x-cloak class="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+                        <flux:icon icon="exclamation-triangle" class="size-4 shrink-0" />
+                        <span x-text="unlockError"></span>
+                    </div>
+
+                    <form @submit.prevent="unlockWithPassphrase()" class="space-y-3">
+                        <flux:input
+                            type="password"
+                            x-model="passphraseInput"
+                            placeholder="{{ __('Vault passphrase...') }}"
+                            required
+                            autofocus
+                            class="w-full"
+                        />
+                        <flux:button
+                            type="submit"
+                            variant="primary"
+                            color="emerald"
+                            class="w-full justify-center"
+                            ::disabled="isDerivingKey || !passphraseInput"
+                        >
+                            <span x-show="!isDerivingKey">{{ __('Unlock & Decrypt Note') }}</span>
+                            <span x-show="isDerivingKey" class="flex items-center gap-2">
+                                <flux:icon icon="arrow-path" class="size-4 animate-spin" />
+                                {{ __('Deriving AES-256 Key (100k rounds)...') }}
+                            </span>
+                        </flux:button>
+                    </form>
+                </div>
+            </div>
             <!-- TOP HEADER (Pandocs style: Dropdown Title, Date, Collaborators, Save/Submit Button) -->
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#252836] bg-[#181A22] px-5 py-3">
                 <div class="flex items-center gap-3 min-w-0">
@@ -1971,9 +2017,14 @@ new #[Title('Vault Details')] class extends Component {
                 <div class="w-full max-w-sm">
                     <flux:input wire:model.live.debounce.250ms="fileSearch" size="sm" icon="magnifying-glass" placeholder="Filter notes and files..." />
                 </div>
-                <flux:text class="text-xs text-zinc-400">
-                    {{ __('Showing up to 100 recent vault notes') }}
-                </flux:text>
+                <div class="flex items-center gap-3">
+                    <flux:button wire:click="exportVaultZip" variant="subtle" size="sm" icon="arrow-down-tray">
+                        {{ __('Export Entire Vault (.zip)') }}
+                    </flux:button>
+                    <flux:text class="text-xs text-zinc-400">
+                        {{ __('Showing up to 100 recent vault notes') }}
+                    </flux:text>
+                </div>
             </div>
 
             <flux:card class="p-0 overflow-hidden">
@@ -2760,29 +2811,239 @@ new #[Title('Vault Details')] class extends Component {
                 </div>
 
                 @if ($vault->is_e2ee)
-                    <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3.5 space-y-2">
-                        <div class="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                            <flux:icon icon="shield-check" class="size-4" />
-                            <span>{{ __('Zero-Knowledge Encryption Verified') }}</span>
+                    <div
+                        x-data="{
+                            slug: {{ Js::from($vault->slug) }},
+                            salt: {{ Js::from($vault->e2ee_salt) }},
+                            testCipher: {{ Js::from($vault->e2ee_test_cipher) }},
+                            isUnlocked: Boolean(window.VaultCrypto) && window.VaultCrypto.hasSessionKey({{ Js::from($vault->slug) }}),
+                            passphrase: '',
+                            isDeriving: false,
+                            error: '',
+                            async unlock() {
+                                if (!this.passphrase || this.isDeriving || !window.VaultCrypto) return;
+                                this.isDeriving = true;
+                                this.error = '';
+                                try {
+                                    const res = await window.VaultCrypto.verifyPassphrase(this.passphrase, this.salt, this.testCipher);
+                                    if (!res.success) {
+                                        this.error = res.error || 'Incorrect passphrase.';
+                                        return;
+                                    }
+                                    window.VaultCrypto.setSessionKey(this.slug, res.key);
+                                    this.isUnlocked = true;
+                                    this.passphrase = '';
+                                } catch (e) {
+                                    this.error = e.message || 'Unlock failed.';
+                                } finally {
+                                    this.isDeriving = false;
+                                }
+                            },
+                            lock() {
+                                if (window.VaultCrypto) {
+                                    window.VaultCrypto.clearSessionKey(this.slug);
+                                }
+                                this.isUnlocked = false;
+                            }
+                        }"
+                        class="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 space-y-4"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                <flux:icon icon="shield-check" class="size-4" />
+                                <span>{{ __('Zero-Knowledge Encryption Verified') }}</span>
+                            </div>
+                            <template x-if="isUnlocked">
+                                <flux:badge color="emerald" size="sm">🔓 {{ __('Browser Session Unlocked') }}</flux:badge>
+                            </template>
+                            <template x-if="!isUnlocked">
+                                <flux:badge color="amber" size="sm">🔒 {{ __('Browser Session Locked') }}</flux:badge>
+                            </template>
                         </div>
-                        <div class="text-xs font-mono text-zinc-600 dark:text-zinc-400 break-all">
-                            <span class="text-zinc-400">{{ __('Key Salt: ') }}</span>{{ $vault->e2ee_salt }}
+
+                        <div class="space-y-1 text-xs font-mono text-zinc-600 dark:text-zinc-400 break-all bg-emerald-500/5 p-2.5 rounded-lg border border-emerald-500/10">
+                            <div><span class="text-zinc-400 font-sans font-medium">{{ __('Algorithm: ') }}</span>PBKDF2-HMAC-SHA256 (100k rounds) + AES-GCM-256</div>
+                            <div><span class="text-zinc-400 font-sans font-medium">{{ __('Key Salt: ') }}</span>{{ $vault->e2ee_salt }}</div>
                         </div>
-                        <p class="text-[11px] text-zinc-500">
-                            {{ __('Your team members must configure the shared vault passphrase in their Obsidian plugin settings to sync and decrypt notes.') }}
-                        </p>
+
+                        <!-- Session Lock/Unlock Controls -->
+                        <div class="pt-2 border-t border-emerald-500/15">
+                            <template x-if="isUnlocked">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-xs text-zinc-400">
+                                        {{ __('Notes in this vault are actively decrypted in this browser tab.') }}
+                                    </p>
+                                    <flux:button size="xs" variant="ghost" @click="lock()" class="text-zinc-400 hover:text-white">
+                                        <flux:icon icon="lock-closed" class="size-3.5 mr-1" />
+                                        {{ __('Lock Browser Session') }}
+                                    </flux:button>
+                                </div>
+                            </template>
+
+                            <template x-if="!isUnlocked">
+                                <form @submit.prevent="unlock()" class="space-y-2.5">
+                                    <p class="text-xs text-zinc-400">
+                                        {{ __('Unlock this vault in your browser to view and edit encrypted notes:') }}
+                                    </p>
+                                    <template x-if="error">
+                                        <div class="text-xs text-red-400 flex items-center gap-1.5" x-text="error"></div>
+                                    </template>
+                                    <div class="flex items-center gap-2">
+                                        <flux:input
+                                            type="password"
+                                            x-model="passphrase"
+                                            placeholder="{{ __('Vault passphrase...') }}"
+                                            size="sm"
+                                            class="flex-1"
+                                            required
+                                        />
+                                        <flux:button
+                                            type="submit"
+                                            size="sm"
+                                            variant="primary"
+                                            color="emerald"
+                                            ::disabled="isDeriving || !passphrase"
+                                        >
+                                            <span x-show="!isDeriving">{{ __('Unlock Tab') }}</span>
+                                            <span x-show="isDeriving">{{ __('Deriving...') }}</span>
+                                        </flux:button>
+                                    </div>
+                                </form>
+                            </template>
+                        </div>
+
+                        @can('update', $vault)
+                            <div class="pt-2 border-t border-emerald-500/15 flex justify-end">
+                                <flux:button
+                                    size="xs"
+                                    variant="subtle"
+                                    color="red"
+                                    wire:click="disableE2ee"
+                                    wire:confirm="Disable Zero-Knowledge E2EE for this vault? Existing notes will remain encrypted with the previous passphrase until re-synced."
+                                >
+                                    {{ __('Disable Encryption') }}
+                                </flux:button>
+                            </div>
+                        @endcan
                     </div>
                 @else
-                    <div class="rounded-lg bg-zinc-50 dark:bg-zinc-800/60 p-3.5 border border-zinc-200 dark:border-zinc-700 space-y-2">
-                        <div class="flex items-center gap-2 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                            <flux:icon icon="lock-closed" class="size-4 text-zinc-400" />
-                            <span>{{ __('Enable E2EE via Obsidian Client Plugin') }}</span>
+                    <div
+                        x-data="{
+                            slug: {{ Js::from($vault->slug) }},
+                            passphrase: '',
+                            confirmPassphrase: '',
+                            isDeriving: false,
+                            error: '',
+                            async enable() {
+                                this.error = '';
+                                if (!this.passphrase || this.passphrase.length < 8) {
+                                    this.error = 'Passphrase must be at least 8 characters long.';
+                                    return;
+                                }
+                                if (this.passphrase !== this.confirmPassphrase) {
+                                    this.error = 'Passphrases do not match.';
+                                    return;
+                                }
+                                if (!window.VaultCrypto) {
+                                    this.error = 'WebCrypto engine is not supported in this browser.';
+                                    return;
+                                }
+
+                                this.isDeriving = true;
+                                try {
+                                    const salt = window.VaultCrypto.generateSalt();
+                                    const key = await window.VaultCrypto.deriveKey(this.passphrase, salt);
+                                    const testCipher = await window.VaultCrypto.createVerificationCipher(key);
+
+                                    window.VaultCrypto.setSessionKey(this.slug, key);
+                                    await $wire.enableE2ee(salt, testCipher);
+                                } catch (e) {
+                                    this.error = e.message || 'Key derivation failed.';
+                                } finally {
+                                    this.isDeriving = false;
+                                }
+                            }
+                        }"
+                        class="rounded-xl bg-zinc-50 dark:bg-zinc-800/60 p-4 border border-zinc-200 dark:border-zinc-700 space-y-4"
+                    >
+                        <div class="flex items-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                            <flux:icon icon="lock-closed" class="size-4 text-emerald-500" />
+                            <span>{{ __('Enable Zero-Knowledge E2EE in Browser') }}</span>
                         </div>
+
                         <p class="text-xs text-zinc-500">
-                            {{ __('To protect zero-knowledge guarantees, E2EE key derivation and verification tokens are initialized through the Obsidian desktop or mobile plugin where your passphrase never leaves your client device.') }}
+                            {{ __('Configure a shared passphrase to activate AES-256-GCM encryption. Synkk runs PBKDF2 (100,000 rounds) directly in your browser using the W3C WebCrypto API. Plaintext notes and your passphrase will never touch the server.') }}
                         </p>
+
+                        <template x-if="error">
+                            <div class="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+                                <flux:icon icon="exclamation-triangle" class="size-4 shrink-0" />
+                                <span x-text="error"></span>
+                            </div>
+                        </template>
+
+                        @can('update', $vault)
+                            <form @submit.prevent="enable()" class="space-y-3 pt-1">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <flux:input
+                                        type="password"
+                                        x-model="passphrase"
+                                        :label="__('Vault Passphrase')"
+                                        placeholder="{{ __('Min 8 characters...') }}"
+                                        size="sm"
+                                        required
+                                    />
+                                    <flux:input
+                                        type="password"
+                                        x-model="confirmPassphrase"
+                                        :label="__('Confirm Passphrase')"
+                                        placeholder="{{ __('Repeat passphrase...') }}"
+                                        size="sm"
+                                        required
+                                    />
+                                </div>
+                                <div class="flex justify-end pt-1">
+                                    <flux:button
+                                        type="submit"
+                                        size="sm"
+                                        variant="primary"
+                                        color="emerald"
+                                        ::disabled="isDeriving || !passphrase || !confirmPassphrase"
+                                    >
+                                        <span x-show="!isDeriving" class="flex items-center gap-1.5">
+                                            <flux:icon icon="lock-closed" class="size-4" />
+                                            {{ __('Derive Key & Enable E2EE') }}
+                                        </span>
+                                        <span x-show="isDeriving" class="flex items-center gap-2">
+                                            <flux:icon icon="arrow-path" class="size-4 animate-spin" />
+                                            {{ __('Deriving (100,000 PBKDF2 rounds)...') }}
+                                        </span>
+                                    </flux:button>
+                                </div>
+                            </form>
+                        @endcan
                     </div>
                 @endif
+            </flux:card>
+
+            <!-- Vault Archive & Backup -->
+            <flux:card class="space-y-3">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <flux:heading size="md">{{ __('Vault Archive & Backup') }}</flux:heading>
+                        <flux:subheading class="text-xs">
+                            {{ __('Download a standalone .zip archive of all active notes and folders in this vault.') }}
+                        </flux:subheading>
+                    </div>
+                    <flux:button
+                        variant="subtle"
+                        size="sm"
+                        icon="arrow-down-tray"
+                        wire:click="exportVaultZip"
+                    >
+                        {{ __('Export Entire Vault (.zip)') }}
+                    </flux:button>
+                </div>
             </flux:card>
 
             <!-- Danger Zone -->

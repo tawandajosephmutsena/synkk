@@ -74,6 +74,7 @@ class ResolveConflictAction
             if ($conflictFile) {
                 $conflictFile->update([
                     'is_deleted' => true,
+                    'version' => $canonicalFile->version,
                     'last_modified_by' => $user->id,
                 ]);
 

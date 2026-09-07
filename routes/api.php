@@ -58,6 +58,7 @@ Route::prefix('v1')
             Route::post('rag/query', [VaultSyncController::class, 'ragQuery'])->name('api.vaults.rag.query');
             Route::post('rag/search', [VaultSyncController::class, 'ragSearch'])->name('api.vaults.rag.search');
             Route::post('rag/index', [VaultSyncController::class, 'ragIndex'])->name('api.vaults.rag.index');
+            Route::get('rag/progress', [VaultSyncController::class, 'ragProgress'])->name('api.vaults.rag.progress');
             Route::get('rag/status', [VaultSyncController::class, 'ragStatus'])->name('api.vaults.rag.status');
         });
     });

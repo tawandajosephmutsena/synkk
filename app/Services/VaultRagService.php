@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Vault;
 use App\Models\VaultFile;
 use App\Models\VaultFileEmbedding;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -27,12 +28,47 @@ class VaultRagService
      */
     public function indexVault(Vault $vault, bool $force = false): array
     {
+        if ($vault->is_e2ee) {
+            Cache::put("vault_rag_progress_{$vault->id}", [
+                'status' => 'skipped',
+                'percentage' => 100,
+                'total_files' => 0,
+                'indexed_files' => 0,
+                'current_file' => null,
+                'chunks_count' => 0,
+                'duration_ms' => 0,
+                'message' => 'Vault has Zero-Knowledge E2EE enabled. Server-side RAG indexing is disabled.',
+                'updated_at' => now()->toIso8601String(),
+            ], now()->addHours(2));
+
+            return [
+                'status' => 'skipped',
+                'files_indexed' => 0,
+                'chunks_count' => 0,
+                'duration_ms' => 0,
+                'message' => 'Vault has Zero-Knowledge E2EE enabled. Server-side RAG indexing is disabled.',
+            ];
+        }
+
         $startTime = microtime(true);
 
         $markdownFiles = VaultFile::where('vault_id', $vault->id)
             ->where('is_deleted', false)
             ->where('path', 'like', '%.md')
             ->get();
+
+        $totalFiles = $markdownFiles->count();
+
+        Cache::put("vault_rag_progress_{$vault->id}", [
+            'status' => 'indexing',
+            'percentage' => $totalFiles > 0 ? 0 : 100,
+            'total_files' => $totalFiles,
+            'indexed_files' => 0,
+            'current_file' => null,
+            'chunks_count' => 0,
+            'duration_ms' => 0,
+            'updated_at' => now()->toIso8601String(),
+        ], now()->addHours(2));
 
         // 1. Remove orphaned embeddings for deleted files
         $activeFileIds = $markdownFiles->pluck('id')->all();
@@ -44,6 +80,10 @@ class VaultRagService
         $filesIndexed = 0;
 
         foreach ($markdownFiles as $file) {
+            if ($file->is_encrypted) {
+                continue;
+            }
+
             $content = $file->getContents();
             if ($content === null || trim($content) === '') {
                 VaultFileEmbedding::where('vault_file_id', $file->id)->delete();
@@ -92,9 +132,32 @@ class VaultRagService
                 ->delete();
 
             $filesIndexed++;
+
+            $currentPct = $totalFiles > 0 ? (int) round(($filesIndexed / $totalFiles) * 100) : 100;
+            Cache::put("vault_rag_progress_{$vault->id}", [
+                'status' => 'indexing',
+                'percentage' => $currentPct,
+                'total_files' => $totalFiles,
+                'indexed_files' => $filesIndexed,
+                'current_file' => $file->path,
+                'chunks_count' => $totalChunksCount,
+                'duration_ms' => (int) round((microtime(true) - $startTime) * 1000),
+                'updated_at' => now()->toIso8601String(),
+            ], now()->addHours(2));
         }
 
         $durationMs = (int) round((microtime(true) - $startTime) * 1000);
+
+        Cache::put("vault_rag_progress_{$vault->id}", [
+            'status' => 'completed',
+            'percentage' => 100,
+            'total_files' => $totalFiles,
+            'indexed_files' => $filesIndexed,
+            'current_file' => null,
+            'chunks_count' => $totalChunksCount,
+            'duration_ms' => $durationMs,
+            'updated_at' => now()->toIso8601String(),
+        ], now()->addHours(2));
 
         return [
             'status' => 'indexed',
@@ -102,6 +165,27 @@ class VaultRagService
             'chunks_count' => $totalChunksCount,
             'duration_ms' => $durationMs,
         ];
+    }
+
+    /**
+     * Get real-time indexing progress and percentage.
+     *
+     * @return array<string, mixed>
+     */
+    public function getProgress(Vault $vault): array
+    {
+        $default = [
+            'status' => 'idle',
+            'percentage' => 0,
+            'total_files' => 0,
+            'indexed_files' => 0,
+            'current_file' => null,
+            'chunks_count' => 0,
+            'duration_ms' => 0,
+            'updated_at' => now()->toIso8601String(),
+        ];
+
+        return Cache::get("vault_rag_progress_{$vault->id}", $default);
     }
 
     /**
@@ -139,12 +223,13 @@ class VaultRagService
 
         $embeddings = VaultFileEmbedding::with('file')
             ->where('vault_id', $vault->id)
+            ->whereHas('file', fn ($q) => $q->where('is_deleted', false))
             ->get();
 
         $scored = [];
 
         foreach ($embeddings as $record) {
-            if (! $record->file || $record->file->is_deleted) {
+            if ($record->file->is_deleted) {
                 continue;
             }
 
@@ -223,6 +308,17 @@ class VaultRagService
      */
     public function query(Vault $vault, string $query, array $options = []): array
     {
+        if ($vault->is_e2ee) {
+            return [
+                'query' => $query,
+                'answer' => 'Vault Copilot RAG is disabled on Zero-Knowledge E2EE vaults to protect privacy. Server storage contains ciphertext and cannot be decrypted without your client passphrase.',
+                'citations' => [],
+                'graph_nodes' => [],
+                'model' => 'synkk/e2ee-guarded',
+                'duration_ms' => 0,
+            ];
+        }
+
         $startTime = microtime(true);
         $maxCitations = $options['max_citations'] ?? 4;
         $expandGraph = $options['expand_graph'] ?? true;

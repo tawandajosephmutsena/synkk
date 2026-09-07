@@ -6,8 +6,10 @@ use App\Actions\Vaults\BatchSyncAction;
 use App\Actions\Vaults\ResolveConflictAction;
 use App\Actions\Vaults\SyncUploadAction;
 use App\Http\Controllers\Controller;
+use App\Jobs\IndexVaultRagJob;
 use App\Models\DeviceToken;
 use App\Models\Vault;
+use App\Models\VaultFile;
 use App\Services\CrdtCollabService;
 use App\Services\E2eeVaultService;
 use App\Services\GhostFileService;
@@ -17,7 +19,6 @@ use App\Services\VaultRagService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class VaultSyncController extends Controller
@@ -32,6 +33,22 @@ class VaultSyncController extends Controller
         protected E2eeVaultService $e2eeService,
         protected VaultRagService $ragService
     ) {}
+
+    /**
+     * Authorize that the device token belongs to the vault's team and has permission to access the vault.
+     */
+    protected function authorizeDeviceForVault(?DeviceToken $deviceToken, Vault $vault): ?JsonResponse
+    {
+        if (! $deviceToken || $vault->team_id !== $deviceToken->team_id) {
+            return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
+        }
+
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        return null;
+    }
 
     /**
      * List all vaults accessible to the current team member.
@@ -285,7 +302,7 @@ class VaultSyncController extends Controller
         }
 
         $request->validate([
-            'path' => 'required|string',
+            'path' => ['required', 'string', 'not_regex:/\.\./'],
             'base_version' => 'nullable|integer',
         ]);
 
@@ -318,7 +335,6 @@ class VaultSyncController extends Controller
                 'storage_limit_mb' => $planService->getStorageLimitMb($deviceToken->team),
             ], 402);
         }
-
         // Get file contents (supports multipart 'file' or raw base64 / text)
         if ($request->hasFile('file')) {
             $uploadedFile = $request->file('file');
@@ -343,7 +359,7 @@ class VaultSyncController extends Controller
         if ($isGhost && $originalSize === 0) {
             $parsedStub = $this->ghostFileService->parseGhostStub($contents);
             if ($parsedStub) {
-                $originalSize = $parsedStub['size'] ?? 0;
+                $originalSize = $parsedStub['size'];
             }
         }
 
@@ -420,9 +436,17 @@ class VaultSyncController extends Controller
 
         $request->validate([
             'items' => "required|array|max:{$maxBatch}",
-            'items.*.path' => 'required|string',
+            'items.*.path' => ['required', 'string', 'not_regex:/\.\./'],
             'items.*.action' => 'nullable|string|in:upload,delete',
             'items.*.base_version' => 'nullable|integer',
+            'items.*.content_base64' => 'nullable|string',
+            'items.*.content' => 'nullable|string',
+            'items.*.is_encrypted' => 'nullable|boolean',
+            'items.*.encryption_iv' => 'nullable|string',
+            'items.*.encryption_tag' => 'nullable|string',
+            'items.*.is_ghost' => 'nullable|boolean',
+            'items.*.original_size' => 'nullable|integer',
+            'items.*.mime_type' => 'nullable|string',
         ]);
 
         $items = $request->input('items', []);
@@ -457,6 +481,10 @@ class VaultSyncController extends Controller
             ], 403);
         }
 
+        $request->validate([
+            'path' => ['required', 'string', 'not_regex:/\.\./'],
+        ]);
+
         $path = trim($request->input('path'), '/');
         if (! $path) {
             return response()->json(['error' => 'Path parameter is required'], 400);
@@ -468,6 +496,7 @@ class VaultSyncController extends Controller
             return response()->json([
                 'error' => 'Permission Denied',
                 'message' => "You do not have write permissions to delete '{$path}'.",
+                'permission' => $permission,
             ], 403);
         }
 
@@ -482,14 +511,19 @@ class VaultSyncController extends Controller
             'is_deleted' => true,
             'version' => $nextVersion,
             'last_modified_by' => $user->id,
+            'last_modified_device' => $deviceToken->name,
         ]);
 
+        // Record change log
         $vault->changeLogs()->create([
+            'vault_file_id' => $file->id,
             'user_id' => $user->id,
             'device_name' => $deviceToken->name,
             'path' => $path,
             'action' => 'deleted',
             'version' => $nextVersion,
+            'sha256' => $file->sha256,
+            'size' => 0,
         ]);
 
         return response()->json([
@@ -500,14 +534,14 @@ class VaultSyncController extends Controller
     }
 
     /**
-     * List all pending conflict copies in the vault.
+     * List active conflict files in the vault.
      */
     public function conflicts(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $user = $deviceToken->user;
@@ -518,9 +552,10 @@ class VaultSyncController extends Controller
                 $query->where('path', 'like', '%.conflict-%')
                     ->orWhere('path', 'like', '%.sync-conflict-%');
             })
+            ->with(['lastModifier'])
             ->get()
-            ->filter(fn ($file) => $vault->permissionForPath($user, $file->path) !== 'hidden')
-            ->map(function ($file) {
+            ->filter(fn (VaultFile $file) => $vault->permissionForPath($user, $file->path) !== 'hidden')
+            ->map(function (VaultFile $file) {
                 $canonicalPath = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $file->path);
                 if ($canonicalPath === $file->path) {
                     $canonicalPath = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $file->path);
@@ -532,7 +567,7 @@ class VaultSyncController extends Controller
                     'canonical_path' => $canonicalPath,
                     'size' => $file->size,
                     'version' => $file->version,
-                    'last_modified_by' => $file->lastModifiedBy?->name ?? 'Unknown',
+                    'last_modified_by' => $file->lastModifier ? $file->lastModifier->name : 'Unknown',
                     'updated_at' => $file->updated_at?->toIso8601String(),
                 ];
             })
@@ -549,15 +584,15 @@ class VaultSyncController extends Controller
      */
     public function diffConflict(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $validated = $request->validate([
-            'conflict_path' => ['required', 'string'],
-            'canonical_path' => ['nullable', 'string'],
+            'conflict_path' => ['required', 'string', 'not_regex:/\.\./'],
+            'canonical_path' => ['nullable', 'string', 'not_regex:/\.\./'],
         ]);
 
         $conflictPath = ltrim(str_replace('\\', '/', $validated['conflict_path']), '/');
@@ -602,7 +637,7 @@ class VaultSyncController extends Controller
             'clean_count' => $diff['clean_count'],
             'merged_content' => $diff['merged_content'],
             'hunks' => $diff['hunks'],
-            'canonical_version' => $canonicalFile?->version ?? 0,
+            'canonical_version' => $canonicalFile ? $canonicalFile->version : 0,
             'conflict_version' => $conflictFile->version,
         ]);
     }
@@ -612,10 +647,10 @@ class VaultSyncController extends Controller
      */
     public function resolveConflict(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $validated = $request->validate([
@@ -647,10 +682,10 @@ class VaultSyncController extends Controller
      */
     public function collabJoin(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $validated = $request->validate([
@@ -673,10 +708,10 @@ class VaultSyncController extends Controller
      */
     public function collabSync(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $validated = $request->validate([
@@ -705,6 +740,12 @@ class VaultSyncController extends Controller
      */
     public function collabLeave(Request $request, Vault $vault): JsonResponse
     {
+        /** @var DeviceToken|null $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
+        }
+
         $validated = $request->validate([
             'path' => ['required', 'string'],
             'peer_id' => ['required', 'string'],
@@ -720,10 +761,10 @@ class VaultSyncController extends Controller
      */
     public function collabPresence(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $validated = $request->validate([
@@ -743,10 +784,10 @@ class VaultSyncController extends Controller
      */
     public function hydrateFile(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $validated = $request->validate([
@@ -780,10 +821,10 @@ class VaultSyncController extends Controller
      */
     public function dehydrateFile(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $validated = $request->validate([
@@ -809,10 +850,10 @@ class VaultSyncController extends Controller
      */
     public function enableE2ee(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         if ($deviceToken->access_scope === 'read_only') {
@@ -839,10 +880,10 @@ class VaultSyncController extends Controller
      */
     public function e2eeStatus(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         return response()->json($this->e2eeService->getStatus($vault));
@@ -853,10 +894,10 @@ class VaultSyncController extends Controller
      */
     public function transportStatus(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $clientVersion = (int) $request->query('client_version', 0);
@@ -887,10 +928,10 @@ class VaultSyncController extends Controller
      */
     public function ragQuery(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $validated = $request->validate([
@@ -915,10 +956,10 @@ class VaultSyncController extends Controller
      */
     public function ragSearch(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $validated = $request->validate([
@@ -937,22 +978,68 @@ class VaultSyncController extends Controller
     }
 
     /**
-     * Re-index vault markdown notes into vector embeddings.
+     * Re-index vault markdown notes into vector embeddings via background queue.
      */
     public function ragIndex(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $force = (bool) $request->input('force', false);
-        $telemetry = $this->ragService->indexVault($vault, $force);
+        $sync = $request->boolean('sync', false);
+
+        if ($sync) {
+            $telemetry = $this->ragService->indexVault($vault, $force);
+
+            return response()->json([
+                'status' => 'indexed',
+                ...$telemetry,
+            ]);
+        }
+
+        IndexVaultRagJob::dispatch($vault, $force);
+        $progress = $this->ragService->getProgress($vault);
+
+        // When executed under synchronous queue runner
+        if (($progress['status'] ?? '') === 'completed') {
+            return response()->json([
+                'status' => 'indexed',
+                'files_indexed' => $progress['indexed_files'] ?? 0,
+                'chunks_count' => $progress['chunks_count'] ?? 0,
+                'duration_ms' => $progress['duration_ms'] ?? 0,
+                'progress' => $progress,
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'queued',
+            'message' => 'Vault RAG indexing dispatched to background queue worker.',
+            'vault' => $vault->slug,
+            'progress' => $progress,
+            'progress_url' => route('api.vaults.rag.progress', ['vault' => $vault->slug]),
+        ], 202);
+    }
+
+    /**
+     * Report real-time RAG indexing progress percentage and metrics.
+     */
+    public function ragProgress(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken|null $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
+        }
+
+        $progress = $this->ragService->getProgress($vault);
 
         return response()->json([
             'status' => 'ok',
-            ...$telemetry,
+            'vault' => $vault->slug,
+            ...$progress,
         ]);
     }
 
@@ -961,30 +1048,20 @@ class VaultSyncController extends Controller
      */
     public function ragStatus(Request $request, Vault $vault): JsonResponse
     {
-        /** @var DeviceToken $deviceToken */
+        /** @var DeviceToken|null $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
         }
 
         $status = $this->ragService->getStatus($vault);
+        $progress = $this->ragService->getProgress($vault);
 
         return response()->json([
             'status' => 'ok',
             ...$status,
+            'progress' => $progress,
         ]);
-    }
-
-    protected function generateConflictPath(string $path, string $userName): string
-    {
-        $info = pathinfo($path);
-        $dirname = (isset($info['dirname']) && $info['dirname'] !== '.') ? $info['dirname'].'/' : '';
-        $filename = $info['filename'];
-        $extension = isset($info['extension']) ? '.'.$info['extension'] : '';
-        $safeUser = Str::slug($userName);
-        $timestamp = now()->format('Ymd-His');
-
-        return "{$dirname}{$filename}.conflict-{$safeUser}-{$timestamp}{$extension}";
     }
 
     protected function guessMimeType(string $path): string

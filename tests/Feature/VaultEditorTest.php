@@ -701,3 +701,84 @@ test('hidden notes are excluded from editor note list and graph nodes', function
     $graphData = $component->get('graphData');
     expect(collect($graphData['nodes'])->pluck('path')->all())->toEqual(['PublicNote.md']);
 });
+
+test('can save client-side encrypted note via saveEncryptedFile in Livewire', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $user->update(['current_team_id' => $team->id]);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'E2EE Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+        'is_e2ee' => true,
+        'e2ee_salt' => bin2hex(random_bytes(16)),
+        'e2ee_test_cipher' => '{"ciphertextBase64":"xyz","ivHex":"abc","tagHex":"def"}',
+    ]);
+
+    $uploader = app(SyncUploadAction::class);
+    $uploader->execute(
+        vault: $vault,
+        user: $user,
+        deviceName: 'Web',
+        path: 'SecretNote.md',
+        contents: 'Initial ciphertext placeholder',
+        baseVersion: 0,
+    );
+
+    $this->actingAs($user);
+
+    $component = Livewire::test('pages::vaults.show', ['vault' => $vault]);
+
+    $encryptedContentBase64 = base64_encode('opaque-aes-gcm-ciphertext-payload');
+    $ivHex = '0123456789abcdef01234567';
+    $tagHex = 'fedcba9876543210fedcba9876543210';
+
+    $component->call('saveEncryptedFile', $encryptedContentBase64, $ivHex, $tagHex);
+
+    $savedFile = $vault->files()->where('path', 'SecretNote.md')->first();
+    expect($savedFile)->not->toBeNull()
+        ->and($savedFile->is_encrypted)->toBeTrue()
+        ->and($savedFile->encryption_iv)->toBe($ivHex)
+        ->and($savedFile->encryption_tag)->toBe($tagHex)
+        ->and($savedFile->getContents())->toBe('opaque-aes-gcm-ciphertext-payload');
+});
+
+test('vault owner can enable and disable E2EE in Livewire settings', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $user->update(['current_team_id' => $team->id]);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Standard Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+        'is_e2ee' => false,
+    ]);
+
+    $this->actingAs($user);
+
+    $component = Livewire::test('pages::vaults.show', ['vault' => $vault]);
+
+    $saltHex = bin2hex(random_bytes(16));
+    $testCipher = '{"ciphertextBase64":"test","ivHex":"123","tagHex":"456"}';
+
+    // Enable E2EE
+    $component->call('enableE2ee', $saltHex, $testCipher);
+
+    $vault->refresh();
+    expect($vault->is_e2ee)->toBeTrue()
+        ->and($vault->e2ee_salt)->toBe($saltHex)
+        ->and($vault->e2ee_test_cipher)->toBe($testCipher);
+
+    // Disable E2EE
+    $component->call('disableE2ee');
+
+    $vault->refresh();
+    expect($vault->is_e2ee)->toBeFalse()
+        ->and($vault->e2ee_salt)->toBeNull();
+});
