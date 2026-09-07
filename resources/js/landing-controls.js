@@ -84,3 +84,48 @@ export const initializeMobileMenu = (menu) => {
         menu.removeEventListener('keydown', closeOnEscape);
     };
 };
+
+export const initializeThemeSwitcher = () => {
+    const STORAGE_KEY = 'synkk-theme';
+
+    const getStoredTheme = () => localStorage.getItem(STORAGE_KEY) || 'system';
+
+    const applyTheme = (theme) => {
+        const isDark =
+            theme === 'dark' ||
+            (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+
+        document.querySelectorAll('[data-theme-set]').forEach((btn) => {
+            const btnTheme = btn.getAttribute('data-theme-set');
+            const isActive = btnTheme === theme;
+            btn.classList.toggle('is-active', isActive);
+            btn.setAttribute('aria-pressed', String(isActive));
+        });
+    };
+
+    document.addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-theme-set]');
+        if (btn) {
+            const theme = btn.getAttribute('data-theme-set');
+            localStorage.setItem(STORAGE_KEY, theme);
+            applyTheme(theme);
+        }
+    });
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (getStoredTheme() === 'system') {
+            applyTheme('system');
+        }
+    });
+
+    applyTheme(getStoredTheme());
+};
+

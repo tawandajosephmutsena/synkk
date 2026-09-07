@@ -7,12 +7,16 @@ use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultChangeLog;
 use App\Models\VaultFile;
+use App\Actions\Vaults\ResolveConflictAction;
 use App\Models\VaultFileVersion;
 use App\Models\VaultPermission;
+use App\Services\CrdtCollabService;
+use App\Services\ThreeWayDiffService;
 use App\Services\VaultAnalyticsService;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
@@ -40,6 +44,21 @@ new #[Title('Vault Details')] class extends Component {
     public string $editorViewMode = 'split'; // 'split', 'source', 'preview'
     public ?int $editorBaseVersion = null;
     public bool $editorIsDirty = false;
+
+    // 3-Way Conflict Sandbox State
+    public ?string $conflictCanonicalPath = null;
+    public ?string $conflictPath = null;
+    public array $conflictHunks = [];
+    public bool $conflictHasConflicts = false;
+    public int $conflictCount = 0;
+    public string $conflictReconciledContent = '';
+    public string $conflictCanonicalContent = '';
+    public string $conflictTheirsContent = '';
+
+    // CRDT Multiplayer State
+    public string $collabPeerId = '';
+    public array $collabActivePeers = [];
+    public int $collabClock = 0;
 
     // New Note Modal State
     public string $newNotePath = '';
@@ -307,6 +326,122 @@ new #[Title('Vault Details')] class extends Component {
         Flux::toast(variant: 'success', text: __('Version v:version restored as current active note.', ['version' => $versionRecord->version]));
     }
 
+    #[Computed]
+    public function currentFileConflicts(): Collection
+    {
+        if (! $this->activeFile) {
+            return collect();
+        }
+
+        $basePath = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $this->activeFile->path);
+        if ($basePath === $this->activeFile->path) {
+            $basePath = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $this->activeFile->path);
+        }
+
+        $info = pathinfo($basePath);
+        $dirname = (isset($info['dirname']) && $info['dirname'] !== '.') ? $info['dirname'].'/' : '';
+        $prefix = $dirname.($info['filename'] ?? '');
+
+        return $this->vault->files()
+            ->where('is_deleted', false)
+            ->where(function ($query) use ($prefix) {
+                $query->where('path', 'like', "{$prefix}.conflict-%")
+                    ->orWhere('path', 'like', "{$prefix}.sync-conflict-%");
+            })
+            ->get();
+    }
+
+    public function openConflictSandbox(string $conflictPath, ?string $canonicalPath = null, ?ThreeWayDiffService $diffService = null): void
+    {
+        $diffService ??= app(ThreeWayDiffService::class);
+        $this->conflictPath = $conflictPath;
+
+        $canonical = $canonicalPath ?? preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $conflictPath);
+        if ($canonical === $conflictPath) {
+            $canonical = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $conflictPath);
+        }
+        $this->conflictCanonicalPath = $canonical;
+
+        $conflictFile = $this->vault->files()->where('path', $conflictPath)->where('is_deleted', false)->firstOrFail();
+        $canonicalFile = $this->vault->files()->where('path', $canonical)->where('is_deleted', false)->first();
+
+        $disk = config('synkk.storage_disk', 'local');
+        $this->conflictTheirsContent = Storage::disk($disk)->exists($conflictFile->storage_path)
+            ? Storage::disk($disk)->get($conflictFile->storage_path)
+            : '';
+
+        $this->conflictCanonicalContent = ($canonicalFile && Storage::disk($disk)->exists($canonicalFile->storage_path))
+            ? Storage::disk($disk)->get($canonicalFile->storage_path)
+            : '';
+
+        $baseContent = '';
+        if ($canonicalFile) {
+            $ancestorVersion = $canonicalFile->versions()->where('version', '<', $canonicalFile->version)->latest('version')->first();
+            if ($ancestorVersion && Storage::disk($disk)->exists($ancestorVersion->storage_path)) {
+                $baseContent = Storage::disk($disk)->get($ancestorVersion->storage_path);
+            }
+        }
+
+        $diff = $diffService->merge($baseContent, $this->conflictCanonicalContent, $this->conflictTheirsContent);
+        $this->conflictHunks = $diff['hunks'];
+        $this->conflictHasConflicts = $diff['has_conflicts'];
+        $this->conflictCount = $diff['conflict_count'];
+        $this->conflictReconciledContent = $diff['merged_content'];
+
+        $this->dispatch('modal-show', name: 'conflict-sandbox-modal');
+    }
+
+    public function setHunkResolution(int $hunkId, string $choice, ?ThreeWayDiffService $diffService = null): void
+    {
+        $diffService ??= app(ThreeWayDiffService::class);
+        if (isset($this->conflictHunks[$hunkId])) {
+            $this->conflictHunks[$hunkId]['choice'] = $choice;
+            $this->conflictReconciledContent = $diffService->assemble($this->conflictHunks);
+        }
+    }
+
+    public function executeConflictResolution(ResolveConflictAction $resolver): void
+    {
+        if (! $this->conflictCanonicalPath || ! $this->conflictPath) {
+            return;
+        }
+
+        $result = $resolver->execute(
+            vault: $this->vault,
+            user: Auth::user(),
+            canonicalPath: $this->conflictCanonicalPath,
+            conflictPath: $this->conflictPath,
+            resolvedContent: $this->conflictReconciledContent,
+            deviceName: 'Web Visual Sandbox'
+        );
+
+        $this->dispatch('modal-close', name: 'conflict-sandbox-modal');
+        $this->selectFile($result['file']->id);
+
+        Flux::toast(variant: 'success', text: __('Conflict reconciled and note updated to revision v:version.', ['version' => $result['version']]));
+    }
+
+    public function collabSyncPulse(?CrdtCollabService $collabService = null): void
+    {
+        if (! $this->activeFile) {
+            return;
+        }
+
+        $collabService ??= app(CrdtCollabService::class);
+        $res = $collabService->sync(
+            vault: $this->vault,
+            user: Auth::user(),
+            path: $this->activeFile->path,
+            peerId: $this->collabPeerId,
+            localDeltas: [],
+            cursor: null,
+            sinceClock: $this->collabClock
+        );
+
+        $this->collabActivePeers = array_values(array_filter($res['peers'], fn ($p) => ($p['peer_id'] ?? '') !== $this->collabPeerId));
+        $this->collabClock = $res['clock'];
+    }
+
     public function updateVaultSettings(): void
     {
         $this->authorize('update', $this->vault);
@@ -393,6 +528,20 @@ new #[Title('Vault Details')] class extends Component {
 
         Flux::toast(variant: 'warning', text: __('Vault ":name" deleted.', ['name' => $name]));
         $this->redirectRoute('vaults.index', navigate: true);
+    }
+
+    public function hydrateGhostFile(int $fileId): void
+    {
+        $file = $this->vault->files()->findOrFail($fileId);
+        app(\App\Services\GhostFileService::class)->hydrateFile($file);
+        Flux::toast(variant: 'success', text: __("Note ':path' successfully hydrated.", ['path' => $file->path]));
+    }
+
+    public function dehydrateGhostFile(int $fileId): void
+    {
+        $file = $this->vault->files()->findOrFail($fileId);
+        app(\App\Services\GhostFileService::class)->dehydrateFile($file);
+        Flux::toast(variant: 'info', text: __("Attachment ':path' converted to on-demand ghost stub.", ['path' => $file->path]));
     }
 
     #[Computed]
@@ -952,36 +1101,60 @@ new #[Title('Vault Details')] class extends Component {
                 </div>
 
                 <div class="flex items-center gap-2.5">
-                    <!-- Collaborators Stack -->
-                    <div class="hidden sm:flex items-center -space-x-1.5 overflow-hidden" title="{{ __('Collaborators') }}">
-                        @foreach ($this->teamMembers->take(3) as $m)
-                            <span class="inline-flex size-6 items-center justify-center rounded-full bg-[#0D3B29] ring-2 ring-[#181A22] text-[10px] font-bold text-emerald-200" title="{{ $m->name }}">
-                                {{ $m->initials() }}
-                            </span>
-                        @endforeach
-                        @if ($this->teamMembers->count() > 3)
-                            <span class="inline-flex size-6 items-center justify-center rounded-full bg-zinc-700 ring-2 ring-[#181A22] text-[9px] font-bold text-white">
-                                +{{ $this->teamMembers->count() - 3 }}
-                            </span>
+                    <!-- CRDT Multiplayer Collaborators Stack & Relay Indicator -->
+                    <div class="hidden sm:flex items-center gap-2">
+                        @if (! empty($collabActivePeers))
+                            <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-[10px] font-semibold animate-pulse" title="{{ __('Active CRDT Multiplayer Peers') }}">
+                                <span class="size-1.5 rounded-full bg-emerald-400"></span>
+                                <span>{{ count($collabActivePeers) }} {{ __('live') }}</span>
+                            </div>
+                            <div class="flex items-center -space-x-1.5 overflow-hidden">
+                                @foreach ($collabActivePeers as $p)
+                                    <span class="inline-flex size-6 items-center justify-center rounded-full ring-2 ring-[#181A22] text-[10px] font-bold text-white shadow-xs" style="background-color: {{ $p['color'] ?? '#10B981' }}" title="{{ $p['name'] }} (Live)">
+                                        {{ strtoupper(substr($p['name'], 0, 2)) }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="flex items-center -space-x-1.5 overflow-hidden" title="{{ __('Collaborators') }}">
+                                @foreach ($this->teamMembers->take(3) as $m)
+                                    <span class="inline-flex size-6 items-center justify-center rounded-full bg-[#0D3B29] ring-2 ring-[#181A22] text-[10px] font-bold text-emerald-200" title="{{ $m->name }}">
+                                        {{ $m->initials() }}
+                                    </span>
+                                @endforeach
+                                @if ($this->teamMembers->count() > 3)
+                                    <span class="inline-flex size-6 items-center justify-center rounded-full bg-zinc-700 ring-2 ring-[#181A22] text-[9px] font-bold text-white">
+                                        +{{ $this->teamMembers->count() - 3 }}
+                                    </span>
+                                @endif
+                            </div>
                         @endif
                     </div>
 
                     @if ($this->activeFile)
                         <!-- Share Button -->
-                        <button
-                            type="button"
-                            @click="copyShareLink()"
-                            class="hidden md:flex items-center gap-1.5 rounded-full border border-zinc-700/80 bg-zinc-800/80 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer shadow-xs"
-                            title="{{ __('Copy share link') }}"
-                        >
-                            <flux:icon icon="share" class="size-3.5" />
-                            <span x-text="shareStatus === 'copied' ? '{{ __('Copied!') }}' : (shareStatus === 'failed' ? '{{ __('Copy failed') }}' : '{{ __('Share') }}')"></span>
-                        </button>
+                        <flux:dropdown position="bottom" align="end">
+                            <button
+                                type="button"
+                                class="hidden sm:flex items-center gap-1.5 rounded-full border border-zinc-700/80 bg-zinc-800/80 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer shadow-xs"
+                            >
+                                <flux:icon icon="share" class="size-3.5" />
+                                <span>{{ __('Share') }}</span>
+                            </button>
+                            <flux:menu class="w-56">
+                                <flux:menu.item icon="clipboard-document" @click="navigator.clipboard.writeText(window.location.href); $dispatch('toast', { text: '{{ __('Link copied to clipboard') }}', variant: 'success' })">
+                                    {{ __('Copy Note URL') }}
+                                </flux:menu.item>
+                                <flux:menu.item icon="qr-code" wire:click="$set('activeTab', 'settings')">
+                                    {{ __('Vault Settings') }}
+                                </flux:menu.item>
+                            </flux:menu>
+                        </flux:dropdown>
 
-                        <!-- Suggesting Changes / Permission Pill -->
+                        <!-- Permission Indicator Pill -->
                         @if ($this->canEditActiveFile)
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-950/70 border border-emerald-600/40 px-2.5 py-1 text-[10px] font-bold text-emerald-400">
-                                <flux:icon icon="pencil-square" class="size-3 text-emerald-400" />
+                            <span class="hidden md:inline-flex items-center gap-1.5 rounded-full bg-emerald-950/70 border border-emerald-500/40 px-2.5 py-1 text-[10px] font-bold text-emerald-300">
+                                <span class="size-1.5 rounded-full bg-emerald-400"></span>
                                 <span>{{ __('Editing enabled') }}</span>
                             </span>
                         @else
@@ -1027,6 +1200,30 @@ new #[Title('Vault Details')] class extends Component {
                     @endif
                 </div>
             </div>
+
+            <!-- Conflict Banner -->
+            @if ($this->activeFile && $this->currentFileConflicts->isNotEmpty())
+                @php $activeConflict = $this->currentFileConflicts->first(); @endphp
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-950/40 px-5 py-2.5 text-amber-200">
+                    <div class="flex items-center gap-2 text-xs">
+                        <flux:icon icon="exclamation-triangle" class="size-4 text-amber-400 shrink-0" />
+                        <span>
+                            <strong class="font-semibold text-amber-300">{{ __('Concurrent Conflict Detected') }}:</strong>
+                            <span class="font-mono text-[11px] text-amber-200/90">{{ $activeConflict->path }}</span>
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="openConflictSandbox('{{ $activeConflict->path }}', '{{ $this->activeFile->path }}')"
+                            class="flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1 text-xs font-bold text-zinc-950 hover:bg-amber-400 transition-colors shadow-xs cursor-pointer"
+                        >
+                            <flux:icon icon="arrows-right-left" class="size-3.5 text-zinc-950" />
+                            <span>{{ __('Launch 3-Way Diff Sandbox') }}</span>
+                        </button>
+                    </div>
+                </div>
+            @endif
 
             <!-- FORMATTING TOOLBAR (Matching Pandocs) -->
             <div class="flex flex-col gap-2 border-b border-[#252836] bg-[#161821] px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-4">
@@ -1725,11 +1922,29 @@ new #[Title('Vault Details')] class extends Component {
                                                 <flux:icon icon="paper-clip" class="size-4 text-zinc-400 shrink-0" />
                                             @endif
                                             <span class="truncate max-w-sm">{{ $file->path }}</span>
+                                            @if ($file->is_ghost)
+                                                <flux:badge color="purple" size="sm" class="shrink-0" title="{{ __('Ghost file stub: content streamable on demand') }}">
+                                                    👻 {{ __('Ghost') }}
+                                                </flux:badge>
+                                            @endif
+                                            @if ($file->is_encrypted || $vault->is_e2ee)
+                                                <flux:badge color="emerald" size="sm" class="shrink-0" title="{{ __('Zero-Knowledge E2EE encrypted') }}">
+                                                    🔒 {{ __('E2EE') }}
+                                                </flux:badge>
+                                            @endif
+                                            @if (str_contains($file->path, '.conflict-') || str_contains($file->path, '.sync-conflict-'))
+                                                <flux:badge color="amber" size="sm" class="shrink-0">{{ __('Conflict') }}</flux:badge>
+                                            @endif
                                         </div>
                                     </flux:table.cell>
 
                                     <flux:table.cell class="text-xs text-zinc-500">
-                                        {{ Number::fileSize($file->size, precision: 1) }}
+                                        @if ($file->is_ghost && $file->original_size > 0)
+                                            <span title="{{ __('Original size before ghost stubbing') }}">{{ Number::fileSize($file->original_size, precision: 1) }}</span>
+                                            <span class="text-[10px] text-zinc-400">({{ __('stub') }})</span>
+                                        @else
+                                            {{ Number::fileSize($file->size, precision: 1) }}
+                                        @endif
                                     </flux:table.cell>
 
                                     <flux:table.cell>
@@ -1745,14 +1960,48 @@ new #[Title('Vault Details')] class extends Component {
                                     </flux:table.cell>
 
                                     <flux:table.cell align="end">
-                                        <flux:button
-                                            variant="subtle"
-                                            size="xs"
-                                            icon="clock"
-                                            wire:click="showFileHistory({{ $file->id }})"
-                                        >
-                                            {{ __('History') }}
-                                        </flux:button>
+                                        <div class="flex items-center justify-end gap-1.5">
+                                            @if ($file->is_ghost)
+                                                <flux:button
+                                                    variant="subtle"
+                                                    size="xs"
+                                                    icon="arrow-down-tray"
+                                                    wire:click="hydrateGhostFile({{ $file->id }})"
+                                                    title="{{ __('Hydrate file content on demand') }}"
+                                                >
+                                                    {{ __('Hydrate') }}
+                                                </flux:button>
+                                            @elseif (! $file->isMarkdown() && $file->size > 1024)
+                                                <flux:button
+                                                    variant="subtle"
+                                                    size="xs"
+                                                    icon="cloud-arrow-up"
+                                                    wire:click="dehydrateGhostFile({{ $file->id }})"
+                                                    title="{{ __('Convert to lightweight ghost file stub') }}"
+                                                >
+                                                    {{ __('Dehydrate') }}
+                                                </flux:button>
+                                            @endif
+                                            @if (str_contains($file->path, '.conflict-') || str_contains($file->path, '.sync-conflict-'))
+                                                <flux:button
+                                                    variant="primary"
+                                                    size="xs"
+                                                    icon="arrows-right-left"
+                                                    wire:click="openConflictSandbox('{{ $file->path }}')"
+                                                    class="!bg-amber-500 !text-zinc-950 hover:!bg-amber-400 font-bold"
+                                                >
+                                                    {{ __('Reconcile') }}
+                                                </flux:button>
+                                            @endif
+                                            <flux:button
+                                                variant="subtle"
+                                                size="xs"
+                                                icon="clock"
+                                                wire:click="showFileHistory({{ $file->id }})"
+                                            >
+                                                {{ __('History') }}
+                                            </flux:button>
+                                        </div>
                                     </flux:table.cell>
                                 </flux:table.row>
                             @endforeach
@@ -2217,6 +2466,50 @@ new #[Title('Vault Details')] class extends Component {
                 </form>
             </flux:card>
 
+            <!-- Zero-Knowledge E2EE & Private Transport Configuration -->
+            <flux:card class="space-y-4">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <flux:heading size="lg">{{ __('Zero-Knowledge End-to-End Encryption') }}</flux:heading>
+                            @if ($vault->is_e2ee)
+                                <flux:badge color="emerald" size="sm">🔒 {{ __('Active (AES-256-GCM)') }}</flux:badge>
+                            @else
+                                <flux:badge color="zinc" size="sm">{{ __('Standard TLS In-Transit') }}</flux:badge>
+                            @endif
+                        </div>
+                        <flux:subheading class="text-xs mt-1">
+                            {{ __('When enabled, all note contents and attachment binaries are encrypted and decrypted strictly on your client devices with WebCrypto AES-256-GCM and PBKDF2 (100,000 rounds). The Synkk server only ever sees opaque ciphertext.') }}
+                        </flux:subheading>
+                    </div>
+                </div>
+
+                @if ($vault->is_e2ee)
+                    <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3.5 space-y-2">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                            <flux:icon icon="shield-check" class="size-4" />
+                            <span>{{ __('Zero-Knowledge Encryption Verified') }}</span>
+                        </div>
+                        <div class="text-xs font-mono text-zinc-600 dark:text-zinc-400 break-all">
+                            <span class="text-zinc-400">{{ __('Key Salt: ') }}</span>{{ $vault->e2ee_salt }}
+                        </div>
+                        <p class="text-[11px] text-zinc-500">
+                            {{ __('Your team members must configure the shared vault passphrase in their Obsidian plugin settings to sync and decrypt notes.') }}
+                        </p>
+                    </div>
+                @else
+                    <div class="rounded-lg bg-zinc-50 dark:bg-zinc-800/60 p-3.5 border border-zinc-200 dark:border-zinc-700 space-y-2">
+                        <div class="flex items-center gap-2 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                            <flux:icon icon="lock-closed" class="size-4 text-zinc-400" />
+                            <span>{{ __('Enable E2EE via Obsidian Client Plugin') }}</span>
+                        </div>
+                        <p class="text-xs text-zinc-500">
+                            {{ __('To protect zero-knowledge guarantees, E2EE key derivation and verification tokens are initialized through the Obsidian desktop or mobile plugin where your passphrase never leaves your client device.') }}
+                        </p>
+                    </div>
+                @endif
+            </flux:card>
+
             <!-- Danger Zone -->
             <flux:card variant="soft" class="border-red-200/50 bg-red-50/20 dark:border-red-900/30 dark:bg-red-950/10 space-y-3">
                 <flux:heading size="md" class="text-red-600 dark:text-red-400">{{ __('Danger Zone') }}</flux:heading>
@@ -2368,5 +2661,168 @@ new #[Title('Vault Details')] class extends Component {
                 <flux:button variant="primary" type="submit" class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90">{{ __('Create Note') }}</flux:button>
             </div>
         </form>
+    </flux:modal>
+
+    <!-- 3-Way Visual Conflict Sandbox Modal -->
+    <flux:modal name="conflict-sandbox-modal" focusable class="max-w-5xl">
+        <div class="space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <flux:heading size="lg" class="text-white flex items-center gap-2">
+                            <flux:icon icon="arrows-right-left" class="size-5 text-amber-400" />
+                            {{ __('3-Way Visual Conflict Sandbox') }}
+                        </flux:heading>
+                        @if ($conflictHasConflicts)
+                            <flux:badge color="amber" size="sm">{{ $conflictCount }} {{ __('conflicts') }}</flux:badge>
+                        @else
+                            <flux:badge color="emerald" size="sm">{{ __('All clean / resolved') }}</flux:badge>
+                        @endif
+                    </div>
+                    <flux:subheading class="text-xs text-zinc-400 mt-1">
+                        {{ __('Side-by-side reconciliation between your canonical note and the incoming conflict copy.') }}
+                    </flux:subheading>
+                </div>
+                <div class="flex flex-col sm:items-end text-xs text-zinc-400 font-mono">
+                    <span class="text-zinc-200 truncate max-w-xs">{{ $conflictCanonicalPath }}</span>
+                    <span class="text-amber-400/80 truncate max-w-xs text-[11px]">{{ $conflictPath }}</span>
+                </div>
+            </div>
+
+            <!-- Side by Side Preview Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Left: Current Note (Ours) -->
+                <div class="rounded-xl border border-zinc-700/60 bg-zinc-900/90 p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                            <span class="size-2 rounded-full bg-emerald-400"></span>
+                            {{ __('Current Note (Ours)') }}
+                        </span>
+                        <span class="text-[10px] font-mono text-zinc-500">v{{ $activeFile?->version }}</span>
+                    </div>
+                    <pre class="text-xs font-mono text-zinc-300 max-h-48 overflow-y-auto bg-black/40 p-3 rounded-lg border border-zinc-800/80 whitespace-pre-wrap">{{ $conflictCanonicalContent ?: __('(Empty note)') }}</pre>
+                </div>
+
+                <!-- Right: Conflict Note (Theirs) -->
+                <div class="rounded-xl border border-zinc-700/60 bg-zinc-900/90 p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                            <span class="size-2 rounded-full bg-amber-400"></span>
+                            {{ __('Incoming Conflict Revision (Theirs)') }}
+                        </span>
+                        <span class="text-[10px] font-mono text-zinc-500">{{ __('Unmerged') }}</span>
+                    </div>
+                    <pre class="text-xs font-mono text-zinc-300 max-h-48 overflow-y-auto bg-black/40 p-3 rounded-lg border border-zinc-800/80 whitespace-pre-wrap">{{ $conflictTheirsContent ?: __('(Empty note)') }}</pre>
+                </div>
+            </div>
+
+            <!-- Hunks Resolution Controls -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-zinc-400">{{ __('Section-by-Section Resolution') }}</h4>
+                    <span class="text-[11px] text-zinc-500">{{ count($conflictHunks) }} {{ __('total sections') }}</span>
+                </div>
+
+                <div class="space-y-3 max-h-72 overflow-y-auto pr-1">
+                    @foreach ($conflictHunks as $hunk)
+                        @if ($hunk['is_conflict'])
+                            <div class="rounded-xl border border-amber-500/40 bg-amber-950/20 p-4 space-y-3">
+                                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-2">
+                                    <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                                        <flux:icon icon="exclamation-circle" class="size-4 text-amber-400" />
+                                        {{ __('Conflict Section #') }}{{ $hunk['id'] + 1 }}
+                                    </span>
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        <button
+                                            type="button"
+                                            wire:click="setHunkResolution({{ $hunk['id'] }}, 'ours')"
+                                            class="px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer {{ ($hunk['choice'] ?? '') === 'ours' ? 'bg-emerald-600 text-white font-bold' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700' }}"
+                                        >
+                                            {{ __('Keep Ours') }}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            wire:click="setHunkResolution({{ $hunk['id'] }}, 'theirs')"
+                                            class="px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer {{ ($hunk['choice'] ?? '') === 'theirs' ? 'bg-amber-600 text-white font-bold' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700' }}"
+                                        >
+                                            {{ __('Keep Theirs') }}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            wire:click="setHunkResolution({{ $hunk['id'] }}, 'both_ours_first')"
+                                            class="px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer {{ ($hunk['choice'] ?? '') === 'both_ours_first' ? 'bg-indigo-600 text-white font-bold' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700' }}"
+                                        >
+                                            {{ __('Both (Ours 1st)') }}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            wire:click="setHunkResolution({{ $hunk['id'] }}, 'both_theirs_first')"
+                                            class="px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer {{ ($hunk['choice'] ?? '') === 'both_theirs_first' ? 'bg-indigo-600 text-white font-bold' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700' }}"
+                                        >
+                                            {{ __('Both (Theirs 1st)') }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
+                                    <div class="bg-emerald-950/30 border border-emerald-500/20 p-2.5 rounded text-emerald-200">
+                                        <div class="text-[10px] text-emerald-400 font-bold mb-1">{{ __('Ours:') }}</div>
+                                        {{ implode("\n", $hunk['our_lines']) }}
+                                    </div>
+                                    <div class="bg-amber-950/30 border border-amber-500/20 p-2.5 rounded text-amber-200">
+                                        <div class="text-[10px] text-amber-400 font-bold mb-1">{{ __('Theirs:') }}</div>
+                                        {{ implode("\n", $hunk['their_lines']) }}
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-400">
+                                <span class="flex items-center gap-1.5">
+                                    <flux:icon icon="check" class="size-3.5 text-emerald-400" />
+                                    <span>{{ $hunk['type'] === 'clean' ? __('Clean identical section') : ($hunk['type'] === 'ours' ? __('Clean change from ours') : __('Clean change from theirs')) }}</span>
+                                </span>
+                                <span class="text-[10px] font-mono text-zinc-500">{{ count($hunk['resolved_lines'] ?? $hunk['our_lines']) }} {{ __('lines') }}</span>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Unified Reconciled Note Preview (Editable) -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <flux:icon icon="sparkles" class="size-3.5 text-emerald-400" />
+                        {{ __('Final Reconciled Note Preview (Editable)') }}
+                    </label>
+                    <span class="text-[11px] text-zinc-400">{{ __('Edits made here will be written directly as the new note revision.') }}</span>
+                </div>
+                <textarea
+                    wire:model="conflictReconciledContent"
+                    rows="8"
+                    class="w-full rounded-xl border border-zinc-700/80 bg-zinc-950 p-3 font-mono text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+                    placeholder="{{ __('Reconciled content...') }}"
+                ></textarea>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between pt-2 border-t border-zinc-800">
+                <div class="text-xs text-zinc-400">
+                    {{ __('Reconciling will archive the conflict copy and save this note as the next active version.') }}
+                </div>
+                <div class="flex items-center gap-2">
+                    <flux:modal.close>
+                        <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                    </flux:modal.close>
+                    <flux:button
+                        variant="primary"
+                        wire:click="executeConflictResolution"
+                        class="!bg-emerald-600 hover:!bg-emerald-500 !text-white font-bold"
+                    >
+                        <flux:icon icon="check" class="size-4 mr-1" />
+                        {{ __('Reconcile & Merge Note') }}
+                    </flux:button>
+                </div>
+            </div>
+        </div>
     </flux:modal>
 </div>

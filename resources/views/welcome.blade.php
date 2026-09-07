@@ -12,6 +12,19 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        <script>
+            (function() {
+                const t = localStorage.getItem('synkk-theme') || 'system';
+                const isDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (isDark) {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            })();
+        </script>
         @fonts
         @vite(['resources/css/landing.css', 'resources/js/landing.js'])
     </head>
@@ -48,10 +61,21 @@
                     <a href="#moonshot">Moonshot</a>
                     <a href="#pricing">Pricing</a>
                     <a href="#roadmap">Roadmap</a>
-                    <a href="{{ route('docs.redirect') }}">Docs</a>
+                    <a href="{{ route('public.docs') }}">Docs</a>
                 </nav>
 
                 <div class="synkk-header__actions">
+                    <div class="synkk-theme-switcher" data-theme-switcher aria-label="Theme switcher">
+                        <button type="button" data-theme-set="light" title="Light mode" aria-label="Light mode">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                        </button>
+                        <button type="button" data-theme-set="dark" title="Dark mode" aria-label="Dark mode">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                        </button>
+                        <button type="button" data-theme-set="system" title="System preference" aria-label="System preference">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                        </button>
+                    </div>
                     @auth
                         <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--ink">Open dashboard <span aria-hidden="true">↗</span></a>
                     @else
@@ -70,7 +94,7 @@
                             <a href="#moonshot">Moonshot <span>05</span></a>
                             <a href="#pricing">Pricing <span>06</span></a>
                             <a href="#roadmap">Roadmap <span>07</span></a>
-                            <a href="{{ route('docs.redirect') }}">Documentation <span>↗</span></a>
+                            <a href="{{ route('public.docs') }}">Documentation <span>↗</span></a>
                             @guest
                                 <a href="{{ route('login') }}">Log in <span>↗</span></a>
                             @endguest
@@ -216,7 +240,7 @@
                                             <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Create workspace <span aria-hidden="true">↗</span></a>
                                         @endif
                                     @endauth
-                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Read architecture <span aria-hidden="true">→</span></a>
+                                    <a href="{{ route('public.docs') }}#architecture" class="synkk-button synkk-button--quiet">Read architecture <span aria-hidden="true">→</span></a>
                                 </div>
                             </div>
                             <div class="synkk-feature-card__media">
@@ -252,7 +276,7 @@
                                             <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Try the editor <span aria-hidden="true">↗</span></a>
                                         @endif
                                     @endauth
-                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Read editor docs <span aria-hidden="true">→</span></a>
+                                    <a href="{{ route('public.docs') }}#quickstart" class="synkk-button synkk-button--quiet">Read editor docs <span aria-hidden="true">→</span></a>
                                 </div>
                             </div>
                             <div class="synkk-feature-card__media">
@@ -288,7 +312,7 @@
                                             <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Explore Graph view <span aria-hidden="true">↗</span></a>
                                         @endif
                                     @endauth
-                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Read graph docs <span aria-hidden="true">→</span></a>
+                                    <a href="{{ route('public.docs') }}#architecture" class="synkk-button synkk-button--quiet">Read graph docs <span aria-hidden="true">→</span></a>
                                 </div>
                             </div>
                             <div class="synkk-feature-card__media">
@@ -324,7 +348,7 @@
                                             <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Create team workspace <span aria-hidden="true">↗</span></a>
                                         @endif
                                     @endauth
-                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Permissions guide <span aria-hidden="true">→</span></a>
+                                    <a href="{{ route('public.docs') }}#permissions" class="synkk-button synkk-button--quiet">Permissions guide <span aria-hidden="true">→</span></a>
                                 </div>
                             </div>
                             <div class="synkk-feature-card__media">
@@ -355,7 +379,7 @@
                                 </ul>
                                 <div class="synkk-feature-card__actions">
                                     <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Download Plugin v1.0.0 <span aria-hidden="true">↗</span></a>
-                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--quiet">Safety documentation <span aria-hidden="true">→</span></a>
+                                    <a href="{{ route('public.docs') }}#safety-shield" class="synkk-button synkk-button--quiet">Safety documentation <span aria-hidden="true">→</span></a>
                                 </div>
                             </div>
                             <div class="synkk-feature-card__media">
@@ -397,7 +421,7 @@
                                     <li><strong>Zero telemetry:</strong> No tracking, no third-party analytics, and no external data exposure.</li>
                                 </ul>
                                 <div class="synkk-feature-card__actions">
-                                    <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--ink">Read self-hosting docs <span aria-hidden="true">→</span></a>
+                                    <a href="{{ route('public.docs') }}#docker" class="synkk-button synkk-button--ink">Read self-hosting docs <span aria-hidden="true">→</span></a>
                                     <a href="https://github.com/tawandajosephmutsena/synkk" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--quiet">View GitHub source <span aria-hidden="true">↗</span></a>
                                 </div>
                             </div>
@@ -1258,8 +1282,8 @@
                                 </div>
                             </div>
                         </li>
-                        <li class="is-next">
-                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>NEXT UP</span>
+                        <li class="is-live">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
                             <div>
                                 <strong>Safety and collaboration</strong>
                                 <p>Character-level CRDT multiplayer editing directly in Obsidian and web, and an in-editor visual conflict sandbox for side-by-side 3-way note reconciliation.</p>
@@ -1271,8 +1295,8 @@
                                 </div>
                             </div>
                         </li>
-                        <li class="is-planned">
-                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--slate" aria-hidden="true"><i></i></span>PLANNED</span>
+                        <li class="is-live">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
                             <div>
                                 <strong>Selective and private transport</strong>
                                 <p>On-demand ghost files for large media attachments, client-side zero-knowledge End-to-End Encryption (E2EE), native mobile background sync relays, and 2-second QR pairing.</p>
@@ -1281,6 +1305,19 @@
                                     <span>Mobile Ghost Files</span>
                                     <span>2s QR Pairing</span>
                                     <span>Background Sync</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="is-next">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>NEXT UP</span>
+                            <div>
+                                <strong>Agentic Knowledge Graph &amp; RAG Server</strong>
+                                <p>Self-hosted vector embeddings, hybrid semantic search, and private local LLM copilots querying your vault with zero cloud leakage.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>Vector Embeddings</span>
+                                    <span>Semantic Search</span>
+                                    <span>Local RAG</span>
+                                    <span>Private AI</span>
                                 </div>
                             </div>
                         </li>
@@ -1349,7 +1386,7 @@
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>The Foundation release preserves the stale upload as a conflict copy instead of silently overwriting the current file. Character-level CRDT merging and an in-editor conflict sandbox are planned after launch.</p>
+                            <p>Synkk features an in-editor visual 3-way diff sandbox for side-by-side note reconciliation, as well as real-time character-level CRDT multiplayer synchronization across web and Obsidian.</p>
                         </div>
                     </details>
                     <details>
@@ -1358,7 +1395,7 @@
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>Yes. The plugin supports selective folder and configuration rules today. On-demand ghost files for large attachments are a later roadmap milestone for mobile storage control.</p>
+                            <p>Yes. The plugin supports selective folder and configuration rules, plus on-demand ghost files for large media attachments so mobile devices stay lean and fast.</p>
                         </div>
                     </details>
                     <details>
@@ -1367,7 +1404,7 @@
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>Synkk only receives the files and paths your configured device and team permissions allow. Client-side zero-knowledge encryption is future work; review the current access and hashing model in the documentation before production use.</p>
+                            <p>Synkk only receives the files and paths your configured device and team permissions allow. With client-side zero-knowledge E2EE (WebCrypto AES-256-GCM), all notes are encrypted on your device and the server only ever sees opaque ciphertext.</p>
                         </div>
                     </details>
                 </div>
@@ -1386,7 +1423,7 @@
                         <p>Download v1.0.0 from GitHub, then follow the setup guide to connect it to Synkk.</p>
                         <div class="synkk-final-cta__actions">
                             <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Download v1.0.0 <span aria-hidden="true">↗</span></a>
-                            <a href="{{ route('docs.redirect') }}" class="synkk-button synkk-button--paper">Read the docs <span aria-hidden="true">→</span></a>
+                            <a href="{{ route('public.docs') }}" class="synkk-button synkk-button--paper">Read the docs <span aria-hidden="true">→</span></a>
                         </div>
                         <div class="synkk-cta-guarantees">
                             <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> 100% Local Files</span>
@@ -1441,7 +1478,7 @@
                         <a href="#pricing">Pricing</a>
                         <a href="#roadmap">Roadmap</a>
                         <a href="#faq">FAQ</a>
-                        <a href="{{ route('docs.redirect') }}">Documentation</a>
+                        <a href="{{ route('public.docs') }}">Documentation</a>
                         <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
                     </nav>
                 </div>

@@ -26,15 +26,35 @@ use Illuminate\Support\Facades\Storage;
  * @property-read User|null $lastModifier
  * @property-read Collection<int, VaultFileVersion> $versions
  */
-#[Fillable(['vault_id', 'path', 'storage_path', 'sha256', 'size', 'version', 'is_deleted', 'last_modified_by'])]
+#[Fillable([
+    'vault_id',
+    'path',
+    'storage_path',
+    'sha256',
+    'size',
+    'version',
+    'is_deleted',
+    'last_modified_by',
+    'is_ghost',
+    'original_size',
+    'mime_type',
+    'hydrated_at',
+    'is_encrypted',
+    'encryption_iv',
+    'encryption_tag',
+])]
 class VaultFile extends Model
 {
     protected function casts(): array
     {
         return [
             'is_deleted' => 'boolean',
+            'is_ghost' => 'boolean',
+            'is_encrypted' => 'boolean',
             'size' => 'integer',
+            'original_size' => 'integer',
             'version' => 'integer',
+            'hydrated_at' => 'datetime',
         ];
     }
 

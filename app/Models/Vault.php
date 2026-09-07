@@ -29,10 +29,17 @@ use Illuminate\Support\Str;
  * @property-read Collection<int, VaultPermission> $permissions
  * @property-read Collection<int, VaultChangeLog> $changeLogs
  */
-#[Fillable(['team_id', 'name', 'slug', 'description', 'default_permission', 'created_by'])]
+#[Fillable(['team_id', 'name', 'slug', 'description', 'default_permission', 'created_by', 'is_e2ee', 'e2ee_salt', 'e2ee_test_cipher'])]
 class Vault extends Model
 {
     use SoftDeletes;
+
+    protected function casts(): array
+    {
+        return [
+            'is_e2ee' => 'boolean',
+        ];
+    }
 
     protected static function boot(): void
     {

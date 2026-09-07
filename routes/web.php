@@ -48,15 +48,10 @@ Route::get('devices', function () {
     return redirect()->route('login');
 });
 
-Route::get('docs', function () {
-    if (auth()->check()) {
-        $team = auth()->user()->currentTeam ?? auth()->user()->personalTeam() ?? auth()->user()->teams->first();
-        if ($team) {
-            return redirect()->route('docs', ['current_team' => $team->slug]);
-        }
-    }
+Route::view('/documentation', 'documentation')->name('public.docs');
 
-    return redirect()->route('login');
+Route::get('docs', function () {
+    return redirect()->route('public.docs');
 })->name('docs.redirect');
 
 Route::prefix('{current_team}')

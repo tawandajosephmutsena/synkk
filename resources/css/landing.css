@@ -1,5 +1,6 @@
 @import 'tailwindcss' source(none);
 @source '../views/welcome.blade.php';
+@source '../views/documentation.blade.php';
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
@@ -3254,4 +3255,1297 @@ summary:focus-visible,
         width: 100%;
         justify-content: center;
     }
+}
+
+/* ==========================================================================
+   Documentation Specific Styling (Matching Welcome Page Branding & Theme)
+   ========================================================================== */
+.synkk-docs-hero {
+    padding-top: 3.5rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid var(--synkk-line);
+    background: linear-gradient(180deg, #f7f8f3 0%, #eeefea 100%);
+}
+.synkk-docs-hero__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.synkk-docs-hero__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.synkk-docs-search {
+    position: relative;
+    max-width: 32rem;
+    width: 100%;
+}
+.synkk-docs-search input {
+    width: 100%;
+    padding: 0.85rem 1.25rem 0.85rem 2.8rem;
+    border-radius: 999px;
+    border: 1px solid var(--synkk-line);
+    background: #ffffff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: var(--synkk-ink);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    transition: border-color 200ms, box-shadow 200ms;
+}
+.synkk-docs-search input:focus {
+    outline: none;
+    border-color: #0d3b29;
+    box-shadow: 0 0 0 3px rgba(13, 59, 41, 0.15);
+}
+.synkk-docs-search svg {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.2rem;
+    height: 1.2rem;
+    color: var(--synkk-muted);
+    pointer-events: none;
+}
+
+.synkk-docs-grid {
+    display: grid;
+    grid-template-columns: 18rem 1fr;
+    gap: 3.5rem;
+    padding-top: 3rem;
+    padding-bottom: 6rem;
+}
+@media (max-width: 992px) {
+    .synkk-docs-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+}
+
+.synkk-docs-sidebar {
+    position: sticky;
+    top: 7rem;
+    height: calc(100vh - 8.5rem);
+    overflow-y: auto;
+    padding-right: 1rem;
+    border-right: 1px solid var(--synkk-line);
+}
+@media (max-width: 992px) {
+    .synkk-docs-sidebar {
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--synkk-line);
+        padding-bottom: 2rem;
+        padding-right: 0;
+    }
+}
+.synkk-docs-sidebar__group {
+    margin-bottom: 2rem;
+}
+.synkk-docs-sidebar__title {
+    font-family: var(--synkk-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #434d3f;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.synkk-docs-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.synkk-docs-sidebar__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #2b3329;
+    text-decoration: none;
+    transition: background 180ms, color 180ms;
+}
+.synkk-docs-sidebar__link:hover,
+.synkk-docs-sidebar__link.is-active {
+    background: #e5ebda;
+    color: #0d3b29;
+    font-weight: 600;
+}
+.synkk-docs-sidebar__link .synkk-badge {
+    font-size: 0.7rem;
+}
+
+.synkk-docs-section {
+    scroll-margin-top: 8rem;
+    margin-bottom: 4.5rem;
+    padding-bottom: 3.5rem;
+    border-bottom: 1px solid var(--synkk-line);
+}
+.synkk-docs-section:last-child {
+    border-bottom: none;
+}
+.synkk-docs-section h2 {
+    font-size: 2.1rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--synkk-ink);
+
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.synkk-docs-section h3 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    color: var(--synkk-ink);
+}
+.synkk-docs-section p {
+    font-size: 1.02rem;
+    line-height: 1.65;
+    color: #333d31;
+    margin-bottom: 1.25rem;
+}
+.synkk-docs-section ul,
+.synkk-docs-section ol {
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+}
+.synkk-docs-section li {
+    font-size: 0.98rem;
+    line-height: 1.6;
+    color: #333d31;
+    margin-bottom: 0.5rem;
+}
+.synkk-docs-section code {
+    font-family: var(--synkk-mono);
+    font-size: 0.86em;
+    background: #e9eee0;
+    color: #1a3c26;
+    padding: 0.2em 0.4em;
+    border-radius: 0.35em;
+    border: 1px solid #d4dcc9;
+}
+
+.synkk-callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1.75rem;
+    border: 1px solid transparent;
+}
+.synkk-callout--info {
+    background: #eaf3dc;
+    border-color: #c7e19f;
+    color: #1e3a15;
+}
+.synkk-callout--tip {
+    background: #f1f8db;
+    border-color: #d8ec92;
+    color: #2b4009;
+}
+.synkk-callout--warning {
+    background: #fff8e6;
+    border-color: #fce1a6;
+    color: #573a00;
+}
+.synkk-callout--danger {
+    background: #fdf2f2;
+    border-color: #f8c4c4;
+    color: #611818;
+}
+.synkk-callout__icon {
+    font-size: 1.3rem;
+    line-height: 1;
+    flex: none;
+}
+.synkk-callout__body h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 0.35rem 0;
+}
+.synkk-callout__body p {
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.synkk-code-box {
+    position: relative;
+    border-radius: 1rem;
+    background: #111815;
+    color: #e5ebda;
+    margin-top: 1.25rem;
+    margin-bottom: 1.75rem;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+.synkk-code-box__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1.25rem;
+    background: #1a231f;
+    border-bottom: 1px solid #28342f;
+    font-family: var(--synkk-mono);
+    font-size: 0.78rem;
+    color: #9cb19a;
+}
+.synkk-code-box__header span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.synkk-code-box__header i {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--synkk-accent);
+}
+.synkk-code-box__copy {
+    background: transparent;
+    border: none;
+    color: #9cb19a;
+    font-family: var(--synkk-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.35rem;
+    transition: color 150ms, background 150ms;
+}
+.synkk-code-box__copy:hover {
+    color: white;
+    background: #2b3933;
+}
+.synkk-code-box pre {
+    margin: 0;
+    padding: 1.25rem;
+    overflow-x: auto;
+    font-family: var(--synkk-mono);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #d1dfc7;
+}
+
+.synkk-api-endpoint {
+    border: 1px solid var(--synkk-line);
+    border-radius: 1rem;
+    background: #ffffff;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+.synkk-api-endpoint__title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+.synkk-api-method {
+    font-family: var(--synkk-mono);
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 0.25rem 0.6rem;
+    border-radius: 0.4rem;
+    text-transform: uppercase;
+}
+.synkk-api-method--get {
+    background: #22c55e;
+    color: white;
+}
+.synkk-api-method--post {
+    background: #0284c7;
+    color: white;
+}
+.synkk-api-method--delete {
+    background: #ef4444;
+    color: white;
+}
+.synkk-api-path {
+    font-family: var(--synkk-mono);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--synkk-ink);
+}
+
+.synkk-step-box {
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+    border: 1px solid var(--synkk-line);
+    background: #ffffff;
+    transition: transform 200ms, box-shadow 200ms;
+}
+.synkk-step-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+.synkk-step-box__num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    background: var(--synkk-ink);
+    color: var(--synkk-accent);
+    font-family: var(--synkk-mono);
+    font-weight: 800;
+    font-size: 1.1rem;
+    flex: none;
+}
+.synkk-step-box__body {
+    flex: 1;
+}
+.synkk-step-box__body h3 {
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+/* ==========================================================================
+   Theme Switcher Control
+   ========================================================================== */
+.synkk-theme-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.2rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--synkk-line);
+    transition: background 200ms, border-color 200ms;
+}
+.synkk-theme-switcher button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--synkk-muted);
+    cursor: pointer;
+    transition: all 220ms var(--synkk-ease);
+}
+.synkk-theme-switcher button:hover {
+    color: var(--synkk-ink);
+    transform: scale(1.08);
+}
+.synkk-theme-switcher button.is-active {
+    background: #ffffff;
+    color: #0d3b29;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* ==========================================================================
+   Vibrant Dark Mode Complete Component Overrides
+   ========================================================================== */
+html.dark,
+[data-theme='dark'] {
+    color-scheme: dark;
+    --synkk-ink: #f8fafc;
+    --synkk-paper: #080c14;
+    --synkk-accent: #22c55e;
+    --synkk-accent-dark: #38bdf8;
+    --synkk-line: #1e293b;
+    --synkk-muted: #94a3b8;
+}
+
+html.dark body,
+html.dark .synkk-site {
+    background: #080c14;
+    color: #f8fafc;
+}
+
+/* Header & Navigation */
+html.dark .synkk-header {
+    background: rgba(8, 12, 20, 0.88);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+    backdrop-filter: blur(20px);
+}
+html.dark .synkk-nav a,
+html.dark .synkk-login {
+    color: #cbd5e1;
+}
+html.dark .synkk-nav a:hover,
+html.dark .synkk-login:hover {
+    color: #38bdf8;
+    text-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+}
+
+/* Theme Switcher */
+html.dark .synkk-theme-switcher {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #334155;
+}
+html.dark .synkk-theme-switcher button {
+    color: #94a3b8;
+}
+html.dark .synkk-theme-switcher button:hover {
+    color: #38bdf8;
+}
+html.dark .synkk-theme-switcher button.is-active {
+    background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+    color: #022c22;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.65);
+}
+
+/* Mobile Drawer Menu */
+html.dark .synkk-mobile-menu > summary {
+    border-color: #334155;
+    background: rgba(255, 255, 255, 0.05);
+}
+html.dark .synkk-mobile-menu > summary span {
+    background: #f8fafc;
+}
+html.dark .synkk-mobile-menu nav {
+    background: #0d1527;
+    border-color: rgba(56, 189, 248, 0.25);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+}
+html.dark .synkk-mobile-menu nav a {
+    color: #f8fafc;
+    border-bottom-color: #1e293b;
+}
+html.dark .synkk-mobile-menu nav span {
+    color: #38bdf8;
+}
+
+/* Announcement Bar */
+html.dark .synkk-announcement {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.18), rgba(6, 182, 212, 0.18));
+    border-bottom: 1px solid rgba(16, 185, 129, 0.35);
+    color: #34d399;
+}
+html.dark .synkk-announcement a {
+    color: #38bdf8;
+}
+html.dark .synkk-status-dot {
+    background: #22c55e;
+    box-shadow: 0 0 12px #22c55e, 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+/* Typography & Headings */
+html.dark .synkk-eyebrow {
+    color: #38bdf8;
+    font-weight: 700;
+}
+html.dark .synkk-section-heading h2,
+html.dark .synkk-roadmap__intro h2,
+html.dark .synkk-final-cta h2,
+html.dark .synkk-hero h1 {
+    color: #f8fafc;
+}
+html.dark .synkk-section-heading > p,
+html.dark .synkk-roadmap__intro > p {
+    color: #94a3b8;
+}
+
+/* Buttons in Dark Mode */
+html.dark .synkk-button--ink {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    color: #f8fafc;
+    border-color: #334155;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+html.dark .synkk-button--ink:hover {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 22px rgba(56, 189, 248, 0.4);
+}
+html.dark .synkk-button--accent {
+    background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+    color: #022c22;
+    font-weight: 700;
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.5);
+}
+html.dark .synkk-button--accent:hover {
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    box-shadow: 0 0 32px rgba(74, 222, 128, 0.7);
+}
+html.dark .synkk-button--quiet,
+html.dark .synkk-button--paper {
+    background: rgba(30, 41, 59, 0.6);
+    color: #e2e8f0;
+    border-color: #334155;
+}
+html.dark .synkk-button--quiet:hover,
+html.dark .synkk-button--paper:hover {
+    background: #1e293b;
+    border-color: #22c55e;
+    color: #38bdf8;
+    box-shadow: 0 0 18px rgba(34, 197, 94, 0.35);
+}
+
+/* Hero Section */
+html.dark .synkk-hero__frame {
+    background: linear-gradient(145deg, #0d1527 0%, #121b30 100%);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 40px rgba(6, 182, 212, 0.12);
+}
+html.dark .synkk-hero__line--accent {
+    color: #34d399;
+}
+html.dark .synkk-hero__line--accent svg {
+    background: #22c55e;
+    color: #022c22;
+}
+html.dark .synkk-hero__lede {
+    color: #94a3b8;
+}
+html.dark .synkk-hero__proof li {
+    color: #cbd5e1;
+}
+html.dark .synkk-hero__proof li::before {
+    color: #34d399;
+}
+html.dark .synkk-hero__media {
+    border-color: rgba(56, 189, 248, 0.2);
+    background: radial-gradient(ellipse at 38% 35%, #064e3b 0, transparent 60%), linear-gradient(145deg, #0f172a, #0b1324);
+}
+html.dark .synkk-orbit {
+    border-color: rgba(56, 189, 248, 0.15);
+}
+html.dark .synkk-orbit i {
+    background: #22c55e;
+    box-shadow: 0 0 10px #22c55e;
+}
+html.dark .synkk-orbit--inner i {
+    background: #a855f7;
+    box-shadow: 0 0 10px #a855f7;
+}
+html.dark .synkk-stage-label {
+    color: #94a3b8;
+}
+html.dark .synkk-device-chip {
+    background: rgba(15, 23, 42, 0.85);
+    border-color: rgba(56, 189, 248, 0.3);
+    color: #f8fafc;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+html.dark .synkk-device-chip span {
+    color: #38bdf8;
+}
+html.dark .synkk-laptop__screen {
+    background: #0f172a;
+    border-color: rgba(56, 189, 248, 0.3);
+}
+html.dark .synkk-window-bar {
+    color: #94a3b8;
+}
+html.dark .synkk-window-bar i {
+    background: #334155;
+}
+html.dark .synkk-window-bar i:first-child {
+    background: #22c55e;
+}
+html.dark .synkk-graph-peek {
+    background: #0f172a;
+    border-color: rgba(56, 189, 248, 0.3);
+}
+html.dark .synkk-graph-peek > div {
+    color: #94a3b8;
+}
+html.dark .synkk-hero-status {
+    background: rgba(15, 23, 42, 0.92);
+    border-color: rgba(56, 189, 248, 0.3);
+    color: #f8fafc;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+}
+html.dark .synkk-hero-status span,
+html.dark .synkk-hero-status small {
+    color: #94a3b8;
+}
+html.dark .synkk-hero-status strong {
+    color: #34d399;
+}
+html.dark .synkk-hero__footnote {
+    color: #94a3b8;
+}
+html.dark .synkk-hero__footnote a {
+    color: #f8fafc;
+}
+html.dark .synkk-hero__footnote a span {
+    border-color: #334155;
+    background: #0f172a;
+}
+
+/* Platforms Bar */
+html.dark .synkk-platforms {
+    border-block-color: #1e293b;
+}
+html.dark .synkk-platforms__inner > p {
+    color: #94a3b8;
+}
+html.dark .synkk-platforms li {
+    color: #cbd5e1;
+}
+
+/* Product Section (Inside Synkk) */
+html.dark .synkk-product-viewer {
+    background: #0d1527;
+    border-color: rgba(56, 189, 248, 0.25);
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7);
+}
+html.dark .synkk-product-tabs {
+    border-bottom-color: #1e293b;
+    background: #0f172a;
+}
+html.dark .synkk-product-tabs button {
+    color: #94a3b8;
+}
+html.dark .synkk-product-tabs button[aria-selected='true'] {
+    background: linear-gradient(135deg, #22c55e, #10b981);
+    color: #022c22;
+    font-weight: 700;
+}
+html.dark .synkk-product-tabs p {
+    color: #38bdf8;
+}
+html.dark .synkk-product-screen img {
+    background: #090d16;
+}
+html.dark .synkk-product-screen figcaption {
+    background: #0f172a;
+    color: #f8fafc;
+}
+html.dark .synkk-product-screen figcaption strong {
+    color: #38bdf8;
+}
+html.dark .synkk-product-screen figcaption span {
+    color: #cbd5e1;
+}
+
+/* Features Section Cards */
+html.dark .synkk-features,
+html.dark .synkk-product-proof {
+    background: #080c14;
+    border-block-color: #1e293b;
+}
+html.dark .synkk-feature-card {
+    background: linear-gradient(145deg, #0d1527 0%, #131d33 100%);
+    border: 1px solid rgba(56, 189, 248, 0.18);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+html.dark .synkk-feature-card:hover {
+    border-color: rgba(34, 197, 94, 0.45);
+    box-shadow: 0 15px 40px rgba(34, 197, 94, 0.18), 0 0 25px rgba(6, 182, 212, 0.18);
+}
+html.dark .synkk-feature-card h3 {
+    color: #f8fafc;
+}
+html.dark .synkk-feature-card p {
+    color: #cbd5e1;
+}
+html.dark .synkk-feature-card__badge {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    color: #4ade80;
+}
+html.dark .synkk-feature-card__list li {
+    color: #cbd5e1;
+}
+html.dark .synkk-feature-card__list li::before {
+    color: #34d399;
+}
+html.dark .synkk-feature-card__list strong {
+    color: #38bdf8;
+}
+
+html.dark .synkk-window-frame {
+    background: #0f172a;
+    border-color: rgba(56, 189, 248, 0.25);
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.7);
+}
+html.dark .synkk-window-frame img {
+    border-top-color: #1e293b;
+}
+
+/* Feature Graphics in Dark Mode */
+html.dark .synkk-feature-graphic--shield {
+    background: linear-gradient(145deg, #022c22 0%, #064e3b 100%);
+    border-color: #10b981;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), 0 0 30px rgba(16, 185, 129, 0.2);
+}
+html.dark .synkk-graphic-shield-badge {
+    border-bottom-color: rgba(16, 185, 129, 0.3);
+}
+html.dark .synkk-graphic-shield-badge strong {
+    color: #f8fafc;
+}
+html.dark .synkk-graphic-shield-badge small {
+    color: #34d399;
+}
+html.dark .synkk-shield-item {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+html.dark .synkk-shield-item__badge {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+}
+html.dark .synkk-shield-item strong {
+    color: #f8fafc;
+}
+html.dark .synkk-shield-item p {
+    color: #cbd5e1;
+}
+
+html.dark .synkk-feature-graphic--docker {
+    background: #0d1527;
+    border-color: rgba(56, 189, 248, 0.3);
+    box-shadow: 0 24px 55px rgba(0, 0, 0, 0.7);
+}
+html.dark .synkk-graphic-docker-header {
+    border-bottom-color: #1e293b;
+    color: #38bdf8;
+}
+html.dark .synkk-docker-code {
+    color: #34d399;
+}
+html.dark .synkk-graphic-wipe-tag {
+    background: #0f172a;
+    border-color: #334155;
+}
+html.dark .synkk-graphic-wipe-tag span {
+    color: #38bdf8;
+}
+html.dark .synkk-graphic-wipe-tag small {
+    color: #94a3b8;
+}
+
+/* Safety Cards Section */
+html.dark .synkk-safety-card {
+    background: linear-gradient(145deg, #0d1527 0%, #141f36 100%);
+    border-color: #1e293b;
+}
+html.dark .synkk-safety-card--primary {
+    background: linear-gradient(145deg, #022c22 0%, #064e3b 100%);
+    border-color: #10b981;
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.25);
+}
+html.dark .synkk-safety-card__top {
+    color: #38bdf8;
+}
+html.dark .synkk-safety-card__top strong {
+    border-color: rgba(56, 189, 248, 0.4);
+    color: #34d399;
+}
+html.dark .synkk-safety-card h3 {
+    color: #f8fafc;
+}
+html.dark .synkk-safety-card > p {
+    color: #cbd5e1;
+}
+html.dark .synkk-hash-readout {
+    background: #022c22;
+    border-color: #059669;
+}
+html.dark .synkk-hash-readout span,
+html.dark .synkk-hash-readout small {
+    color: #38bdf8;
+}
+html.dark .synkk-hash-readout code {
+    color: #34d399;
+}
+html.dark .synkk-rule-list p {
+    border-bottom-color: #1e293b;
+    color: #cbd5e1;
+}
+html.dark .synkk-rule-list strong {
+    color: #34d399;
+}
+html.dark .synkk-rule-list p:last-child strong {
+    color: #f43f5e;
+}
+html.dark .synkk-version-list strong {
+    color: #f8fafc;
+}
+html.dark .synkk-version-list small {
+    color: #94a3b8;
+}
+html.dark .synkk-version-list i {
+    border-color: #34d399;
+}
+html.dark .synkk-version-list li:first-child i {
+    background: #34d399;
+    box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.2);
+}
+
+/* Comparison Matrix Table */
+html.dark .synkk-comparison {
+    background: radial-gradient(ellipse 75% 50% at 50% 0%, rgba(6, 182, 212, 0.15), transparent 70%), #080c14;
+    border-block-color: #1e293b;
+}
+html.dark .synkk-comparison-table-wrapper {
+    background: #0d1527;
+    border-color: #1e293b;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+}
+html.dark .synkk-comparison-table th,
+html.dark .synkk-comparison-table td {
+    border-bottom-color: #1e293b;
+    color: #cbd5e1;
+}
+html.dark .synkk-comparison-table thead th {
+    background: #0f172a;
+    color: #f8fafc;
+    border-bottom-color: #334155;
+}
+html.dark .synkk-comparison-table tbody tr:hover td,
+html.dark .synkk-comparison-table tbody tr:hover th {
+    background: rgba(30, 41, 59, 0.5);
+}
+html.dark .synkk-col-dim {
+    background: #080c14;
+    color: #f8fafc;
+}
+html.dark .synkk-comparison-table .synkk-col-dim strong,
+html.dark .synkk-th-label,
+html.dark .synkk-th-title {
+    color: #f8fafc;
+}
+html.dark .synkk-comparison-table .synkk-col-dim .synkk-cell-dim-desc,
+html.dark .synkk-th-sub,
+html.dark .synkk-cell-sub {
+    color: #94a3b8;
+}
+html.dark .synkk-comparison-table .synkk-col-featured {
+    background: rgba(16, 185, 129, 0.1);
+    border-inline: 2.5px solid #10b981;
+}
+html.dark .synkk-comparison-table thead th.synkk-col-featured {
+    background: #022c22 !important;
+    border-inline-color: #10b981;
+    border-top-color: #10b981;
+}
+html.dark .synkk-comparison-table tbody tr:hover td.synkk-col-featured {
+    background: rgba(16, 185, 129, 0.18) !important;
+}
+html.dark .synkk-comparison-table tbody tr:last-child td.synkk-col-featured {
+    border-bottom-color: #10b981;
+}
+html.dark .synkk-comparison-badge-synkk {
+    background: linear-gradient(135deg, #10b981, #06b6d4);
+    color: #022c22;
+}
+html.dark .synkk-cell-check strong {
+    color: #4ade80;
+}
+html.dark .synkk-cell-warn strong {
+    color: #fbbf24;
+}
+html.dark .synkk-cell-cross strong {
+    color: #f87171;
+}
+
+/* Workflow Section */
+html.dark .synkk-workflow {
+    background: #05080f;
+    color: #f8fafc;
+}
+html.dark .synkk-workflow::after {
+    border-color: rgba(56, 189, 248, 0.15);
+    box-shadow: 0 0 0 6rem rgba(56, 189, 248, 0.05), 0 0 0 12rem rgba(56, 189, 248, 0.02);
+}
+html.dark .synkk-workflow-track {
+    background: #1e293b;
+}
+html.dark .synkk-workflow-track span {
+    background: linear-gradient(90deg, #22c55e, #06b6d4);
+}
+html.dark .synkk-workflow-grid li {
+    background: #0d1527;
+    border: 1px solid #1e293b;
+}
+html.dark .synkk-workflow-grid h3 {
+    color: #f8fafc;
+}
+html.dark .synkk-workflow-grid p {
+    color: #94a3b8;
+}
+html.dark .synkk-step-number {
+    color: #34d399;
+}
+html.dark .synkk-workflow-grid small {
+    background: #0f172a;
+    border-color: #334155;
+    color: #38bdf8;
+}
+
+/* Moonshot Section */
+html.dark .synkk-moonshot {
+    background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(6, 182, 212, 0.12), transparent 70%), #080c14;
+    border-block-color: #1e293b;
+}
+html.dark .synkk-moonshot-card {
+    background: linear-gradient(145deg, #0d1527 0%, #131d33 100%);
+    border-color: rgba(56, 189, 248, 0.2);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+html.dark .synkk-moonshot-card:hover {
+    border-color: #10b981;
+    box-shadow: 0 20px 48px rgba(16, 185, 129, 0.2);
+}
+html.dark .synkk-moonshot-card__header {
+    border-bottom-color: #1e293b;
+}
+html.dark .synkk-moonshot-card__badge {
+    color: #38bdf8;
+}
+html.dark .synkk-moonshot-step {
+    background: linear-gradient(135deg, #10b981, #06b6d4);
+    color: #022c22;
+}
+html.dark .synkk-moonshot-phase {
+    background: #0f172a;
+    border-color: #334155;
+    color: #94a3b8;
+}
+html.dark .synkk-moonshot-phase--live {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #4ade80;
+}
+html.dark .synkk-moonshot-card__content h3 {
+    color: #f8fafc;
+}
+html.dark .synkk-moonshot-card__content p {
+    color: #cbd5e1;
+}
+html.dark .synkk-moonshot-features li {
+    color: #cbd5e1;
+}
+html.dark .synkk-moonshot-features li::before {
+    color: #34d399;
+}
+html.dark .synkk-qr-preview {
+    background: #0d1527;
+    border-color: #1e293b;
+    color: #f8fafc;
+}
+html.dark .synkk-qr-frame {
+    background: #0f172a;
+    border-color: #38bdf8;
+}
+html.dark .synkk-qr-scan-line {
+    background: #38bdf8;
+    box-shadow: 0 0 10px #38bdf8;
+}
+html.dark .synkk-qr-telemetry__pill {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+}
+html.dark .synkk-qr-telemetry small {
+    color: #94a3b8;
+}
+
+/* Pricing Section */
+html.dark .synkk-pricing {
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(16, 185, 129, 0.12), transparent 70%), #080c14;
+    border-block-color: #1e293b;
+}
+html.dark .synkk-pricing-grid article {
+    background: #0d1527;
+    border-color: #1e293b;
+    color: #f8fafc;
+}
+html.dark .synkk-pricing-grid article.is-featured {
+    background: linear-gradient(175deg, #022c22 0%, #043f33 100%);
+    border-color: #10b981;
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4), 0 25px 50px rgba(0, 0, 0, 0.6);
+}
+html.dark .synkk-price-heading > span {
+    color: #38bdf8;
+}
+html.dark .synkk-price-heading strong {
+    color: #f8fafc;
+}
+html.dark .synkk-price-heading small,
+html.dark .synkk-price-subtitle {
+    color: #94a3b8;
+}
+html.dark .synkk-pricing-grid ul {
+    color: #cbd5e1;
+}
+html.dark .synkk-pricing-grid li::before {
+    color: #34d399;
+}
+html.dark .synkk-pricing-trust {
+    background: #0d1527;
+    border-color: #1e293b;
+}
+html.dark .synkk-trust-item {
+    color: #cbd5e1;
+}
+html.dark .synkk-trust-item svg {
+    color: #34d399;
+}
+html.dark .synkk-launch-channels {
+    color: #94a3b8;
+}
+html.dark .synkk-pricing-enterprise {
+    background: #0d1527;
+    border-color: #1e293b;
+}
+html.dark .synkk-pricing-enterprise__copy strong {
+    color: #f8fafc;
+}
+html.dark .synkk-pricing-enterprise__copy p {
+    color: #94a3b8;
+}
+
+/* Roadmap Section */
+html.dark .synkk-roadmap {
+    background: radial-gradient(ellipse 70% 60% at 20% 0%, rgba(6, 182, 212, 0.12), transparent 65%), #080c14;
+    border-bottom-color: #1e293b;
+}
+html.dark .synkk-roadmap-monitor {
+    background: #0d1527;
+    border-color: #1e293b;
+}
+html.dark .synkk-roadmap-monitor__header {
+    border-bottom-color: #1e293b;
+    color: #38bdf8;
+}
+html.dark .synkk-roadmap-monitor__grid small {
+    color: #94a3b8;
+}
+html.dark .synkk-roadmap-monitor__grid span {
+    color: #f8fafc;
+}
+html.dark .synkk-roadmap-list::before {
+    background: linear-gradient(180deg, #22c55e 0%, #06b6d4 60%, rgba(6, 182, 212, 0.2) 100%);
+}
+html.dark .synkk-roadmap-list li {
+    background: #0d1527;
+    border-color: #1e293b;
+}
+html.dark .synkk-roadmap-list li:hover {
+    background: #141f36;
+    border-color: #38bdf8;
+    box-shadow: 0 10px 25px rgba(6, 182, 212, 0.15);
+}
+html.dark .synkk-roadmap-status {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #4ade80;
+}
+html.dark .synkk-roadmap-list .is-next .synkk-roadmap-status {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #fbbf24;
+}
+html.dark .synkk-roadmap-list .is-planned .synkk-roadmap-status {
+    background: rgba(148, 163, 184, 0.15);
+    border-color: rgba(148, 163, 184, 0.35);
+    color: #cbd5e1;
+}
+html.dark .synkk-roadmap-list strong {
+    color: #f8fafc;
+}
+html.dark .synkk-roadmap-list p {
+    color: #cbd5e1;
+}
+html.dark .synkk-roadmap-chips span {
+    background: #1e293b;
+    border-color: #334155;
+    color: #38bdf8;
+}
+
+/* FAQ Section */
+html.dark .synkk-faq-list details {
+    background: #0d1527;
+    border-color: #1e293b;
+}
+html.dark .synkk-faq-list details[open] {
+    background: #141f36;
+    border-color: #38bdf8;
+    box-shadow: 0 10px 30px rgba(6, 182, 212, 0.15);
+}
+html.dark .synkk-faq-list summary {
+    color: #f8fafc;
+}
+html.dark .synkk-faq-list summary > span:first-child {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+}
+html.dark .synkk-faq-toggle {
+    background: rgba(34, 197, 94, 0.15);
+    color: #34d399;
+}
+html.dark .synkk-faq-answer p {
+    color: #cbd5e1;
+    border-left-color: #38bdf8;
+}
+
+/* Final CTA Section */
+html.dark .synkk-final-cta {
+    background: linear-gradient(135deg, #091322 0%, #0d1b30 100%);
+    border-color: rgba(56, 189, 248, 0.3);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.2);
+}
+
+/* Documentation Page in Dark Mode */
+html.dark .synkk-docs-hero {
+    background: linear-gradient(180deg, #080c14 0%, #0e1526 100%);
+    border-bottom-color: #1e293b;
+}
+html.dark .synkk-docs-hero h1 {
+    color: #f8fafc;
+}
+html.dark .synkk-docs-hero h1 span {
+    color: #34d399;
+}
+html.dark .synkk-docs-hero p {
+    color: #94a3b8;
+}
+html.dark .synkk-docs-search input {
+    background: #0d1527;
+    border-color: #334155;
+    color: #f8fafc;
+}
+html.dark .synkk-docs-search input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+}
+
+html.dark .synkk-docs-sidebar {
+    border-right-color: #1e293b;
+}
+html.dark .synkk-docs-sidebar__title {
+    color: #38bdf8;
+}
+html.dark .synkk-docs-sidebar__link {
+    color: #cbd5e1;
+}
+html.dark .synkk-docs-sidebar__link:hover,
+html.dark .synkk-docs-sidebar__link.is-active {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border-left: 3px solid #22c55e;
+}
+
+html.dark .synkk-docs-section {
+    border-bottom-color: #1e293b;
+}
+html.dark .synkk-docs-section h2 {
+    color: #f8fafc;
+}
+html.dark .synkk-docs-section h2 span {
+    color: #34d399;
+}
+html.dark .synkk-docs-section h3 {
+    color: #38bdf8;
+}
+html.dark .synkk-docs-section p,
+html.dark .synkk-docs-section li {
+    color: #cbd5e1;
+}
+html.dark .synkk-docs-section code {
+    background: #1e293b;
+    color: #38bdf8;
+    border-color: #334155;
+}
+
+html.dark .synkk-step-box {
+    background: #0d1527;
+    border-color: #1e293b;
+}
+html.dark .synkk-step-box:hover {
+    border-color: #38bdf8;
+    box-shadow: 0 10px 30px rgba(6, 182, 212, 0.15);
+}
+html.dark .synkk-step-box__num {
+    background: linear-gradient(135deg, #10b981, #06b6d4);
+    color: #022c22;
+}
+
+html.dark .synkk-api-endpoint {
+    background: #0d1527;
+    border-color: #1e293b;
+}
+html.dark .synkk-api-path {
+    color: #f8fafc;
+}
+
+html.dark .synkk-callout--info {
+    background: rgba(6, 182, 212, 0.12);
+    border-color: rgba(6, 182, 212, 0.3);
+    color: #7dd3fc;
+}
+html.dark .synkk-callout--tip {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #6ee7b7;
+}
+html.dark .synkk-callout--warning {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #fde047;
+}
+html.dark .synkk-callout--danger {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+/* Footer & Logo in Dark Mode */
+html.dark .synkk-brand img,
+html.dark .synkk-footer__top img {
+    filter: brightness(0) invert(1);
+    opacity: 0.95;
+}
+
+html.dark .synkk-footer {
+    background: #04070e;
+    border-top: 1px solid #1e293b;
+    color: #94a3b8;
+}
+html.dark .synkk-footer-telemetry {
+    border-bottom-color: #1e293b;
+}
+html.dark .synkk-footer-telemetry__status {
+    color: #94a3b8;
+}
+html.dark .synkk-footer-telemetry__status strong {
+    color: #38bdf8;
+}
+html.dark .synkk-footer-telemetry__link {
+    color: #34d399;
+}
+html.dark .synkk-footer__top p {
+    color: #94a3b8;
+}
+html.dark .synkk-footer nav a {
+    color: #cbd5e1;
+}
+html.dark .synkk-footer nav a:hover {
+    color: #38bdf8;
+}
+html.dark .synkk-footer__bottom {
+    border-top-color: #1e293b;
+    color: #64748b;
 }

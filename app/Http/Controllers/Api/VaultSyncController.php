@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Actions\Vaults\BatchSyncAction;
+use App\Actions\Vaults\ResolveConflictAction;
 use App\Actions\Vaults\SyncUploadAction;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceToken;
 use App\Models\Vault;
+use App\Services\CrdtCollabService;
+use App\Services\E2eeVaultService;
+use App\Services\GhostFileService;
 use App\Services\PlanService;
+use App\Services\ThreeWayDiffService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +23,12 @@ class VaultSyncController extends Controller
 {
     public function __construct(
         protected SyncUploadAction $uploadAction,
-        protected BatchSyncAction $batchSyncAction
+        protected BatchSyncAction $batchSyncAction,
+        protected ThreeWayDiffService $diffService,
+        protected ResolveConflictAction $resolveConflictAction,
+        protected CrdtCollabService $collabService,
+        protected GhostFileService $ghostFileService,
+        protected E2eeVaultService $e2eeService
     ) {}
 
     /**
@@ -95,6 +105,12 @@ class VaultSyncController extends Controller
                 'size' => $file->size,
                 'version' => $file->version,
                 'permission' => $permission, // 'read_write' or 'read_only'
+                'is_ghost' => (bool) $file->is_ghost,
+                'original_size' => (int) ($file->original_size ?: $file->size),
+                'mime_type' => $file->mime_type,
+                'is_encrypted' => (bool) $file->is_encrypted,
+                'encryption_iv' => $file->encryption_iv,
+                'encryption_tag' => $file->encryption_tag,
                 'updated_at' => $file->updated_at?->toIso8601String(),
             ];
         }
@@ -125,6 +141,8 @@ class VaultSyncController extends Controller
                 'id' => $vault->id,
                 'name' => $vault->name,
                 'slug' => $vault->slug,
+                'is_e2ee' => (bool) $vault->is_e2ee,
+                'e2ee_salt' => $vault->e2ee_salt,
                 'latest_version' => $vault->latestVersion(),
             ],
             'files' => $allowedFiles,
@@ -216,11 +234,32 @@ class VaultSyncController extends Controller
             return response()->json(['error' => 'File not found on storage'], 404);
         }
 
-        return Storage::disk($disk)->response($file->storage_path, basename($file->path), [
+        $asGhost = $request->boolean('ghost');
+        if ($asGhost || ($file->is_ghost && ! $request->boolean('hydrate'))) {
+            $stub = $this->ghostFileService->makeGhostStub($file);
+
+            return response($stub, 200, [
+                'Content-Type' => 'text/markdown; charset=utf-8',
+                'X-Synkk-Ghost' => '1',
+                'X-Synkk-Original-Size' => (string) ($file->original_size ?: $file->size),
+                'X-Synkk-Sha256' => $file->sha256,
+                'X-Synkk-Version' => (string) $file->version,
+            ]);
+        }
+
+        $headers = [
             'Content-Type' => $this->guessMimeType($file->path),
             'X-Synkk-Sha256' => $file->sha256,
             'X-Synkk-Version' => (string) $file->version,
-        ]);
+        ];
+
+        if ($file->is_encrypted) {
+            $headers['X-Synkk-Encrypted'] = '1';
+            $headers['X-Synkk-IV'] = (string) $file->encryption_iv;
+            $headers['X-Synkk-Tag'] = (string) $file->encryption_tag;
+        }
+
+        return Storage::disk($disk)->response($file->storage_path, basename($file->path), $headers);
     }
 
     /**
@@ -292,6 +331,20 @@ class VaultSyncController extends Controller
 
         $baseVersion = (int) $request->input('base_version', 0);
 
+        $isEncrypted = $request->boolean('is_encrypted');
+        $iv = $request->input('encryption_iv');
+        $tag = $request->input('encryption_tag');
+
+        $isGhost = $request->boolean('is_ghost');
+        $originalSize = (int) $request->input('original_size', 0);
+
+        if ($isGhost && $originalSize === 0) {
+            $parsedStub = $this->ghostFileService->parseGhostStub($contents);
+            if ($parsedStub) {
+                $originalSize = $parsedStub['size'] ?? 0;
+            }
+        }
+
         $res = $this->uploadAction->execute(
             $vault,
             $user,
@@ -300,6 +353,24 @@ class VaultSyncController extends Controller
             $contents,
             $baseVersion
         );
+
+        if ($isEncrypted || $isGhost) {
+            $savedFile = $vault->files()->where('path', $res['path'] ?? $path)->where('is_deleted', false)->first();
+            if ($savedFile) {
+                $updates = [];
+                if ($isEncrypted) {
+                    $updates['is_encrypted'] = true;
+                    $updates['encryption_iv'] = $iv;
+                    $updates['encryption_tag'] = $tag;
+                }
+                if ($isGhost) {
+                    $updates['is_ghost'] = true;
+                    $updates['original_size'] = $originalSize ?: $savedFile->size;
+                    $updates['mime_type'] = $this->guessMimeType($path);
+                }
+                $savedFile->update($updates);
+            }
+        }
 
         $statusCode = ($res['status'] ?? '') === 'created' ? 201 : 200;
 
@@ -423,6 +494,389 @@ class VaultSyncController extends Controller
             'status' => 'deleted',
             'path' => $path,
             'version' => $nextVersion,
+        ]);
+    }
+
+    /**
+     * List all pending conflict copies in the vault.
+     */
+    public function conflicts(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $user = $deviceToken->user;
+
+        $conflicts = $vault->files()
+            ->where('is_deleted', false)
+            ->where(function ($query) {
+                $query->where('path', 'like', '%.conflict-%')
+                    ->orWhere('path', 'like', '%.sync-conflict-%');
+            })
+            ->get()
+            ->filter(fn ($file) => $vault->permissionForPath($user, $file->path) !== 'hidden')
+            ->map(function ($file) {
+                $canonicalPath = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $file->path);
+                if ($canonicalPath === $file->path) {
+                    $canonicalPath = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $file->path);
+                }
+
+                return [
+                    'id' => $file->id,
+                    'conflict_path' => $file->path,
+                    'canonical_path' => $canonicalPath,
+                    'size' => $file->size,
+                    'version' => $file->version,
+                    'last_modified_by' => $file->lastModifiedBy?->name ?? 'Unknown',
+                    'updated_at' => $file->updated_at?->toIso8601String(),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'status' => 'ok',
+            'conflicts' => $conflicts,
+        ]);
+    }
+
+    /**
+     * Generate structured 3-way diff between canonical note and conflict copy.
+     */
+    public function diffConflict(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $validated = $request->validate([
+            'conflict_path' => ['required', 'string'],
+            'canonical_path' => ['nullable', 'string'],
+        ]);
+
+        $conflictPath = ltrim(str_replace('\\', '/', $validated['conflict_path']), '/');
+        $canonicalPath = isset($validated['canonical_path']) && filled($validated['canonical_path'])
+            ? ltrim(str_replace('\\', '/', $validated['canonical_path']), '/')
+            : preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $conflictPath);
+
+        if ($canonicalPath === $conflictPath) {
+            $canonicalPath = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $conflictPath);
+        }
+
+        $conflictFile = $vault->files()->where('path', $conflictPath)->where('is_deleted', false)->firstOrFail();
+        $canonicalFile = $vault->files()->where('path', $canonicalPath)->where('is_deleted', false)->first();
+
+        $disk = config('synkk.storage_disk', 'local');
+
+        $conflictContent = Storage::disk($disk)->exists($conflictFile->storage_path)
+            ? Storage::disk($disk)->get($conflictFile->storage_path)
+            : '';
+
+        $canonicalContent = ($canonicalFile && Storage::disk($disk)->exists($canonicalFile->storage_path))
+            ? Storage::disk($disk)->get($canonicalFile->storage_path)
+            : '';
+
+        // Attempt to find base ancestor version snapshot
+        $baseContent = '';
+        if ($canonicalFile) {
+            $ancestorVersion = $canonicalFile->versions()->where('version', '<', $canonicalFile->version)->latest('version')->first();
+            if ($ancestorVersion && Storage::disk($disk)->exists($ancestorVersion->storage_path)) {
+                $baseContent = Storage::disk($disk)->get($ancestorVersion->storage_path);
+            }
+        }
+
+        $diff = $this->diffService->merge($baseContent, $canonicalContent, $conflictContent);
+
+        return response()->json([
+            'status' => 'ok',
+            'canonical_path' => $canonicalPath,
+            'conflict_path' => $conflictPath,
+            'has_conflicts' => $diff['has_conflicts'],
+            'conflict_count' => $diff['conflict_count'],
+            'clean_count' => $diff['clean_count'],
+            'merged_content' => $diff['merged_content'],
+            'hunks' => $diff['hunks'],
+            'canonical_version' => $canonicalFile?->version ?? 0,
+            'conflict_version' => $conflictFile->version,
+        ]);
+    }
+
+    /**
+     * Resolve a conflict note by applying reconciled content and cleaning up conflict file.
+     */
+    public function resolveConflict(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $validated = $request->validate([
+            'canonical_path' => ['required', 'string'],
+            'conflict_path' => ['required', 'string'],
+            'resolved_content' => ['required', 'string'],
+        ]);
+
+        $res = $this->resolveConflictAction->execute(
+            vault: $vault,
+            user: $deviceToken->user,
+            canonicalPath: $validated['canonical_path'],
+            conflictPath: $validated['conflict_path'],
+            resolvedContent: $validated['resolved_content'],
+            deviceName: $deviceToken->name
+        );
+
+        return response()->json([
+            'status' => 'resolved',
+            'canonical_path' => $res['canonical_path'],
+            'conflict_path' => $res['conflict_path'],
+            'version' => $res['version'],
+            'sha256' => $res['file']->sha256,
+        ]);
+    }
+
+    /**
+     * Join a note collaboration room.
+     */
+    public function collabJoin(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $validated = $request->validate([
+            'path' => ['required', 'string'],
+            'peer_id' => ['required', 'string'],
+        ]);
+
+        $res = $this->collabService->join(
+            vault: $vault,
+            user: $deviceToken->user,
+            path: $validated['path'],
+            peerId: $validated['peer_id']
+        );
+
+        return response()->json($res);
+    }
+
+    /**
+     * Sync CRDT deltas and cursor position with note collaboration room.
+     */
+    public function collabSync(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $validated = $request->validate([
+            'path' => ['required', 'string'],
+            'peer_id' => ['required', 'string'],
+            'deltas' => ['nullable', 'array'],
+            'cursor' => ['nullable', 'array'],
+            'since_clock' => ['nullable', 'integer'],
+        ]);
+
+        $res = $this->collabService->sync(
+            vault: $vault,
+            user: $deviceToken->user,
+            path: $validated['path'],
+            peerId: $validated['peer_id'],
+            localDeltas: $validated['deltas'] ?? [],
+            cursor: $validated['cursor'] ?? null,
+            sinceClock: (int) ($validated['since_clock'] ?? 0)
+        );
+
+        return response()->json($res);
+    }
+
+    /**
+     * Leave a note collaboration room.
+     */
+    public function collabLeave(Request $request, Vault $vault): JsonResponse
+    {
+        $validated = $request->validate([
+            'path' => ['required', 'string'],
+            'peer_id' => ['required', 'string'],
+        ]);
+
+        $this->collabService->leave($vault, $validated['path'], $validated['peer_id']);
+
+        return response()->json(['status' => 'left']);
+    }
+
+    /**
+     * Get active collaborator presence list for a note.
+     */
+    public function collabPresence(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $validated = $request->validate([
+            'path' => ['required', 'string'],
+        ]);
+
+        $peers = $this->collabService->getPresence($vault, $validated['path']);
+
+        return response()->json([
+            'status' => 'ok',
+            'peers' => $peers,
+        ]);
+    }
+
+    /**
+     * Hydrate an on-demand ghost file to fetch full binary payload.
+     */
+    public function hydrateFile(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $validated = $request->validate([
+            'path' => ['required', 'string'],
+        ]);
+
+        $permission = $vault->permissionForPath($deviceToken->user, $validated['path']);
+        if ($permission === 'hidden') {
+            return response()->json(['error' => 'File not found or permission denied'], 404);
+        }
+
+        try {
+            $hydrated = $this->ghostFileService->hydrate($vault, $validated['path']);
+
+            return response()->json([
+                'status' => 'hydrated',
+                'is_ghost' => false,
+                'path' => $hydrated['path'],
+                'size' => $hydrated['size'],
+                'sha256' => $hydrated['sha256'],
+                'mime_type' => $hydrated['mime_type'],
+                'content_base64' => base64_encode($hydrated['contents']),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 404);
+        }
+    }
+
+    /**
+     * Dehydrate a local/server file back to a lightweight ghost placeholder.
+     */
+    public function dehydrateFile(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $validated = $request->validate([
+            'path' => ['required', 'string'],
+        ]);
+
+        try {
+            $file = $this->ghostFileService->dehydrate($vault, $validated['path']);
+
+            return response()->json([
+                'status' => 'dehydrated',
+                'path' => $file->path,
+                'is_ghost' => true,
+                'original_size' => $file->original_size,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 404);
+        }
+    }
+
+    /**
+     * Enable client-side zero-knowledge End-to-End Encryption on a vault.
+     */
+    public function enableE2ee(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        if ($deviceToken->access_scope === 'read_only') {
+            return response()->json(['error' => 'Read-only device tokens cannot change vault security settings'], 403);
+        }
+
+        $validated = $request->validate([
+            'salt' => ['required', 'string', 'min:16'],
+            'test_cipher' => ['required', 'string'],
+        ]);
+
+        $this->e2eeService->enable($vault, $validated['salt'], $validated['test_cipher']);
+
+        return response()->json([
+            'status' => 'enabled',
+            'is_e2ee' => true,
+            'vault_slug' => $vault->slug,
+            'salt' => $vault->e2ee_salt,
+        ]);
+    }
+
+    /**
+     * Get vault E2EE encryption status and key derivation configuration.
+     */
+    public function e2eeStatus(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        return response()->json($this->e2eeService->getStatus($vault));
+    }
+
+    /**
+     * Mobile background transport heartbeat and delta check.
+     */
+    public function transportStatus(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $clientVersion = (int) $request->query('client_version', 0);
+        $pendingChanges = $vault->changeLogs()->where('version', '>', $clientVersion)->count();
+
+        return response()->json([
+            'status' => 'healthy',
+            'vault' => $vault->name,
+            'vault_slug' => $vault->slug,
+            'latest_version' => $vault->latestVersion(),
+            'is_e2ee' => (bool) $vault->is_e2ee,
+            'e2ee_salt' => $vault->e2ee_salt,
+            'active_collaborators' => $this->collabService->getRoomPeers($vault, 'general')->count(),
+            'total_files' => $vault->files()->where('is_deleted', false)->count(),
+            'server_time' => now()->toIso8601String(),
+            'client_version' => $clientVersion,
+            'pending_changes' => $pendingChanges,
+            'recommended_sync_interval_seconds' => 300,
+            'relay' => [
+                'online' => true,
+                'heartbeat_at' => now()->timestamp,
+            ],
         ]);
     }
 

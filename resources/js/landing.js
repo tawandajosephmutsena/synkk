@@ -1,9 +1,11 @@
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './landing-showcase.js';
-import { initializeMobileMenu, initializeSurfaceShowcase } from './landing-controls.js';
+import { initializeMobileMenu, initializeSurfaceShowcase, initializeThemeSwitcher } from './landing-controls.js';
 
 gsap.registerPlugin(ScrollTrigger);
+
+initializeThemeSwitcher();
 
 const page = document.querySelector('.synkk-site');
 

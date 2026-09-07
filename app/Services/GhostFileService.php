@@ -1,0 +1,179 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Vault;
+use App\Models\VaultFile;
+use Illuminate\Support\Facades\Storage;
+use RuntimeException;
+
+class GhostFileService
+{
+    /**
+     * Default threshold for automatic ghost file treatment (5 MB).
+     */
+    public const DEFAULT_THRESHOLD_BYTES = 5242880; // 5 MB
+
+    /**
+     * Common binary/media extensions suitable for ghost file on-demand hydration.
+     *
+     * @var array<int, string>
+     */
+    protected array $ghostableExtensions = [
+        'mp4', 'mov', 'avi', 'mkv', 'webm',
+        'mp3', 'wav', 'm4a', 'flac', 'ogg',
+        'pdf', 'zip', 'tar', 'gz', 'dmg', 'iso',
+        'psd', 'ai', 'sketch', 'fig',
+    ];
+
+    /**
+     * Determine if a given file path and size qualifies for ghost mode.
+     */
+    public function isGhostCandidate(string $path, int $size, int $thresholdBytes = self::DEFAULT_THRESHOLD_BYTES): bool
+    {
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        if (in_array($ext, ['md', 'canvas', 'txt', 'json'])) {
+            return false;
+        }
+
+        if ($size >= $thresholdBytes) {
+            return true;
+        }
+
+        return in_array($ext, $this->ghostableExtensions) && $size > 1048576; // > 1 MB
+    }
+
+    /**
+     * Convenience alias for threshold in MB.
+     */
+    public function isCandidateForGhost(string $path, int $size, int $thresholdMb = 5): bool
+    {
+        return $this->isGhostCandidate($path, $size, $thresholdMb * 1024 * 1024);
+    }
+
+    /**
+     * Check if string contains a ghost file stub.
+     */
+    public function isGhostStub(string $content): bool
+    {
+        return str_contains($content, '<!-- synkk:ghost');
+    }
+
+    /**
+     * Generate a ghost stub string from explicit parameters.
+     */
+    public function generateGhostStub(string $path, int $originalSize, string $mimeType, ?string $sha256 = null): string
+    {
+        $payload = [
+            'synkk_ghost' => true,
+            'path' => $path,
+            'sha256' => $sha256 ?? '',
+            'size' => $originalSize,
+            'mime' => $mimeType,
+            'version' => 1,
+        ];
+
+        return "<!-- synkk:ghost\n".json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n-->\n";
+    }
+
+    /**
+     * Format a lightweight ghost stub payload for client download.
+     */
+    public function makeGhostStub(VaultFile $file): string
+    {
+        return $this->generateGhostStub(
+            path: $file->path,
+            originalSize: $file->original_size ?: $file->size,
+            mimeType: $file->mime_type ?? 'application/octet-stream',
+            sha256: $file->sha256
+        );
+    }
+
+    /**
+     * Parse a ghost stub string to extract file metadata.
+     *
+     * @return array{synkk_ghost: bool, path: string, sha256: string, size: int, mime: string, version: int}|null
+     */
+    public function parseGhostStub(string $content): ?array
+    {
+        if (! str_contains($content, '<!-- synkk:ghost')) {
+            return null;
+        }
+
+        if (preg_match('/<!-- synkk:ghost\s*(\{.*?\})\s*-->/s', $content, $matches)) {
+            $data = json_decode($matches[1], true);
+            if (is_array($data) && ($data['synkk_ghost'] ?? false) === true) {
+                return $data;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Hydrate a ghost file by path, returning full binary content.
+     */
+    public function hydrate(Vault $vault, string $path): array
+    {
+        $cleanPath = ltrim(str_replace('\\', '/', $path), '/');
+        $file = $vault->files()
+            ->where('path', $cleanPath)
+            ->where('is_deleted', false)
+            ->firstOrFail();
+
+        $disk = config('synkk.storage_disk', 'local');
+        if (! Storage::disk($disk)->exists($file->storage_path)) {
+            throw new RuntimeException("File payload '{$cleanPath}' not found on server storage disk.");
+        }
+
+        $file->update([
+            'hydrated_at' => now(),
+            'is_ghost' => false,
+        ]);
+
+        return [
+            'status' => 'hydrated',
+            'path' => $file->path,
+            'size' => $file->size,
+            'sha256' => $file->sha256,
+            'mime_type' => $file->mime_type ?? 'application/octet-stream',
+            'contents' => Storage::disk($disk)->get($file->storage_path),
+        ];
+    }
+
+    /**
+     * Dehydrate a file on the server record (marking as ghost).
+     */
+    public function dehydrate(Vault $vault, string $path): VaultFile
+    {
+        $cleanPath = ltrim(str_replace('\\', '/', $path), '/');
+        $file = $vault->files()
+            ->where('path', $cleanPath)
+            ->where('is_deleted', false)
+            ->firstOrFail();
+
+        $file->update([
+            'is_ghost' => true,
+            'original_size' => $file->size,
+        ]);
+
+        return $file;
+    }
+
+    /**
+     * Hydrate given VaultFile model.
+     */
+    public function hydrateFile(VaultFile $file): array
+    {
+        return $this->hydrate($file->vault, $file->path);
+    }
+
+    /**
+     * Dehydrate given VaultFile model.
+     */
+    public function dehydrateFile(VaultFile $file): VaultFile
+    {
+        return $this->dehydrate($file->vault, $file->path);
+    }
+}
