@@ -23,8 +23,8 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-accent: #0b6cff;
-    --color-accent-content: #0b6cff;
+    --color-accent: #0D3B29;
+    --color-accent-content: #0D3B29;
     --color-accent-foreground: var(--color-white);
 
     --color-vanilla-50: #fffdfa;
@@ -40,9 +40,9 @@
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent: #10b981;
+        --color-accent-content: #10b981;
+        --color-accent-foreground: #022c22;
     }
 }
 
@@ -129,9 +129,9 @@ select:focus[data-flux-control] {
 }
 
 .synkk-markdown-preview a {
-    color: #7dd3fc;
+    color: #34d399;
     text-decoration: underline;
-    text-decoration-color: rgb(125 211 252 / 0.35);
+    text-decoration-color: rgb(52 211 153 / 0.35);
     text-underline-offset: 0.2em;
 }
 
@@ -161,23 +161,23 @@ select:focus[data-flux-control] {
 }
 
 .synkk-markdown-preview .synkk-task input {
-    accent-color: #38bdf8;
+    accent-color: #10b981;
     margin-top: 0.4rem;
 }
 
 .synkk-markdown-preview code {
-    background: #242a36;
-    border: 1px solid #343b49;
+    background: #111f18;
+    border: 1px solid #1e3a2b;
     border-radius: 0.4rem;
-    color: #bae6fd;
+    color: #a7f3d0;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 0.84em;
     padding: 0.12rem 0.34rem;
 }
 
 .synkk-markdown-preview pre {
-    background: #0b0e14;
-    border: 1px solid #2a303c;
+    background: #07130e;
+    border: 1px solid #142a1f;
     border-radius: 1rem;
     overflow-x: auto;
     padding: 1rem 1.1rem;
@@ -186,12 +186,12 @@ select:focus[data-flux-control] {
 .synkk-markdown-preview pre code {
     background: transparent;
     border: 0;
-    color: #dbeafe;
+    color: #ecfdf5;
     padding: 0;
 }
 
 .synkk-markdown-preview blockquote {
-    border-left: 3px solid #38bdf8;
+    border-left: 3px solid #10b981;
     color: #aeb4c0;
     padding-left: 1rem;
 }
@@ -232,10 +232,10 @@ select:focus[data-flux-control] {
 }
 
 .synkk-markdown-preview .synkk-wiki-link {
-    background: rgb(14 165 233 / 0.12);
-    border: 1px solid rgb(56 189 248 / 0.25);
+    background: rgb(16 185 129 / 0.12);
+    border: 1px solid rgb(16 185 129 / 0.28);
     border-radius: 0.4rem;
-    color: #7dd3fc;
+    color: #6ee7b7;
     display: inline-flex;
     font-size: 0.82em;
     font-weight: 700;
@@ -243,8 +243,8 @@ select:focus[data-flux-control] {
 }
 
 .synkk-markdown-preview .synkk-callout {
-    background: rgb(14 165 233 / 0.08);
-    border: 1px solid rgb(56 189 248 / 0.25);
+    background: rgb(16 185 129 / 0.08);
+    border: 1px solid rgb(16 185 129 / 0.25);
     border-left-width: 4px;
     border-radius: 0.9rem;
     padding: 0.9rem 1.1rem;
@@ -263,7 +263,7 @@ select:focus[data-flux-control] {
 }
 
 .synkk-markdown-preview .synkk-callout strong {
-    color: #7dd3fc;
+    color: #6ee7b7;
     font-size: 0.76rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -272,27 +272,27 @@ select:focus[data-flux-control] {
 
 .synkk-markdown-preview .synkk-callout p {
     margin: 0.45rem 0 0;
-    color: #dbeafe;
+    color: #ecfdf5;
     line-height: 1.5;
 }
 
 /* Callout Themes matching Obsidian */
 .synkk-markdown-preview .synkk-callout--note {
-    background: rgb(14 165 233 / 0.08);
-    border-color: rgb(56 189 248 / 0.25);
+    background: rgb(16 185 129 / 0.08);
+    border-color: rgb(16 185 129 / 0.25);
 }
 .synkk-markdown-preview .synkk-callout--note strong,
-.synkk-markdown-preview .synkk-callout--note .synkk-callout-icon { color: #7dd3fc; }
+.synkk-markdown-preview .synkk-callout--note .synkk-callout-icon { color: #6ee7b7; }
 
 .synkk-markdown-preview .synkk-callout--info,
 .synkk-markdown-preview .synkk-callout--abstract {
-    background: rgb(99 102 241 / 0.08);
-    border-color: rgb(129 140 248 / 0.28);
+    background: rgb(20 184 166 / 0.08);
+    border-color: rgb(45 212 191 / 0.28);
 }
 .synkk-markdown-preview .synkk-callout--info strong,
 .synkk-markdown-preview .synkk-callout--abstract strong,
 .synkk-markdown-preview .synkk-callout--info .synkk-callout-icon,
-.synkk-markdown-preview .synkk-callout--abstract .synkk-callout-icon { color: #a5b4fc; }
+.synkk-markdown-preview .synkk-callout--abstract .synkk-callout-icon { color: #5eead4; }
 
 .synkk-markdown-preview .synkk-callout--tip,
 .synkk-markdown-preview .synkk-callout--todo {
@@ -403,12 +403,12 @@ select:focus[data-flux-control] {
     font-size: 0.72rem;
     font-style: italic;
     font-weight: 700;
-    color: #38bdf8;
+    color: #34d399;
 }
 .synkk-markdown-preview .synkk-math-inline code {
     background: transparent;
     border: none;
-    color: #bae6fd;
+    color: #a7f3d0;
     padding: 0;
 }
 
@@ -434,7 +434,7 @@ select:focus[data-flux-control] {
     gap: 0.35rem;
     font-size: 0.65rem;
     font-weight: 800;
-    color: #38bdf8;
+    color: #34d399;
     letter-spacing: 0.06em;
 }
 .synkk-markdown-preview .synkk-mermaid-source {
@@ -446,8 +446,8 @@ select:focus[data-flux-control] {
 
 /* Dataview query block */
 .synkk-markdown-preview .synkk-dataview-block {
-    background: #0d121d;
-    border: 1px solid #222d42;
+    background: #071510;
+    border: 1px solid #143024;
     border-radius: 1rem;
     overflow: hidden;
     margin: 1.25rem 0;
@@ -456,16 +456,16 @@ select:focus[data-flux-control] {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: #151d2e;
+    background: #0c231a;
     padding: 0.55rem 0.9rem;
-    border-bottom: 1px solid #222d42;
+    border-bottom: 1px solid #143024;
 }
 .synkk-markdown-preview .synkk-dataview-badge {
     display: inline-flex;
     align-items: center;
     padding: 0.15rem 0.45rem;
     border-radius: 999px;
-    background: #6366f1;
+    background: #059669;
     color: #ffffff;
     font-size: 0.62rem;
     font-weight: 800;
@@ -474,7 +474,7 @@ select:focus[data-flux-control] {
 .synkk-markdown-preview .synkk-dataview-type {
     font-size: 0.72rem;
     font-weight: 700;
-    color: #a5b4fc;
+    color: #6ee7b7;
     text-transform: uppercase;
 }
 .synkk-markdown-preview .synkk-dataview-content pre {

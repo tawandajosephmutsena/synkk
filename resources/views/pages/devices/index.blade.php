@@ -272,7 +272,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                     readonly
                     value="{{ url('/api/v1') }}"
                     x-on:click="$el.select()"
-                    class="w-full rounded-md border border-zinc-200 bg-white px-3 py-1.5 font-mono text-xs font-semibold text-indigo-600 sm:w-auto dark:border-white/10 dark:bg-zinc-800 dark:text-indigo-400"
+                    class="w-full rounded-md border border-zinc-200 bg-white px-3 py-1.5 font-mono text-xs font-semibold text-emerald-700 sm:w-auto dark:border-white/10 dark:bg-zinc-800 dark:text-emerald-400"
                     aria-label="{{ __('Obsidian Sync Server URL') }}"
                 />
                 <flux:button
@@ -325,13 +325,13 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                                     <div class="flex items-center gap-3">
                                         <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300">
                                             @if ($token->client_platform === 'ios')
-                                                <flux:icon icon="device-phone-mobile" class="size-4 text-blue-500" />
+                                                <flux:icon icon="device-phone-mobile" class="size-4 text-zinc-700 dark:text-zinc-300" />
                                             @elseif ($token->client_platform === 'android')
                                                 <flux:icon icon="device-phone-mobile" class="size-4 text-emerald-500" />
                                             @elseif ($token->client_platform === 'mac')
                                                 <flux:icon icon="computer-desktop" class="size-4 text-zinc-700 dark:text-zinc-300" />
                                             @elseif ($token->client_platform === 'windows')
-                                                <flux:icon icon="computer-desktop" class="size-4 text-sky-500" />
+                                                <flux:icon icon="computer-desktop" class="size-4 text-teal-600 dark:text-teal-400" />
                                             @else
                                                 <flux:icon icon="laptop" class="size-4 text-zinc-400" />
                                             @endif
@@ -349,7 +349,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                                         @if ($token->access_scope === 'read_only')
                                             <flux:badge color="amber" size="sm" class="font-semibold">{{ __('Read-Only') }}</flux:badge>
                                         @else
-                                            <flux:badge color="blue" size="sm" class="font-semibold">{{ __('Read/Write') }}</flux:badge>
+                                            <flux:badge color="zinc" size="sm" class="font-semibold">{{ __('Read/Write') }}</flux:badge>
                                         @endif
                                         @if ($token->is_wiped)
                                             <flux:badge color="red" size="sm" icon="no-symbol" class="font-bold">{{ __('Wiped') }}</flux:badge>

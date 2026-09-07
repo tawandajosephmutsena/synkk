@@ -5,7 +5,7 @@
 <div class="relative w-full max-w-5xl mx-auto flex flex-col items-center justify-center select-none py-8">
     
     <!-- Ambient Glow / Starlight behind mascot -->
-    <div class="absolute inset-0 bg-gradient-to-t from-[#D4FF00]/15 via-sky-400/15 to-transparent rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-[#D4FF00]/15 via-emerald-400/15 to-transparent rounded-full blur-3xl pointer-events-none -z-10"></div>
 
     <!-- Speech / Title Banner above dancing mascot -->
     <div class="mb-4 inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-white dark:bg-[#1C1E22] border-2 border-black shadow-[4px_4px_0px_0px_#121212] z-20">

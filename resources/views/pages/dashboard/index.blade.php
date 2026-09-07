@@ -511,8 +511,8 @@ new #[Title('Dashboard')] class extends Component {
                 {{ __('Plan, prioritize, and accomplish your vault sync with ease.') }}
             </p>
             <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold {{ $this->team?->plan === 'cloud' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300' : ($this->team?->plan === 'pro_ltd' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300') }}">
-                    <span class="size-1.5 rounded-full {{ $this->team?->plan === 'cloud' ? 'bg-indigo-500' : ($this->team?->plan === 'pro_ltd' ? 'bg-emerald-500' : 'bg-slate-500') }}"></span>
+                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold {{ $this->team?->plan === 'cloud' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-200' : ($this->team?->plan === 'pro_ltd' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300') }}">
+                    <span class="size-1.5 rounded-full {{ in_array($this->team?->plan, ['cloud', 'pro_ltd']) ? 'bg-emerald-500' : 'bg-slate-500' }}"></span>
                     {{ $this->teamPlanSummary['plan_badge'] }}
                 </span>
                 <span class="text-xs text-slate-500 dark:text-zinc-400">
@@ -771,7 +771,7 @@ new #[Title('Dashboard')] class extends Component {
                     @forelse ($this->vaults->take(5) as $idx => $v)
                         @php
                             $colors = [
-                                ['bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400', '///'],
+                                ['bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300', '///'],
                                 ['bg-teal-50 text-teal-600 dark:bg-teal-950/60 dark:text-teal-400', '◒'],
                                 ['bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400', '✤'],
                                 ['bg-orange-50 text-orange-600 dark:bg-orange-950/60 dark:text-orange-400', '◐'],
@@ -1102,7 +1102,7 @@ new #[Title('Dashboard')] class extends Component {
                                             {{ __('Created') }}
                                         </span>
                                     @elseif ($act->action === 'updated')
-                                        <span class="inline-flex rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-400">
+                                        <span class="inline-flex rounded-md bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">
                                             {{ __('Updated') }}
                                         </span>
                                     @elseif ($act->action === 'deleted')
@@ -1211,9 +1211,9 @@ new #[Title('Dashboard')] class extends Component {
                 </div>
 
                 <!-- Cloud SaaS -->
-                <div class="rounded-2xl border border-indigo-200 p-4 bg-indigo-50/30 dark:border-indigo-800/60 dark:bg-indigo-950/20">
-                    <div class="font-bold text-sm text-indigo-950 dark:text-indigo-200">{{ __('Cloud Managed') }}</div>
-                    <div class="text-xl font-black text-indigo-900 dark:text-white mt-1">$12 <span class="text-xs font-normal text-slate-500">/month</span></div>
+                <div class="rounded-2xl border border-teal-200 p-4 bg-teal-50/30 dark:border-teal-800/60 dark:bg-teal-950/20">
+                    <div class="font-bold text-sm text-teal-950 dark:text-teal-200">{{ __('Cloud Managed') }}</div>
+                    <div class="text-xl font-black text-teal-900 dark:text-white mt-1">$12 <span class="text-xs font-normal text-slate-500">/month</span></div>
                     <div class="text-[11px] text-slate-600 dark:text-zinc-300 mt-2 space-y-1">
                         <div>• <strong>50+ Vaults</strong></div>
                         <div>• <strong>100 Connected Devices</strong></div>
@@ -1328,9 +1328,9 @@ new #[Title('Dashboard')] class extends Component {
                         :class="drawerTab === 'messages' ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'"
                         class="flex-1 py-1.5 px-3 text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                        <flux:icon icon="envelope" class="size-3.5 text-indigo-500" />
+                        <flux:icon icon="envelope" class="size-3.5 text-emerald-600 dark:text-emerald-400" />
                         <span>{{ __('Messages') }}</span>
-                        <span class="rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.2 text-[10px] font-bold">2</span>
+                        <span class="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 text-[10px] font-bold">2</span>
                     </button>
                 </div>
 
@@ -1365,7 +1365,7 @@ new #[Title('Dashboard')] class extends Component {
                         </div>
 
                         <div class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 flex items-start gap-3">
-                            <div class="size-8 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
+                            <div class="size-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
                                 <flux:icon icon="arrow-path" class="size-4" />
                             </div>
                             <div class="flex-1 min-w-0">
@@ -1394,7 +1394,7 @@ new #[Title('Dashboard')] class extends Component {
                         </div>
 
                         <div class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 flex items-start gap-3">
-                            <div class="size-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                            <div class="size-8 rounded-full bg-emerald-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
                                 SY
                             </div>
                             <div class="flex-1 min-w-0">

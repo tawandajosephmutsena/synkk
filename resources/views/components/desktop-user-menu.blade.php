@@ -7,7 +7,7 @@
             <span class="absolute bottom-0 right-0 size-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900"></span>
         </div>
         <div class="in-data-flux-sidebar-collapsed-desktop:hidden ms-2.5 grid flex-1 text-start text-xs leading-tight min-w-0">
-            <span class="truncate font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{{ auth()->user()->name }}</span>
+            <span class="truncate font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ auth()->user()->name }}</span>
             <span class="truncate text-[10px] text-slate-500 dark:text-zinc-400 font-medium">{{ auth()->user()->email }}</span>
         </div>
         <flux:icon name="chevrons-up-down" variant="micro" class="in-data-flux-sidebar-collapsed-desktop:hidden ms-auto size-4 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-zinc-200" />

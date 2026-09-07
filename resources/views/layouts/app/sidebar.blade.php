@@ -86,21 +86,21 @@
             </div>
 
             <!-- Custom Application Card in Sidebar -->
-            <div class="in-data-flux-sidebar-collapsed-desktop:hidden relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-[#141B2D] to-[#0A0E18] p-4 text-white shadow-xs mb-3 dark:border-white/10">
+            <div class="in-data-flux-sidebar-collapsed-desktop:hidden relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-[#0D3B29] to-[#041710] p-4 text-white shadow-xs mb-3 dark:border-white/10">
                 <div class="flex items-center gap-2 mb-2">
-                    <div class="flex size-7 items-center justify-center rounded-lg bg-indigo-500/25 text-indigo-300">
+                    <div class="flex size-7 items-center justify-center rounded-lg bg-emerald-500/25 text-emerald-300">
                         <flux:icon icon="sparkles" class="size-4" />
                     </div>
                     <span class="text-xs font-bold tracking-tight text-white">{{ __('Custom Application') }}</span>
                 </div>
-                <p class="text-[11px] text-slate-300/90 leading-snug mb-3">
+                <p class="text-[11px] text-emerald-100/90 leading-snug mb-3">
                     {{ __('Need custom sync, tailored private cloud, or bespoke workflows by Ottomate?') }}
                 </p>
                 <a
                     href="https://book-it.ottomate.space"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="block w-full rounded-full bg-gradient-to-r from-indigo-500 to-blue-600 py-1.5 text-center text-xs font-bold text-white shadow-sm hover:from-indigo-400 hover:to-blue-500 transition-all"
+                    class="block w-full rounded-full bg-gradient-to-r from-emerald-600 to-teal-700 py-1.5 text-center text-xs font-bold text-white shadow-sm hover:from-emerald-500 hover:to-teal-600 transition-all"
                 >
                     {{ __('Book a Meeting') }}
                 </a>

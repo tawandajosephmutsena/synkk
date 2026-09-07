@@ -95,7 +95,7 @@ new #[Title('Appearance settings')] class extends Component {
 
                     <div class="mt-3 flex items-center justify-between w-full">
                         <div class="flex items-center gap-2">
-                            <flux:icon icon="moon" class="size-4 text-indigo-400" />
+                            <flux:icon icon="moon" class="size-4 text-emerald-400" />
                             <span class="text-xs font-bold text-gray-900 dark:text-white">{{ __('Dark') }}</span>
                         </div>
                         <span

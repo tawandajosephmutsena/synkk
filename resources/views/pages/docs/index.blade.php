@@ -410,7 +410,7 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                     <!-- Endpoint 6 -->
                     <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
                         <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded bg-sky-500 text-white font-bold text-[10px]">POST</span>
+                            <span class="px-2 py-0.5 rounded bg-emerald-600 text-white font-bold text-[10px]">POST</span>
                             <span class="font-bold text-zinc-900 dark:text-white">/vaults/{slug}/upload</span>
                         </div>
                         <flux:text size="sm">Uploads a single note or asset with base64 content, SHA-256 verification, and DLP scanning.</flux:text>
@@ -463,7 +463,7 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
 
                 <div class="space-y-2">
                     <flux:heading size="sm">Docker Compose Example</flux:heading>
-                    <pre class="font-mono text-xs bg-zinc-900 text-sky-300 p-4 rounded-xl overflow-x-auto"><code>version: '3.8'
+                    <pre class="font-mono text-xs bg-zinc-900 text-emerald-300 p-4 rounded-xl overflow-x-auto"><code>version: '3.8'
 
 services:
   synkk:

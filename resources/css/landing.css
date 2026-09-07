@@ -7,12 +7,12 @@
 
 :root {
     color-scheme: light;
-    --synkk-ink: #20231f;
+    --synkk-ink: #111815;
     --synkk-paper: #f7f8f3;
     --synkk-accent: #d9ef63;
-    --synkk-accent-dark: #516123;
-    --synkk-line: #dce0d4;
-    --synkk-muted: #666b60;
+    --synkk-accent-dark: #3e4f16;
+    --synkk-line: #c6cebc;
+    --synkk-muted: #434d3f;
     --synkk-mono: 'SFMono-Regular', 'Cascadia Code', ui-monospace, monospace;
     --synkk-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -48,8 +48,8 @@ a:focus-visible,
 button:focus-visible,
 summary:focus-visible,
 [tabindex='0']:focus-visible {
-    outline: 3px solid #7b58a6;
-    outline-offset: 5px;
+    outline: 3px solid #0D3B29;
+    outline-offset: 4px;
 }
 ::selection {
     background: var(--synkk-accent);
@@ -128,9 +128,9 @@ summary:focus-visible,
 .synkk-nav a,
 .synkk-login {
     position: relative;
-    color: #43483e;
-    font-size: 0.8rem;
-    font-weight: 500;
+    color: #1a231b;
+    font-size: 0.82rem;
+    font-weight: 600;
     text-decoration: none;
 }
 .synkk-nav a::after {

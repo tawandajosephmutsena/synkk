@@ -3,7 +3,7 @@
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-slate-100/60 text-slate-900 dark:bg-[#070A12] dark:text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+    <body class="min-h-screen bg-slate-100/60 text-slate-900 dark:bg-[#070A12] dark:text-slate-100 antialiased selection:bg-emerald-600 selection:text-white">
         <flux:header container class="border-b border-slate-200/90 bg-white/95 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#0D121F]/95 shadow-sm">
             <flux:sidebar.toggle class="lg:hidden mr-2" icon="bars-2" inset="left" />
 

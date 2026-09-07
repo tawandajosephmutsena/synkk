@@ -219,8 +219,8 @@ new class extends Component
                         <flux:subheading>{{ __('Monitor storage & device fleet quotas or activate lifetime commercial licenses') }}</flux:subheading>
                     </div>
 
-                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider {{ $this->teamData['plan'] === 'cloud' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800' : ($this->teamData['plan'] === 'pro_ltd' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300') }}">
-                        <span class="size-2 rounded-full {{ $this->teamData['plan'] === 'cloud' ? 'bg-indigo-500' : ($this->teamData['plan'] === 'pro_ltd' ? 'bg-emerald-500' : 'bg-slate-500') }}"></span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider {{ $this->teamData['plan'] === 'cloud' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800' : ($this->teamData['plan'] === 'pro_ltd' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300') }}">
+                        <span class="size-2 rounded-full {{ in_array($this->teamData['plan'], ['cloud', 'pro_ltd']) ? 'bg-emerald-500' : 'bg-slate-500' }}"></span>
                         {{ $this->planSummary['plan_badge'] }}
                     </span>
                 </div>

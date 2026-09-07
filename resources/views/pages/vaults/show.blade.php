@@ -9,6 +9,7 @@ use App\Models\VaultChangeLog;
 use App\Models\VaultFile;
 use App\Models\VaultFileVersion;
 use App\Models\VaultPermission;
+use App\Services\VaultAnalyticsService;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -57,6 +58,11 @@ new #[Title('Vault Details')] class extends Component {
     // Search
     public string $fileSearch = '';
     public string $editorSearch = '';
+
+    // Vault Intelligence & Analytics
+    public string $analyticsTimeframe = '30d';
+    public string $analyticsSearchQuery = '';
+    public string $analyticsActionFilter = 'all';
 
     // Version History Modal State
     public ?int $selectedFileId = null;
@@ -666,14 +672,14 @@ new #[Title('Vault Details')] class extends Component {
                 'TIP' => 'border-purple-600/50 bg-[#1E1630] text-purple-200',
                 'WARNING', 'CAUTION' => 'border-amber-800/60 bg-[#2B2319] text-amber-200',
                 'IMPORTANT' => 'border-red-800/60 bg-[#2B1919] text-red-200',
-                default => 'border-blue-800/60 bg-[#19232B] text-blue-200',
+                default => 'border-emerald-800/60 bg-[#162B21] text-emerald-200',
             };
 
             $titleColor = match ($type) {
                 'TIP' => 'text-[#C084FC]',
                 'WARNING', 'CAUTION' => 'text-amber-300',
                 'IMPORTANT' => 'text-red-300',
-                default => 'text-blue-300',
+                default => 'text-emerald-300',
             };
 
             $safeTitle = e($title);
@@ -706,6 +712,42 @@ new #[Title('Vault Details')] class extends Component {
         ]);
 
         return strtr($html, $placeholders);
+    }
+
+    #[Computed]
+    public function analyticsStats(): array
+    {
+        return app(VaultAnalyticsService::class)->getVaultStats($this->vault, $this->analyticsTimeframe);
+    }
+
+    #[Computed]
+    public function analyticsWikiGraph(): array
+    {
+        return app(VaultAnalyticsService::class)->getWikiLinkGraphStats($this->vault->id);
+    }
+
+    #[Computed]
+    public function analyticsLeaderboard(): array
+    {
+        return app(VaultAnalyticsService::class)->getContributorLeaderboard($this->vault->id, $this->analyticsTimeframe);
+    }
+
+    #[Computed]
+    public function analyticsVelocity(): array
+    {
+        return app(VaultAnalyticsService::class)->getActivityVelocityTimeline($this->vault->id, 14);
+    }
+
+    #[Computed]
+    public function analyticsRecentFeed(): Collection
+    {
+        return app(VaultAnalyticsService::class)->getRecentChangeFeed(
+            $this->vault->id,
+            $this->analyticsActionFilter !== 'all' ? $this->analyticsActionFilter : null,
+            null,
+            filled($this->analyticsSearchQuery) ? $this->analyticsSearchQuery : null,
+            30
+        );
     }
 }; ?>
 
@@ -841,6 +883,12 @@ new #[Title('Vault Details')] class extends Component {
                     <span>{{ __('Sync Audit Trail') }}</span>
                 </span>
             </flux:radio>
+            <flux:radio value="analytics">
+                <span class="flex items-center gap-1.5 font-bold text-xs">
+                    <flux:icon icon="chart-bar-square" class="size-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>{{ __('Analytics & Intelligence') }}</span>
+                </span>
+            </flux:radio>
             <flux:radio value="settings">
                 <span class="flex items-center gap-1.5 font-bold text-xs">
                     <flux:icon icon="cog" class="size-4" />
@@ -884,7 +932,7 @@ new #[Title('Vault Details')] class extends Component {
                                 <flux:menu.item @click="openFile({{ $f->id }})" class="cursor-pointer py-1.5">
                                     <div class="flex w-full items-center justify-between gap-3 text-left">
                                         <span class="min-w-0">
-                                            <span class="block truncate text-xs {{ $this->activeFileId === $f->id ? 'font-bold text-sky-300' : 'text-zinc-200' }}">{{ pathinfo($f->path, PATHINFO_FILENAME) }}</span>
+                                            <span class="block truncate text-xs {{ $this->activeFileId === $f->id ? 'font-bold text-emerald-400' : 'text-zinc-200' }}">{{ pathinfo($f->path, PATHINFO_FILENAME) }}</span>
                                             <span class="block truncate font-mono text-[9px] text-zinc-500">{{ $f->path }}</span>
                                         </span>
                                         <span class="font-mono text-[10px] text-zinc-500">v{{ $f->version }}</span>
@@ -958,7 +1006,7 @@ new #[Title('Vault Details')] class extends Component {
                             type="button"
                             @click="saveEditor()"
                             :disabled="!canEdit || !isDirty || isSaving"
-                            class="flex items-center gap-2 rounded-full bg-sky-500 px-4 py-1.5 text-xs font-bold text-slate-950 shadow-md transition-all hover:bg-sky-400 active:scale-98 disabled:cursor-not-allowed disabled:border disabled:border-zinc-700 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none sm:px-5"
+                            class="flex items-center gap-2 rounded-full bg-[#0D3B29] px-4 py-1.5 text-xs font-bold text-white shadow-md transition-all hover:bg-[#0D3B29]/90 dark:bg-emerald-600 dark:hover:bg-emerald-500 active:scale-98 disabled:cursor-not-allowed disabled:border disabled:border-zinc-700 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none sm:px-5"
                             title="{{ $this->canEditActiveFile ? __('Save Note (Cmd+S / Ctrl+S)') : __('You have read-only access to this file') }}"
                         >
                             <flux:icon icon="arrow-up-tray" class="size-3.5" />
@@ -1017,7 +1065,7 @@ new #[Title('Vault Details')] class extends Component {
                     <button type="button" @click="insertFormat('`', '`', 'code')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs font-mono text-cyan-400" title="Inline Code">&lt;/&gt;</button>
                     <button type="button" @click="insertFormat('```javascript\n', '\n```', '// your code here')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs font-mono" title="Code Block">{ }</button>
                     <button type="button" @click="insertTable()" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Insert Table">⊞</button>
-                    <button type="button" @click="insertFormat('> [!TIP]\n> ', '', 'Add a useful tip')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs text-sky-300" title="Tip Callout Box">💡</button>
+                    <button type="button" @click="insertFormat('> [!TIP]\n> ', '', 'Add a useful tip')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs text-emerald-400" title="Tip Callout Box">💡</button>
                     <button type="button" @click="insertFormat('\n---\n')" class="size-7 flex items-center justify-center rounded hover:bg-zinc-800 text-xs" title="Horizontal Rule">—</button>
                 </fieldset>
                 </div>
@@ -1199,8 +1247,8 @@ new #[Title('Vault Details')] class extends Component {
                                 <div
                                     :class="{
                                         'bg-rose-500/90 h-[3px]': type === 'h1',
-                                        'bg-sky-400/90 h-[3px]': type === 'h2',
-                                        'bg-indigo-400/80 h-[2.5px]': type === 'h3',
+                                        'bg-emerald-400/90 h-[3px]': type === 'h2',
+                                        'bg-teal-400/80 h-[2.5px]': type === 'h3',
                                         'bg-emerald-400/90 h-[2px]': type === 'code',
                                         'bg-purple-400/90 h-[2.5px]': type === 'tip',
                                         'bg-amber-400/70 h-[2px]': type === 'list',
@@ -1261,7 +1309,7 @@ new #[Title('Vault Details')] class extends Component {
                             <button type="button" @click="insertFormat('[📎 ', '](file.pdf)', 'File')" class="size-7 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center justify-center text-xs" title="Attachment">📎</button>
                             <button type="button" @click="insertFormat('`', '`', 'code')" class="size-7 rounded-lg text-cyan-400 hover:bg-zinc-800 flex items-center justify-center text-xs font-mono" title="Code">&lt;&gt;</button>
                             <button type="button" @click="insertTable()" class="size-7 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center justify-center text-xs" title="Table">⊞</button>
-                            <button type="button" @click="insertFormat('> [!TIP]\n> ', '', 'Add a useful tip')" class="size-7 rounded-lg text-sky-300 hover:bg-zinc-800 flex items-center justify-center text-xs" title="Tip Box">💡</button>
+                            <button type="button" @click="insertFormat('> [!TIP]\n> ', '', 'Add a useful tip')" class="size-7 rounded-lg text-emerald-400 hover:bg-zinc-800 flex items-center justify-center text-xs" title="Tip Box">💡</button>
                         </div>
                     </div>
 
@@ -1547,9 +1595,9 @@ new #[Title('Vault Details')] class extends Component {
             @endif
 
             <!-- How it works Callout -->
-            <flux:card variant="soft" class="border-blue-200/50 bg-blue-50/20 dark:border-blue-900/30 dark:bg-blue-950/20">
+            <flux:card variant="soft" class="border-emerald-200/50 bg-emerald-50/20 dark:border-emerald-900/30 dark:bg-emerald-950/20">
                 <div class="flex items-start gap-3">
-                    <flux:icon icon="information-circle" class="size-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <flux:icon icon="information-circle" class="size-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <div class="text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
                         <strong class="font-semibold text-zinc-900 dark:text-zinc-100">{{ __('Hierarchical Folder & File Access Rules:') }}</strong>
                         {{ __('Rules cascade downwards into subfolders and notes unless a more specific child rule exists. Specific member rules override whole-team defaults. When a path is set to "Hidden", it is omitted from that member\'s sync manifest entirely and will never touch their device.') }}
@@ -1589,7 +1637,7 @@ new #[Title('Vault Details')] class extends Component {
                                             @if ($rule->is_folder)
                                                 <flux:icon icon="folder" class="size-4 text-amber-500 shrink-0" />
                                             @else
-                                                <flux:icon icon="document-text" class="size-4 text-blue-500 shrink-0" />
+                                                <flux:icon icon="document-text" class="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                             @endif
                                             <span class="text-zinc-900 dark:text-zinc-100">{{ $rule->path }}</span>
                                             @if ($rule->is_folder)
@@ -1672,7 +1720,7 @@ new #[Title('Vault Details')] class extends Component {
                                     <flux:table.cell class="font-mono text-xs font-medium">
                                         <div class="flex items-center gap-2">
                                             @if ($file->isMarkdown())
-                                                <flux:icon icon="document-text" class="size-4 text-blue-500 shrink-0" />
+                                                <flux:icon icon="document-text" class="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                             @else
                                                 <flux:icon icon="paper-clip" class="size-4 text-zinc-400 shrink-0" />
                                             @endif
@@ -1740,7 +1788,7 @@ new #[Title('Vault Details')] class extends Component {
                                         @if ($act->action === 'created')
                                             <flux:badge color="emerald" size="sm">{{ __('Created') }}</flux:badge>
                                         @elseif ($act->action === 'updated')
-                                            <flux:badge color="blue" size="sm">{{ __('Updated') }}</flux:badge>
+                                            <flux:badge color="teal" size="sm">{{ __('Updated') }}</flux:badge>
                                         @elseif ($act->action === 'deleted')
                                             <flux:badge color="red" size="sm">{{ __('Deleted') }}</flux:badge>
                                         @elseif ($act->action === 'conflict')
@@ -1782,6 +1830,365 @@ new #[Title('Vault Details')] class extends Component {
                 </flux:table>
             @endif
         </flux:card>
+    @endif
+
+    <!-- TAB: VAULT INTELLIGENCE & ANALYTICS -->
+    @if ($activeTab === 'analytics')
+        <div class="flex flex-col gap-6">
+            <!-- Header & Timeframe Switcher -->
+            <div class="flex flex-col gap-4 rounded-2xl border border-gray-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900 dark:text-white">{{ __('Vault Intelligence & Deep Analytics') }}</h2>
+                    <p class="text-xs text-slate-500 dark:text-zinc-400">{{ __('Real-time telemetry, note metrics, graph connectivity, and collaborator change stream.') }}</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-medium text-slate-500 dark:text-zinc-400">{{ __('Timeframe:') }}</span>
+                    <div class="flex items-center rounded-xl bg-slate-100 p-1 dark:bg-zinc-800">
+                        @foreach (['24h' => '24h', '7d' => '7d', '30d' => '30d', '90d' => '90d', 'all' => 'All'] as $tfKey => $tfLabel)
+                            <button
+                                type="button"
+                                wire:click="$set('analyticsTimeframe', '{{ $tfKey }}')"
+                                class="rounded-lg px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer {{ $analyticsTimeframe === $tfKey ? 'bg-white text-[#0D3B29] shadow-2xs dark:bg-zinc-900 dark:text-emerald-400' : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white' }}"
+                            >
+                                {{ $tfLabel }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4 KPI Summary Cards -->
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <!-- Notes & Words -->
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-500 dark:text-zinc-400">{{ __('Notes & Knowledge') }}</span>
+                        <span class="flex size-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                            <flux:icon icon="document-text" class="size-4" />
+                        </span>
+                    </div>
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <span class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ number_format($this->analyticsStats['notes_count']) }}</span>
+                        <span class="text-xs text-slate-500 dark:text-zinc-400">{{ __('markdown notes') }}</span>
+                    </div>
+                    <div class="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-[11px] text-slate-500 dark:border-zinc-800/80 dark:text-zinc-400">
+                        <span>~{{ number_format($this->analyticsStats['estimated_words']) }} {{ __('words') }}</span>
+                        <span class="font-medium text-emerald-700 dark:text-emerald-400">~{{ $this->analyticsStats['reading_time_minutes'] }} {{ __('min read') }}</span>
+                    </div>
+                </div>
+
+                <!-- Storage & Files -->
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-500 dark:text-zinc-400">{{ __('Total Storage & Files') }}</span>
+                        <span class="flex size-7 items-center justify-center rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-400">
+                            <flux:icon icon="circle-stack" class="size-4" />
+                        </span>
+                    </div>
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <span class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ $this->analyticsStats['total_storage_formatted'] }}</span>
+                        <span class="text-xs text-slate-500 dark:text-zinc-400">({{ number_format($this->analyticsStats['total_files']) }} {{ __('files') }})</span>
+                    </div>
+                    <div class="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-[11px] text-slate-500 dark:border-zinc-800/80 dark:text-zinc-400">
+                        <span>{{ number_format($this->analyticsStats['images_count']) }} {{ __('images') }} ({{ $this->analyticsStats['images_size_formatted'] }})</span>
+                        <span class="font-medium text-teal-700 dark:text-teal-400">{{ $this->analyticsStats['canvas_count'] }} {{ __('canvases') }}</span>
+                    </div>
+                </div>
+
+                <!-- Wiki-Links & Density -->
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-500 dark:text-zinc-400">{{ __('Wiki-Links & Network') }}</span>
+                        <span class="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                            <flux:icon icon="share" class="size-4" />
+                        </span>
+                    </div>
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <span class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ number_format($this->analyticsWikiGraph['total_links']) }}</span>
+                        <span class="text-xs text-slate-500 dark:text-zinc-400">{{ __('connections') }}</span>
+                    </div>
+                    <div class="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-[11px] text-slate-500 dark:border-zinc-800/80 dark:text-zinc-400">
+                        <span>{{ $this->analyticsWikiGraph['density'] }} {{ __('links/note') }}</span>
+                        <span class="font-medium text-amber-700 dark:text-amber-400">{{ $this->analyticsWikiGraph['orphan_notes_count'] }} {{ __('orphans') }}</span>
+                    </div>
+                </div>
+
+                <!-- Mutation Velocity -->
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-500 dark:text-zinc-400">{{ __('Sync Velocity (:tf)', ['tf' => $analyticsTimeframe]) }}</span>
+                        <span class="flex size-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                            <flux:icon icon="bolt" class="size-4" />
+                        </span>
+                    </div>
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <span class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ number_format($this->analyticsStats['period_changes']) }}</span>
+                        <span class="text-xs text-slate-500 dark:text-zinc-400">{{ __('mutations') }}</span>
+                    </div>
+                    <div class="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-[11px] text-slate-500 dark:border-zinc-800/80 dark:text-zinc-400">
+                        <span>+{{ $this->analyticsStats['period_creations'] }} ~{{ $this->analyticsStats['period_updates'] }} -{{ $this->analyticsStats['period_deletions'] }}</span>
+                        <span class="font-medium text-emerald-700 dark:text-emerald-400">{{ count($this->analyticsLeaderboard) }} {{ __('collaborators') }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 14-Day Velocity Chart & Format Composition -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <!-- 14-Day Velocity Histogram -->
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs lg:col-span-2 dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('14-Day Vault Mutation Velocity') }}</h3>
+                            <p class="text-xs text-slate-500 dark:text-zinc-400">{{ __('Daily note creations, edits, and deletions synced across connected devices.') }}</p>
+                        </div>
+                        <div class="flex items-center gap-3 text-[11px]">
+                            <span class="flex items-center gap-1 text-slate-600 dark:text-zinc-300">
+                                <span class="size-2.5 rounded-full bg-emerald-500"></span> {{ __('Created') }}
+                            </span>
+                            <span class="flex items-center gap-1 text-slate-600 dark:text-zinc-300">
+                                <span class="size-2.5 rounded-full bg-teal-500"></span> {{ __('Updated') }}
+                            </span>
+                            <span class="flex items-center gap-1 text-slate-600 dark:text-zinc-300">
+                                <span class="size-2.5 rounded-full bg-rose-400"></span> {{ __('Deleted') }}
+                            </span>
+                        </div>
+                    </div>
+
+                    @php
+                        $maxVel = collect($this->analyticsVelocity)->max('total') ?: 1;
+                    @endphp
+
+                    <div class="mt-6 flex h-44 items-end gap-2 border-b border-gray-200/80 pb-2 dark:border-zinc-800">
+                        @foreach ($this->analyticsVelocity as $vPoint)
+                            @php
+                                $heightPct = max(6, min(100, round(($vPoint['total'] / $maxVel) * 100)));
+                            @endphp
+                            <div class="flex flex-1 flex-col items-center gap-1.5 h-full justify-end group relative" title="{{ $vPoint['date'] }}: {{ $vPoint['total'] }} mutations ({{ $vPoint['created'] }} created, {{ $vPoint['updated'] }} updated, {{ $vPoint['deleted'] }} deleted)">
+                                <div class="w-full max-w-[28px] rounded-t-md bg-slate-100 flex flex-col justify-end overflow-hidden dark:bg-zinc-800" style="height: {{ $heightPct }}%;">
+                                    @if ($vPoint['created'] > 0)
+                                        <div class="w-full bg-emerald-500" style="height: {{ round(($vPoint['created'] / max(1, $vPoint['total'])) * 100) }}%;"></div>
+                                    @endif
+                                    @if ($vPoint['updated'] > 0)
+                                        <div class="w-full bg-teal-500" style="height: {{ round(($vPoint['updated'] / max(1, $vPoint['total'])) * 100) }}%;"></div>
+                                    @endif
+                                    @if ($vPoint['deleted'] > 0)
+                                        <div class="w-full bg-rose-400" style="height: {{ round(($vPoint['deleted'] / max(1, $vPoint['total'])) * 100) }}%;"></div>
+                                    @endif
+                                </div>
+                                <span class="text-[10px] text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{{ $vPoint['label'] }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <!-- Asset & File Breakdown -->
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-1">{{ __('Vault File Composition') }}</h3>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400 mb-4">{{ __('Format breakdown of all notes and media assets.') }}</p>
+
+                        <!-- Segmented Bar -->
+                        @php
+                            $totalF = max(1, $this->analyticsStats['total_files']);
+                            $notesPct = round(($this->analyticsStats['notes_count'] / $totalF) * 100);
+                            $imagesPct = round(($this->analyticsStats['images_count'] / $totalF) * 100);
+                            $canvasPct = round(($this->analyticsStats['canvas_count'] / $totalF) * 100);
+                            $othersPct = max(0, 100 - $notesPct - $imagesPct - $canvasPct);
+                        @endphp
+
+                        <div class="h-3.5 w-full rounded-full bg-slate-100 flex overflow-hidden dark:bg-zinc-800 mb-4">
+                            <div class="bg-emerald-600 transition-all" style="width: {{ $notesPct }}%;" title="Markdown Notes: {{ $notesPct }}%"></div>
+                            <div class="bg-teal-500 transition-all" style="width: {{ $imagesPct }}%;" title="Images: {{ $imagesPct }}%"></div>
+                            <div class="bg-amber-500 transition-all" style="width: {{ $canvasPct }}%;" title="Canvases: {{ $canvasPct }}%"></div>
+                            <div class="bg-slate-400 transition-all" style="width: {{ $othersPct }}%;" title="Other Files: {{ $othersPct }}%"></div>
+                        </div>
+
+                        <!-- Image Format Breakdown Pills -->
+                        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-2">{{ __('Image Attachments by Format') }}</h4>
+                        <div class="grid grid-cols-2 gap-2">
+                            @foreach ($this->analyticsStats['image_breakdown'] as $ext => $imgData)
+                                @if ($imgData['count'] > 0)
+                                    <div class="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 p-2 text-xs dark:border-zinc-800 dark:bg-zinc-800/40">
+                                        <span class="font-mono font-bold uppercase text-slate-700 dark:text-zinc-300">.{{ $ext }}</span>
+                                        <div class="text-right">
+                                            <div class="font-bold text-slate-900 dark:text-white">{{ $imgData['count'] }}</div>
+                                            <div class="text-[10px] text-slate-400">{{ $imgData['size_formatted'] }}</div>
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="mt-4 border-t border-gray-100 pt-3 text-[11px] text-slate-500 dark:border-zinc-800 dark:text-zinc-400">
+                        {{ __('Avg note length: ~:words words (:chars characters)', [
+                            'words' => $this->analyticsStats['notes_count'] > 0 ? round($this->analyticsStats['estimated_words'] / $this->analyticsStats['notes_count']) : 0,
+                            'chars' => $this->analyticsStats['notes_count'] > 0 ? round($this->analyticsStats['total_characters'] / $this->analyticsStats['notes_count']) : 0,
+                        ]) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Knowledge Hubs & Collaborator Leaderboard Grid -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <!-- Top Authority Hub Notes -->
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <flux:icon icon="link" class="size-4 text-emerald-600 dark:text-emerald-400" />
+                            <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Knowledge Hubs (Top Inbound Linked Notes)') }}</h3>
+                        </div>
+                        <span class="rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                            {{ $this->analyticsWikiGraph['unique_targets_count'] }} {{ __('connected targets') }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-zinc-400 mb-4">{{ __('Central nodes linked most frequently from other notes in this vault.') }}</p>
+
+                    <div class="flex flex-col divide-y divide-gray-100 dark:divide-zinc-800">
+                        @forelse ($this->analyticsWikiGraph['top_hubs'] as $hub)
+                            <div class="flex items-center justify-between py-2.5">
+                                <div class="flex items-center gap-2.5 truncate">
+                                    <span class="flex size-6 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-xs font-bold text-[#0D3B29] dark:bg-emerald-950/80 dark:text-emerald-300">
+                                        #{{ $loop->iteration }}
+                                    </span>
+                                    <span class="font-mono text-xs font-semibold text-slate-800 truncate dark:text-zinc-200">
+                                        [[{{ $hub['title'] }}]]
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <span class="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
+                                        {{ $hub['inbound_links'] }} {{ __('inbound links') }}
+                                    </span>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="py-6 text-center text-xs text-slate-400">{{ __('No internal [[wiki-links]] found in this vault yet.') }}</div>
+                        @endforelse
+                    </div>
+                </div>
+
+                <!-- Active Collaborators Leaderboard -->
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <flux:icon icon="user-group" class="size-4 text-teal-600 dark:text-teal-400" />
+                            <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Collaborator Activity Leaderboard') }}</h3>
+                        </div>
+                        <span class="text-xs text-slate-500 dark:text-zinc-400">{{ __('Timeframe: :tf', ['tf' => $analyticsTimeframe]) }}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-zinc-400 mb-4">{{ __('Team members actively modifying files and syncing changes.') }}</p>
+
+                    <div class="flex flex-col divide-y divide-gray-100 dark:divide-zinc-800">
+                        @forelse ($this->analyticsLeaderboard as $contributor)
+                            <div class="flex items-center justify-between py-2.5">
+                                <div class="flex items-center gap-3">
+                                    <span class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-xs font-bold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+                                        {{ substr($contributor['user_name'], 0, 2) }}
+                                    </span>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-900 dark:text-white">{{ $contributor['user_name'] }}</div>
+                                        <div class="text-[10px] text-slate-400">
+                                            {{ $contributor['device_name'] ?? 'Obsidian Sync' }} • {{ $contributor['last_active_human'] }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 text-right">
+                                    <div class="text-xs font-bold text-slate-900 dark:text-white">{{ $contributor['mutations_count'] }} {{ __('edits') }}</div>
+                                    <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 dark:bg-zinc-800 dark:text-zinc-400">
+                                        +{{ $contributor['creations'] }} ~{{ $contributor['updates'] }}
+                                    </span>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="py-6 text-center text-xs text-slate-400">{{ __('No member activity recorded in this timeframe.') }}</div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Change & Mutation Stream Table -->
+            <div class="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/80 dark:border-zinc-800">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Real-Time Vault Mutation Stream') }}</h3>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400">{{ __('Detailed history of note updates, deletions, and sync changes.') }}</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div class="relative w-48 sm:w-64">
+                            <flux:icon icon="magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
+                            <input
+                                wire:model.live.debounce.250ms="analyticsSearchQuery"
+                                type="text"
+                                placeholder="Filter path or device..."
+                                class="w-full rounded-xl border border-gray-200/90 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 shadow-2xs focus:border-[#0D3B29] focus:outline-none dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                            />
+                        </div>
+
+                        <select
+                            wire:model.live="analyticsActionFilter"
+                            class="rounded-xl border border-gray-200/90 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
+                        >
+                            <option value="all">{{ __('All Actions') }}</option>
+                            <option value="created">{{ __('Created') }}</option>
+                            <option value="updated">{{ __('Updated') }}</option>
+                            <option value="deleted">{{ __('Deleted') }}</option>
+                            <option value="conflict">{{ __('Conflict') }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="border-b border-gray-200/80 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400">
+                            <tr>
+                                <th class="py-3 px-4">{{ __('Timestamp') }}</th>
+                                <th class="py-3 px-4">{{ __('File Path') }}</th>
+                                <th class="py-3 px-4">{{ __('Action') }}</th>
+                                <th class="py-3 px-4">{{ __('Contributor & Device') }}</th>
+                                <th class="py-3 px-4">{{ __('Size') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-zinc-800/80">
+                            @forelse ($this->analyticsRecentFeed as $feedItem)
+                                <tr class="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                                    <td class="py-3 px-4 whitespace-nowrap text-slate-500 dark:text-zinc-400 text-[11px]">
+                                        {{ $feedItem->created_at->format('M d, H:i:s') }}
+                                        <span class="block text-[10px] text-slate-400">({{ $feedItem->created_at->diffForHumans() }})</span>
+                                    </td>
+                                    <td class="py-3 px-4 font-mono text-slate-700 dark:text-zinc-300 max-w-xs truncate" title="{{ $feedItem->path }}">
+                                        {{ $feedItem->path }}
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        @if ($feedItem->action === 'created')
+                                            <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">{{ __('CREATED') }}</span>
+                                        @elseif ($feedItem->action === 'updated')
+                                            <span class="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">{{ __('UPDATED') }}</span>
+                                        @elseif ($feedItem->action === 'conflict')
+                                            <span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">{{ __('CONFLICT') }}</span>
+                                        @else
+                                            <span class="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">{{ __('DELETED') }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-4 text-slate-600 dark:text-zinc-300">
+                                        <div class="font-medium text-slate-900 dark:text-white">{{ $feedItem->user?->name ?? 'Obsidian Sync' }}</div>
+                                        <div class="text-[10px] text-slate-400">{{ $feedItem->device_name ?? 'Desktop Client' }}</div>
+                                    </td>
+                                    <td class="py-3 px-4 font-mono text-[11px] text-slate-500 dark:text-zinc-400">
+                                        {{ $feedItem->file_size ? \Illuminate\Support\Number::fileSize($feedItem->file_size, precision: 1) : '-' }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="py-8 text-center text-xs text-slate-400">{{ __('No change records match the filter criteria.') }}</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     @endif
 
     <!-- TAB 4: Settings -->
@@ -1874,7 +2281,7 @@ new #[Title('Vault Details')] class extends Component {
             <div class="space-y-5">
                 <div>
                     <flux:heading size="lg" class="flex items-center gap-2">
-                        <flux:icon icon="clock" class="size-5 text-blue-500" />
+                        <flux:icon icon="clock" class="size-5 text-teal-600 dark:text-teal-400" />
                         <span>{{ __('Note Revision History') }}</span>
                     </flux:heading>
                     <flux:subheading class="font-mono text-xs text-zinc-500 truncate mt-1">
