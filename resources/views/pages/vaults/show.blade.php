@@ -87,6 +87,11 @@ new #[Title('Vault Details')] class extends Component {
     public ?int $selectedFileId = null;
     public ?VaultFile $selectedFile = null;
 
+    // Vault Copilot & RAG State
+    public string $copilotQuery = '';
+    public array $copilotMessages = [];
+    public ?string $copilotStatusMessage = null;
+
     public function mount(Vault $vault): void
     {
         abort_unless(Auth::user()->can('view', $vault), 403);
@@ -898,6 +903,76 @@ new #[Title('Vault Details')] class extends Component {
             30
         );
     }
+
+    public function askCopilot(?string $customQuery = null): void
+    {
+        $queryText = trim($customQuery ?? $this->copilotQuery);
+        if ($queryText === '') {
+            return;
+        }
+
+        abort_unless(Auth::user()->can('view', $this->vault), 403);
+
+        $this->copilotMessages[] = [
+            'role' => 'user',
+            'content' => $queryText,
+            'time' => now()->format('H:i'),
+        ];
+
+        $this->copilotQuery = '';
+
+        try {
+            $ragService = app(\App\Services\VaultRagService::class);
+            $response = $ragService->query($this->vault, $queryText, [
+                'expand_graph' => true,
+                'max_citations' => 4,
+            ]);
+
+            $this->copilotMessages[] = [
+                'role' => 'assistant',
+                'content' => $response['answer'],
+                'citations' => $response['citations'],
+                'graph_nodes' => $response['graph_nodes'],
+                'model' => $response['model'],
+                'duration_ms' => $response['duration_ms'],
+                'time' => now()->format('H:i'),
+            ];
+        } catch (\Throwable $e) {
+            $this->copilotMessages[] = [
+                'role' => 'assistant',
+                'content' => 'Error querying Vault Copilot: ' . $e->getMessage(),
+                'citations' => [],
+                'graph_nodes' => [],
+                'model' => 'error',
+                'time' => now()->format('H:i'),
+            ];
+        }
+    }
+
+    public function reindexVaultEmbeddings(): void
+    {
+        abort_unless(Auth::user()->can('update', $this->vault), 403);
+
+        $ragService = app(\App\Services\VaultRagService::class);
+        $result = $ragService->indexVault($this->vault, force: true);
+
+        $this->copilotStatusMessage = "Re-indexed {$result['files_indexed']} files ({$result['chunks_count']} chunks) in {$result['duration_ms']}ms.";
+    }
+
+    public function openCitationNote(string $notePath): void
+    {
+        $targetFile = $this->vault->files()->where('path', $notePath)->where('is_deleted', false)->first();
+        if ($targetFile) {
+            $this->selectFile($targetFile->id);
+            $this->activeTab = 'editor';
+        }
+    }
+
+    #[Computed]
+    public function ragTelemetry(): array
+    {
+        return app(\App\Services\VaultRagService::class)->getStatus($this->vault);
+    }
 }; ?>
 
 <div class="flex h-full w-full flex-1 flex-col gap-6">
@@ -1036,6 +1111,12 @@ new #[Title('Vault Details')] class extends Component {
                 <span class="flex items-center gap-1.5 font-bold text-xs">
                     <flux:icon icon="chart-bar-square" class="size-4 text-emerald-600 dark:text-emerald-400" />
                     <span>{{ __('Analytics & Intelligence') }}</span>
+                </span>
+            </flux:radio>
+            <flux:radio value="copilot">
+                <span class="flex items-center gap-1.5 font-bold text-xs">
+                    <flux:icon icon="sparkles" class="size-4 text-amber-500" />
+                    <span>{{ __('Vault Copilot (RAG)') }}</span>
                 </span>
             </flux:radio>
             <flux:radio value="settings">
@@ -2437,6 +2518,200 @@ new #[Title('Vault Details')] class extends Component {
                     </table>
                 </div>
             </div>
+        </div>
+    @endif
+
+    <!-- TAB: Vault Copilot (Agentic Knowledge Graph & RAG Server) -->
+    @if ($activeTab === 'copilot')
+        <div class="space-y-6">
+            <!-- Copilot Header & Telemetry Card -->
+            <flux:card class="space-y-4">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <flux:heading size="lg">{{ __('Vault Copilot & Agentic RAG Server') }}</flux:heading>
+                            <flux:badge color="emerald" size="sm">
+                                <span class="size-1.5 rounded-full bg-emerald-500 animate-pulse mr-1.5"></span>
+                                {{ __('Local RAG Active') }}
+                            </flux:badge>
+                        </div>
+                        <flux:subheading class="text-xs mt-1">
+                            {{ __('Private, zero-cloud-leakage semantic reasoning engine pairing 2D [[wikilink]] graph traversal with local vector embeddings.') }}
+                        </flux:subheading>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="rounded-lg bg-zinc-100 dark:bg-zinc-800/80 px-3 py-1.5 text-xs text-zinc-600 dark:text-zinc-300 font-mono flex items-center gap-2">
+                            <flux:icon icon="cpu-chip" class="size-3.5 text-amber-500" />
+                            <span>{{ $this->ragTelemetry['total_chunks'] }} {{ __('chunks') }} / {{ $this->ragTelemetry['total_files'] }} {{ __('notes') }}</span>
+                        </div>
+                        <flux:button size="xs" variant="subtle" icon="arrow-path" wire:click="reindexVaultEmbeddings" wire:loading.attr="disabled">
+                            <span wire:loading.remove wire:target="reindexVaultEmbeddings">{{ __('Re-index Vault') }}</span>
+                            <span wire:loading wire:target="reindexVaultEmbeddings">{{ __('Indexing...') }}</span>
+                        </flux:button>
+                    </div>
+                </div>
+
+                @if ($copilotStatusMessage)
+                    <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2 text-xs text-emerald-400 font-medium flex items-center justify-between">
+                        <span>{{ $copilotStatusMessage }}</span>
+                        <button wire:click="$set('copilotStatusMessage', null)" class="text-emerald-400/60 hover:text-emerald-400">&times;</button>
+                    </div>
+                @endif
+
+                <!-- Prompt Suggestions -->
+                <div class="pt-1">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">{{ __('Suggested Prompts') }}:</span>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <button
+                            type="button"
+                            wire:click="askCopilot('Summarize our team\'s sync protocol and security boundaries')"
+                            class="rounded-full border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 px-3 py-1 text-xs text-zinc-700 dark:text-zinc-300 hover:border-amber-500/50 hover:bg-amber-500/10 transition-colors"
+                        >
+                            ⚡ "Summarize our sync protocol and security boundaries"
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="askCopilot('Find orphaned concepts and missing links in this vault')"
+                            class="rounded-full border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 px-3 py-1 text-xs text-zinc-700 dark:text-zinc-300 hover:border-amber-500/50 hover:bg-amber-500/10 transition-colors"
+                        >
+                            🕸️ "Find orphaned concepts and missing links"
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="askCopilot('Explain how encryption and device tokens are verified')"
+                            class="rounded-full border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 px-3 py-1 text-xs text-zinc-700 dark:text-zinc-300 hover:border-amber-500/50 hover:bg-amber-500/10 transition-colors"
+                        >
+                            🔒 "Explain how encryption and device tokens work"
+                        </button>
+                    </div>
+                </div>
+            </flux:card>
+
+            <!-- Interactive Conversation Thread -->
+            <div class="space-y-4">
+                @if (empty($copilotMessages))
+                    <flux:card class="py-12 text-center border-dashed">
+                        <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
+                            <flux:icon icon="sparkles" class="size-6" />
+                        </div>
+                        <h3 class="mt-4 font-semibold text-zinc-900 dark:text-white">{{ __('Ready to query your vault') }}</h3>
+                        <p class="mt-1.5 max-w-md mx-auto text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                            {{ __('Ask any question above or type below. Synkk will search local vector embeddings, traverse note backlinks, and synthesize an exact answer with citations.') }}
+                        </p>
+                    </flux:card>
+                @else
+                    @foreach ($copilotMessages as $msg)
+                        @if ($msg['role'] === 'user')
+                            <div class="flex justify-end">
+                                <div class="max-w-xl rounded-2xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-sm text-white shadow-sm">
+                                    <div class="flex items-center justify-between gap-4 mb-1 text-[11px] text-zinc-400">
+                                        <span class="font-semibold">{{ __('You') }}</span>
+                                        <span>{{ $msg['time'] }}</span>
+                                    </div>
+                                    <p class="text-zinc-100">{{ $msg['content'] }}</p>
+                                </div>
+                            </div>
+                        @else
+                            <div class="flex justify-start">
+                                <div class="w-full max-w-3xl rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 shadow-sm space-y-4">
+                                    <div class="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
+                                        <div class="flex items-center gap-2">
+                                            <flux:icon icon="sparkles" class="size-4 text-amber-500" />
+                                            <span class="text-xs font-bold text-zinc-900 dark:text-white">{{ __('Vault Copilot') }}</span>
+                                            <flux:badge size="sm" color="zinc" class="font-mono text-[10px]">{{ $msg['model'] }}</flux:badge>
+                                        </div>
+                                        @if (isset($msg['duration_ms']))
+                                            <span class="text-[11px] font-mono text-zinc-400">{{ $msg['duration_ms'] }}ms</span>
+                                        @endif
+                                    </div>
+
+                                    <!-- Graph Traversal Chips -->
+                                    @if (! empty($msg['graph_nodes']))
+                                        <div class="rounded-lg bg-zinc-50 dark:bg-zinc-800/40 p-3 border border-zinc-200/60 dark:border-zinc-700/50 space-y-2">
+                                            <div class="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                                                <flux:icon icon="arrows-pointing-out" class="size-3.5 text-amber-500" />
+                                                <span>{{ __('Context retrieved via [[wikilink]] graph traversal') }}:</span>
+                                            </div>
+                                            <div class="flex flex-wrap gap-1.5">
+                                                @foreach ($msg['graph_nodes'] as $node)
+                                                    <button
+                                                        type="button"
+                                                        wire:click="openCitationNote('{{ $node['path'] }}')"
+                                                        class="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-xs font-mono text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-colors"
+                                                        title="{{ __('Open note in editor') }}"
+                                                    >
+                                                        <span>[[{{ $node['title'] }}]]</span>
+                                                        <span class="text-[10px] opacity-75">({{ $node['relationship'] }})</span>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <!-- Markdown Answer -->
+                                    <div class="prose prose-sm dark:prose-invert max-w-none text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                                        {!! \Illuminate\Support\Str::markdown($msg['content']) !!}
+                                    </div>
+
+                                    <!-- Verified Citations -->
+                                    @if (! empty($msg['citations']))
+                                        <div class="border-t border-zinc-100 dark:border-zinc-800/80 pt-3 space-y-2">
+                                            <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">{{ __('Verified Note Citations') }}:</span>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                @foreach ($msg['citations'] as $cit)
+                                                    <div class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 p-2.5 flex flex-col justify-between">
+                                                        <div>
+                                                            <div class="flex items-center justify-between gap-1 mb-1">
+                                                                <span class="text-xs font-mono font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                                                                    {{ $cit['note'] }}{{ $cit['heading'] ? ' #' . $cit['heading'] : '' }}
+                                                                </span>
+                                                                <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                                                                    {{ $cit['score_pct'] }}%
+                                                                </span>
+                                                            </div>
+                                                            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-2 italic">
+                                                                "{{ $cit['excerpt'] }}"
+                                                            </p>
+                                                        </div>
+                                                        <div class="mt-2 pt-1 border-t border-zinc-200/50 dark:border-zinc-700/50 flex justify-end">
+                                                            <button
+                                                                type="button"
+                                                                wire:click="openCitationNote('{{ $cit['note'] }}')"
+                                                                class="text-[11px] font-medium text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                                                            >
+                                                                <span>{{ __('Open in Editor') }}</span>
+                                                                <flux:icon icon="arrow-top-right-on-square" class="size-3" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
+                @endif
+            </div>
+
+            <!-- Query Input Bar -->
+            <flux:card>
+                <form wire:submit.prevent="askCopilot" class="flex gap-2">
+                    <div class="flex-1">
+                        <flux:input
+                            wire:model="copilotQuery"
+                            placeholder="{{ __('Ask Vault Copilot anything about this vault (e.g. Summarize architecture)...') }}"
+                            autocomplete="off"
+                        />
+                    </div>
+                    <flux:button type="submit" variant="primary" icon="sparkles" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="askCopilot">{{ __('Ask') }}</span>
+                        <span wire:loading wire:target="askCopilot">{{ __('Thinking...') }}</span>
+                    </flux:button>
+                </form>
+            </flux:card>
         </div>
     @endif
 

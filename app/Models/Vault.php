@@ -28,6 +28,7 @@ use Illuminate\Support\Str;
  * @property-read Collection<int, VaultFile> $files
  * @property-read Collection<int, VaultPermission> $permissions
  * @property-read Collection<int, VaultChangeLog> $changeLogs
+ * @property-read Collection<int, VaultFileEmbedding> $embeddings
  */
 #[Fillable(['team_id', 'name', 'slug', 'description', 'default_permission', 'created_by', 'is_e2ee', 'e2ee_salt', 'e2ee_test_cipher'])]
 class Vault extends Model
@@ -105,6 +106,14 @@ class Vault extends Model
     public function fileVersions(): HasMany
     {
         return $this->hasMany(VaultFileVersion::class);
+    }
+
+    /**
+     * @return HasMany<VaultFileEmbedding, $this>
+     */
+    public function embeddings(): HasMany
+    {
+        return $this->hasMany(VaultFileEmbedding::class);
     }
 
     public function latestVersion(): int

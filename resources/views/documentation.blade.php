@@ -618,6 +618,42 @@
                             <p class="text-sm text-zinc-700">Lightweight heartbeat endpoint returning vault revision number, active collaborator count, and E2EE state for mobile background polling.</p>
                         </div>
 
+                        <!-- API Endpoint 13: Agentic RAG Query -->
+                        <div class="synkk-api-endpoint">
+                            <div class="synkk-api-endpoint__title">
+                                <span class="synkk-api-method synkk-api-method--post">POST</span>
+                                <span class="synkk-api-path">/vaults/{slug}/rag/query</span>
+                            </div>
+                            <p class="text-sm text-zinc-700">Graph-augmented agentic query synthesizing accurate answers from vault chunks, traversing [[wikilinks]] backlinks, and returning exact note citations.</p>
+                        </div>
+
+                        <!-- API Endpoint 14: Hybrid Semantic Search -->
+                        <div class="synkk-api-endpoint">
+                            <div class="synkk-api-endpoint__title">
+                                <span class="synkk-api-method synkk-api-method--post">POST</span>
+                                <span class="synkk-api-path">/vaults/{slug}/rag/search</span>
+                            </div>
+                            <p class="text-sm text-zinc-700">Dense vector cosine similarity and sparse lexical search returning ranked note snippets and similarity percentages.</p>
+                        </div>
+
+                        <!-- API Endpoint 15: Vector Embeddings Re-indexing -->
+                        <div class="synkk-api-endpoint">
+                            <div class="synkk-api-endpoint__title">
+                                <span class="synkk-api-method synkk-api-method--post">POST</span>
+                                <span class="synkk-api-path">/vaults/{slug}/rag/index</span>
+                            </div>
+                            <p class="text-sm text-zinc-700">Incrementally indexes markdown notes into 128-dimensional hyperspheres with SHA-256 caching and deleted file cleanup.</p>
+                        </div>
+
+                        <!-- API Endpoint 16: RAG Status & Telemetry -->
+                        <div class="synkk-api-endpoint">
+                            <div class="synkk-api-endpoint__title">
+                                <span class="synkk-api-method synkk-api-method--get">GET</span>
+                                <span class="synkk-api-path">/vaults/{slug}/rag/status</span>
+                            </div>
+                            <p class="text-sm text-zinc-700">Returns vector indexing status, chunk counts, indexed files, embedding provider, and active local LLM health.</p>
+                        </div>
+
                         <h3>HTTP Status Code Reference</h3>
                         <ul class="font-mono text-sm space-y-1">
                             <li><strong class="text-emerald-600">200 OK:</strong> Request succeeded cleanly.</li>
@@ -746,11 +782,18 @@ volumes:
                                     3-way diff sandbox, CRDT multiplayer editing, zero-knowledge E2EE (AES-256-GCM), on-demand ghost files, and 2-second QR pairing.
                                 </p>
                             </div>
-                            <div class="p-4 rounded-xl border border-amber-500/30 bg-amber-50 text-amber-950">
-                                <span class="px-2 py-0.5 rounded bg-amber-700 text-white font-mono text-[10px] uppercase font-bold">Phase 3 · Next Up</span>
+                            <div class="p-4 rounded-xl border border-emerald-500/30 bg-emerald-50 text-emerald-950">
+                                <span class="px-2 py-0.5 rounded bg-emerald-700 text-white font-mono text-[10px] uppercase font-bold">Phase 3 · Live</span>
                                 <h4 class="font-bold text-base mt-2 mb-1">Agentic Knowledge &amp; RAG</h4>
+                                <p class="text-xs text-emerald-900 leading-relaxed">
+                                    Self-hosted vector embeddings, hybrid semantic search, [[wikilink]] graph traversal, and private local LLM copilots querying your vault with zero cloud leakage.
+                                </p>
+                            </div>
+                            <div class="p-4 rounded-xl border border-amber-500/30 bg-amber-50 text-amber-950">
+                                <span class="px-2 py-0.5 rounded bg-amber-700 text-white font-mono text-[10px] uppercase font-bold">Phase 4 · Next Up</span>
+                                <h4 class="font-bold text-base mt-2 mb-1">Autonomous Note Agents &amp; Canvas</h4>
                                 <p class="text-xs text-amber-900 leading-relaxed">
-                                    Self-hosted vector embeddings, hybrid semantic search, and private local LLM copilots querying your vault with zero cloud leakage.
+                                    Autonomous background research agents synthesizing new notes, periodic health audits, and visual Obsidian .canvas synthesis.
                                 </p>
                             </div>
                         </div>

@@ -90,6 +90,7 @@ return [
                 'ip_whitelisting',
                 'read_only_tokens',
                 'plugin_suite_sync',
+                'rag_vector_search',
             ],
         ],
         'cloud' => [
@@ -117,5 +118,23 @@ return [
                 'priority_support',
             ],
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Agentic Knowledge Graph & RAG Server
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for local vector embeddings, hybrid semantic search,
+    | Ollama / private local LLM endpoints, and Graph-Augmented RAG.
+    |
+    */
+    'rag' => [
+        'provider' => env('SYNKK_RAG_PROVIDER', 'deterministic'),
+        'ollama_url' => env('SYNKK_RAG_OLLAMA_URL', 'http://localhost:11434'),
+        'embedding_model' => env('SYNKK_RAG_EMBEDDING_MODEL', 'nomic-embed-text'),
+        'llm_model' => env('SYNKK_RAG_LLM_MODEL', 'llama3.2'),
+        'llm_provider' => env('SYNKK_RAG_LLM_PROVIDER', 'local-first'),
+        'dimensions' => 128,
     ],
 ];

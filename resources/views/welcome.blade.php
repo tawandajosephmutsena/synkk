@@ -1308,16 +1308,29 @@
                                 </div>
                             </div>
                         </li>
-                        <li class="is-next">
-                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>NEXT UP</span>
+                        <li class="is-live">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
                             <div>
                                 <strong>Agentic Knowledge Graph &amp; RAG Server</strong>
-                                <p>Self-hosted vector embeddings, hybrid semantic search, and private local LLM copilots querying your vault with zero cloud leakage.</p>
+                                <p>Self-hosted vector embeddings, hybrid semantic search, [[wikilink]] graph traversal, and private local LLM copilots querying your vault with zero cloud leakage.</p>
                                 <div class="synkk-roadmap-chips">
                                     <span>Vector Embeddings</span>
                                     <span>Semantic Search</span>
                                     <span>Local RAG</span>
                                     <span>Private AI</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="is-next">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>NEXT UP</span>
+                            <div>
+                                <strong>Autonomous Note Agents &amp; Visual Canvas</strong>
+                                <p>Autonomous background research agents synthesizing new notes, periodic health audits, and visual Obsidian .canvas synthesis.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>Note Agents</span>
+                                    <span>Visual Canvas</span>
+                                    <span>Health Audits</span>
+                                    <span>Autonomous AI</span>
                                 </div>
                             </div>
                         </li>

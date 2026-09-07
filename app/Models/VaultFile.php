@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Storage;
  * @property-read Vault $vault
  * @property-read User|null $lastModifier
  * @property-read Collection<int, VaultFileVersion> $versions
+ * @property-read Collection<int, VaultFileEmbedding> $embeddings
  */
 #[Fillable([
     'vault_id',
@@ -80,6 +81,14 @@ class VaultFile extends Model
     public function versions(): HasMany
     {
         return $this->hasMany(VaultFileVersion::class)->orderBy('version', 'desc');
+    }
+
+    /**
+     * @return HasMany<VaultFileEmbedding, $this>
+     */
+    public function embeddings(): HasMany
+    {
+        return $this->hasMany(VaultFileEmbedding::class, 'vault_file_id')->orderBy('chunk_index', 'asc');
     }
 
     public function getDiskPathAttribute(): string

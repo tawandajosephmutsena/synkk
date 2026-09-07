@@ -13,6 +13,7 @@ use App\Services\E2eeVaultService;
 use App\Services\GhostFileService;
 use App\Services\PlanService;
 use App\Services\ThreeWayDiffService;
+use App\Services\VaultRagService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +29,8 @@ class VaultSyncController extends Controller
         protected ResolveConflictAction $resolveConflictAction,
         protected CrdtCollabService $collabService,
         protected GhostFileService $ghostFileService,
-        protected E2eeVaultService $e2eeService
+        protected E2eeVaultService $e2eeService,
+        protected VaultRagService $ragService
     ) {}
 
     /**
@@ -877,6 +879,99 @@ class VaultSyncController extends Controller
                 'online' => true,
                 'heartbeat_at' => now()->timestamp,
             ],
+        ]);
+    }
+
+    /**
+     * Agentic RAG query with graph-augmented retrieval and verified citations.
+     */
+    public function ragQuery(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $validated = $request->validate([
+            'query' => ['required', 'string', 'max:1000'],
+            'expand_graph' => ['nullable', 'boolean'],
+            'max_citations' => ['nullable', 'integer', 'min:1', 'max:10'],
+        ]);
+
+        $result = $this->ragService->query($vault, $validated['query'], [
+            'expand_graph' => $validated['expand_graph'] ?? true,
+            'max_citations' => $validated['max_citations'] ?? 4,
+        ]);
+
+        return response()->json([
+            'status' => 'ok',
+            ...$result,
+        ]);
+    }
+
+    /**
+     * Fast hybrid semantic search returning top matching note chunks and similarity scores.
+     */
+    public function ragSearch(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $validated = $request->validate([
+            'query' => ['required', 'string', 'max:1000'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:25'],
+        ]);
+
+        $results = $this->ragService->search($vault, $validated['query'], $validated['limit'] ?? 5);
+
+        return response()->json([
+            'status' => 'ok',
+            'query' => $validated['query'],
+            'count' => count($results),
+            'results' => $results,
+        ]);
+    }
+
+    /**
+     * Re-index vault markdown notes into vector embeddings.
+     */
+    public function ragIndex(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $force = (bool) $request->input('force', false);
+        $telemetry = $this->ragService->indexVault($vault, $force);
+
+        return response()->json([
+            'status' => 'ok',
+            ...$telemetry,
+        ]);
+    }
+
+    /**
+     * Report RAG indexing health and status.
+     */
+    public function ragStatus(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if (! $deviceToken->canAccessVault($vault->id)) {
+            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
+        }
+
+        $status = $this->ragService->getStatus($vault);
+
+        return response()->json([
+            'status' => 'ok',
+            ...$status,
         ]);
     }
 

@@ -53,5 +53,11 @@ Route::prefix('v1')
 
             // Native Mobile Background Sync & Transport Relay Status
             Route::get('transport/status', [VaultSyncController::class, 'transportStatus'])->name('api.vaults.transport.status');
+
+            // Agentic Knowledge Graph & Local RAG Server
+            Route::post('rag/query', [VaultSyncController::class, 'ragQuery'])->name('api.vaults.rag.query');
+            Route::post('rag/search', [VaultSyncController::class, 'ragSearch'])->name('api.vaults.rag.search');
+            Route::post('rag/index', [VaultSyncController::class, 'ragIndex'])->name('api.vaults.rag.index');
+            Route::get('rag/status', [VaultSyncController::class, 'ragStatus'])->name('api.vaults.rag.status');
         });
     });
