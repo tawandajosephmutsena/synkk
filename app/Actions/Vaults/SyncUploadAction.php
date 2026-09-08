@@ -6,9 +6,11 @@ use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultFileVersion;
 use App\Services\SecretScannerService;
+use App\ValueObjects\VaultContentEnvelope;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class SyncUploadAction
 {
@@ -27,19 +29,62 @@ class SyncUploadAction
         string $deviceName,
         string $path,
         string $contents,
-        int $baseVersion = 0
+        int $baseVersion = 0,
+        ?VaultContentEnvelope $envelope = null
     ): array {
         $disk = config('synkk.storage_disk', 'local');
-        $sha256 = hash('sha256', $contents);
-        $size = strlen($contents);
         $cleanPath = trim($path, '/');
 
-        // DLP Secret Scan
-        $scanResult = $this->secretScanner->scan($contents);
+        if ($envelope !== null) {
+            $contents = $envelope->payload;
+            $sha256 = $envelope->payloadSha256;
+            $size = strlen($contents);
+            $isEncrypted = $envelope->encrypted;
+            $iv = $envelope->iv;
+            $tag = $envelope->tag;
+            $isGhost = $envelope->ghost;
+            $originalSize = $envelope->plaintextSize;
+            $mimeType = $envelope->mimeType;
+        } else {
+            if ($vault->is_e2ee) {
+                throw ValidationException::withMessages([
+                    'encrypted' => ['Encrypted vaults require a client-encrypted payload.'],
+                ]);
+            }
+            $sha256 = hash('sha256', $contents);
+            $size = strlen($contents);
+            $isEncrypted = false;
+            $iv = null;
+            $tag = null;
+            $isGhost = false;
+            $originalSize = $size;
+            $mimeType = null;
+        }
+
+        // DLP Secret Scan (only on plaintext)
+        $scanResult = $isEncrypted ? ['has_secrets' => false, 'detected' => []] : $this->secretScanner->scan($contents);
         $hasSecrets = $scanResult['has_secrets'];
         $detectedSecrets = $scanResult['detected'];
 
-        return DB::transaction(function () use ($vault, $user, $deviceName, $cleanPath, $contents, $sha256, $size, $baseVersion, $disk, $hasSecrets, $detectedSecrets) {
+        return DB::transaction(function () use (
+            $vault,
+            $user,
+            $deviceName,
+            $cleanPath,
+            $contents,
+            $sha256,
+            $size,
+            $baseVersion,
+            $disk,
+            $hasSecrets,
+            $detectedSecrets,
+            $isEncrypted,
+            $iv,
+            $tag,
+            $isGhost,
+            $originalSize,
+            $mimeType
+        ) {
             $existing = $vault->files()->where('path', $cleanPath)->lockForUpdate()->first();
             $latestVaultVersion = $vault->latestVersion();
             $nextVersion = $latestVaultVersion + 1;
@@ -81,6 +126,12 @@ class SyncUploadAction
                     'version' => $nextVersion,
                     'is_deleted' => false,
                     'last_modified_by' => $user->id,
+                    'is_encrypted' => $isEncrypted,
+                    'encryption_iv' => $iv,
+                    'encryption_tag' => $tag,
+                    'is_ghost' => $isGhost,
+                    'original_size' => $originalSize,
+                    'mime_type' => $mimeType,
                 ]);
 
                 $vault->changeLogs()->create([
@@ -103,6 +154,11 @@ class SyncUploadAction
                     'version' => $nextVersion,
                     'sha256' => $sha256,
                     'size' => $size,
+                    'is_encrypted' => $isEncrypted,
+                    'encryption_iv' => $iv,
+                    'encryption_tag' => $tag,
+                    'is_ghost' => $isGhost,
+                    'original_size' => $originalSize,
                     'has_secrets' => $hasSecrets,
                     'detected_secrets' => $detectedSecrets,
                     'message' => "Concurrent change detected. Your version was safely preserved as '{$savePath}'.",
@@ -128,6 +184,13 @@ class SyncUploadAction
                         'sha256' => $existing->sha256,
                         'size' => $existing->size,
                         'created_by' => $existing->last_modified_by ?: $user->id,
+                        'is_encrypted' => (bool) $existing->is_encrypted,
+                        'encryption_iv' => $existing->encryption_iv,
+                        'encryption_tag' => $existing->encryption_tag,
+                        'is_ghost' => (bool) $existing->is_ghost,
+                        'original_size' => $existing->original_size,
+                        'mime_type' => $existing->mime_type,
+                        'format_version' => 2,
                     ]);
 
                     // Clean up old storage file if necessary
@@ -156,6 +219,12 @@ class SyncUploadAction
                     'version' => $nextVersion,
                     'is_deleted' => false,
                     'last_modified_by' => $user->id,
+                    'is_encrypted' => $isEncrypted,
+                    'encryption_iv' => $iv,
+                    'encryption_tag' => $tag,
+                    'is_ghost' => $isGhost,
+                    'original_size' => $originalSize,
+                    'mime_type' => $mimeType,
                 ]);
 
                 $vault->changeLogs()->create([
@@ -176,6 +245,11 @@ class SyncUploadAction
                     'version' => $nextVersion,
                     'sha256' => $sha256,
                     'size' => $size,
+                    'is_encrypted' => $isEncrypted,
+                    'encryption_iv' => $iv,
+                    'encryption_tag' => $tag,
+                    'is_ghost' => $isGhost,
+                    'original_size' => $originalSize,
                     'has_secrets' => $hasSecrets,
                     'detected_secrets' => $detectedSecrets,
                 ];
@@ -190,6 +264,12 @@ class SyncUploadAction
                 'version' => $nextVersion,
                 'is_deleted' => false,
                 'last_modified_by' => $user->id,
+                'is_encrypted' => $isEncrypted,
+                'encryption_iv' => $iv,
+                'encryption_tag' => $tag,
+                'is_ghost' => $isGhost,
+                'original_size' => $originalSize,
+                'mime_type' => $mimeType,
             ]);
 
             $vault->changeLogs()->create([
@@ -210,6 +290,11 @@ class SyncUploadAction
                 'version' => $nextVersion,
                 'sha256' => $sha256,
                 'size' => $size,
+                'is_encrypted' => $isEncrypted,
+                'encryption_iv' => $iv,
+                'encryption_tag' => $tag,
+                'is_ghost' => $isGhost,
+                'original_size' => $originalSize,
                 'has_secrets' => $hasSecrets,
                 'detected_secrets' => $detectedSecrets,
             ];

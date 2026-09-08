@@ -38,6 +38,7 @@ class PruneDeletedVaultFiles extends Command
 
         $expiredFiles = VaultFile::where('is_deleted', true)
             ->where('updated_at', '<=', $cutoff)
+            ->with('versions')
             ->get();
 
         $prunedCount = 0;
@@ -45,6 +46,12 @@ class PruneDeletedVaultFiles extends Command
         $disk = config('synkk.storage_disk', 'local');
 
         foreach ($expiredFiles as $file) {
+            foreach ($file->versions as $version) {
+                if ($version->storage_path && Storage::disk($disk)->exists($version->storage_path)) {
+                    Storage::disk($disk)->delete($version->storage_path);
+                }
+            }
+
             if ($file->storage_path && Storage::disk($disk)->exists($file->storage_path)) {
                 Storage::disk($disk)->delete($file->storage_path);
             }

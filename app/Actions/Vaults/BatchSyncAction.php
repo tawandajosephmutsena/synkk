@@ -4,7 +4,9 @@ namespace App\Actions\Vaults;
 
 use App\Models\User;
 use App\Models\Vault;
+use App\ValueObjects\VaultContentEnvelope;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class BatchSyncAction
 {
@@ -98,22 +100,21 @@ class BatchSyncAction
                 }
 
                 // Action is upload
-                $contents = null;
-                if (isset($item['content_base64'])) {
-                    $contents = base64_decode($item['content_base64']);
-                } elseif (isset($item['content'])) {
-                    $contents = (string) $item['content'];
-                }
+                $envelope = $item['envelope'] ?? null;
+                if (! $envelope instanceof VaultContentEnvelope) {
+                    try {
+                        $envelope = VaultContentEnvelope::fromValidated($item, $vault);
+                    } catch (ValidationException $e) {
+                        $errors++;
+                        $results[] = [
+                            'path' => $path,
+                            'status' => 'error',
+                            'message' => $e->getMessage(),
+                            'errors' => $e->errors(),
+                        ];
 
-                if ($contents === null) {
-                    $errors++;
-                    $results[] = [
-                        'path' => $path,
-                        'status' => 'error',
-                        'message' => 'No file content provided.',
-                    ];
-
-                    continue;
+                        continue;
+                    }
                 }
 
                 $baseVersion = (int) ($item['base_version'] ?? 0);
@@ -123,31 +124,10 @@ class BatchSyncAction
                     $user,
                     $deviceName,
                     $path,
-                    $contents,
-                    $baseVersion
+                    $envelope->payload,
+                    $baseVersion,
+                    $envelope
                 );
-
-                $isEncrypted = ! empty($item['is_encrypted']);
-                $isGhost = ! empty($item['is_ghost']);
-
-                if ($isEncrypted || $isGhost) {
-                    $savedPath = (isset($res['path']) && is_string($res['path'])) ? $res['path'] : $path;
-                    $savedFile = $vault->files()->where('path', $savedPath)->where('is_deleted', false)->first();
-                    if ($savedFile) {
-                        $updates = [];
-                        if ($isEncrypted) {
-                            $updates['is_encrypted'] = true;
-                            $updates['encryption_iv'] = isset($item['encryption_iv']) ? (string) $item['encryption_iv'] : null;
-                            $updates['encryption_tag'] = isset($item['encryption_tag']) ? (string) $item['encryption_tag'] : null;
-                        }
-                        if ($isGhost) {
-                            $updates['is_ghost'] = true;
-                            $updates['original_size'] = isset($item['original_size']) ? (int) $item['original_size'] : $savedFile->size;
-                            $updates['mime_type'] = isset($item['mime_type']) ? (string) $item['mime_type'] : null;
-                        }
-                        $savedFile->update($updates);
-                    }
-                }
 
                 if (($res['status'] ?? '') === 'conflict') {
                     $conflicts++;

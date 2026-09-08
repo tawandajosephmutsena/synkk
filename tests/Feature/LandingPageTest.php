@@ -207,3 +207,12 @@ test('the landing page defaults to dark mode on initial load', function () {
         ->assertSee("localStorage.getItem('synkk-theme') || 'dark'", escape: false)
         ->assertSee('data-theme-set="dark" title="Dark mode" aria-label="Dark mode" class="is-active" aria-pressed="true"', escape: false);
 });
+
+test('the landing page presents accurate live CRDT and E2EE disclosures', function () {
+    $response = $this->get(route('home'));
+
+    $response
+        ->assertOk()
+        ->assertSee('character-level CRDT multiplayer editing powered by Yjs over Laravel Reverb')
+        ->assertSee('server-side search and RAG indexing are disabled to guarantee zero server knowledge');
+});

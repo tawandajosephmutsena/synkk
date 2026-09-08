@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\DeviceToken;
+use App\Models\User;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Http\Request;
@@ -23,6 +24,36 @@ class AuthenticateDeviceToken
         $token = $request->bearerToken();
 
         if (! $token) {
+            if (Auth::guard('web')->check()) {
+                /** @var User $user */
+                $user = Auth::guard('web')->user();
+                $team = $user->currentTeam ?? $user->teams()->first();
+
+                if ($team) {
+                    $deviceToken = DeviceToken::firstOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'team_id' => $team->id,
+                            'name' => 'Web Browser Session',
+                        ],
+                        [
+                            'token_hash' => hash('sha256', 'web_session_'.$user->id.'_'.(string) config('app.key')),
+                            'token_preview' => 'web_sess...',
+                            'access_scope' => 'read_write',
+                        ]
+                    );
+
+                    $deviceToken->setRelation('user', $user);
+                    $deviceToken->setRelation('team', $team);
+
+                    $request->attributes->set('device_token', $deviceToken);
+                    $request->setUserResolver(fn () => $user);
+                    Auth::setUser($user);
+
+                    return $next($request);
+                }
+            }
+
             return response()->json([
                 'error' => 'Unauthenticated',
                 'message' => 'A valid Bearer token is required in the Authorization header.',
@@ -70,6 +101,7 @@ class AuthenticateDeviceToken
         // Bind attributes to request
         $request->attributes->set('device_token', $deviceToken);
         $request->attributes->set('current_team', $deviceToken->team);
+        $request->setUserResolver(fn () => $deviceToken->user);
         Auth::setUser($deviceToken->user);
 
         return $next($request);

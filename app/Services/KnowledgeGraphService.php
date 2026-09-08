@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Vault;
 use App\Models\VaultFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class KnowledgeGraphService
@@ -18,6 +19,36 @@ class KnowledgeGraphService
      * }
      */
     public function getInteractiveGraph(Vault $vault, ?iterable $markdownFiles = null): array
+    {
+        $version = $vault->latestVersion();
+
+        if ($markdownFiles === null) {
+            $cacheKey = "vault_graph_{$vault->id}_v{$version}";
+        } else {
+            $identifiers = [];
+            foreach ($markdownFiles as $file) {
+                $identifiers[] = $file->id.':'.$file->version;
+            }
+            $cacheKey = "vault_graph_{$vault->id}_v{$version}_".md5(implode(',', $identifiers));
+        }
+
+        /** @var array{
+         *     nodes: array<int, array{id: int, name: string, path: string, size: int, version: int, updated_at: string, linksCount: int}>,
+         *     edges: array<int, array{source: int, target: int}>
+         * } */
+        return Cache::remember($cacheKey, now()->addHours(6), function () use ($vault, $markdownFiles): array {
+            return $this->buildInteractiveGraph($vault, $markdownFiles);
+        });
+    }
+
+    /**
+     * @param  iterable<VaultFile>|null  $markdownFiles
+     * @return array{
+     *     nodes: array<int, array{id: int, name: string, path: string, size: int, version: int, updated_at: string, linksCount: int}>,
+     *     edges: array<int, array{source: int, target: int}>
+     * }
+     */
+    public function buildInteractiveGraph(Vault $vault, ?iterable $markdownFiles = null): array
     {
         $files = $markdownFiles ?? VaultFile::where('vault_id', $vault->id)
             ->where('is_deleted', false)
@@ -186,6 +217,28 @@ class KnowledgeGraphService
      * }
      */
     public function getGraphTopology(Vault $vault): array
+    {
+        $version = $vault->latestVersion();
+        $cacheKey = "vault_graph_topology_{$vault->id}_v{$version}";
+
+        /** @var array{
+         *     nodes: array<int, array{path: string, title: string, inbound: int, outbound: int, is_orphan: bool}>,
+         *     edges: array<int, array{source: string, target: string}>,
+         *     adjacency: array<string, array<string, array<int, string>>>
+         * } */
+        return Cache::remember($cacheKey, now()->addHours(6), function () use ($vault): array {
+            return $this->buildGraphTopology($vault);
+        });
+    }
+
+    /**
+     * @return array{
+     *     nodes: array<int, array{path: string, title: string, inbound: int, outbound: int, is_orphan: bool}>,
+     *     edges: array<int, array{source: string, target: string}>,
+     *     adjacency: array<string, array<string, array<int, string>>>
+     * }
+     */
+    public function buildGraphTopology(Vault $vault): array
     {
         $markdownFiles = VaultFile::where('vault_id', $vault->id)
             ->where('is_deleted', false)

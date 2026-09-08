@@ -28,20 +28,31 @@ it('prunes soft-deleted vault files older than retention threshold', function ()
     Storage::disk('local')->put($recentStoragePath, 'Recently deleted content');
     Storage::disk('local')->put($activeStoragePath, 'Active content');
 
-    // 1. Old deleted file (35 days old)
+    // 1. Old deleted file (35 days old) with historical version
     $oldFile = VaultFile::create([
         'vault_id' => $vault->id,
         'path' => 'old.md',
         'storage_path' => $oldStoragePath,
         'sha256' => hash('sha256', 'Old deleted content'),
         'size' => 19,
-        'version' => 1,
+        'version' => 2,
         'is_deleted' => true,
         'last_modified_by' => $user->id,
     ]);
     $oldFile->timestamps = false;
     $oldFile->updated_at = now()->subDays(35);
     $oldFile->save();
+
+    $oldVersionStoragePath = "vaults/{$vault->id}/versions/old_v1.md";
+    Storage::disk('local')->put($oldVersionStoragePath, 'Old v1 historical content');
+    $oldFile->versions()->create([
+        'vault_id' => $vault->id,
+        'version' => 1,
+        'storage_path' => $oldVersionStoragePath,
+        'sha256' => hash('sha256', 'Old v1 historical content'),
+        'size' => 25,
+        'created_by' => $user->id,
+    ]);
 
     // 2. Recently deleted file (10 days old)
     $recentFile = VaultFile::create([
@@ -79,6 +90,7 @@ it('prunes soft-deleted vault files older than retention threshold', function ()
 
     expect(VaultFile::find($oldFile->id))->toBeNull()
         ->and(Storage::disk('local')->exists($oldStoragePath))->toBeFalse()
+        ->and(Storage::disk('local')->exists($oldVersionStoragePath))->toBeFalse()
         ->and(VaultFile::find($recentFile->id))->not->toBeNull()
         ->and(Storage::disk('local')->exists($recentStoragePath))->toBeTrue()
         ->and(VaultFile::find($activeFile->id))->not->toBeNull()

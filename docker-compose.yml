@@ -15,9 +15,20 @@ services:
       DB_CONNECTION: "sqlite"
       DB_DATABASE: "/var/www/html/database/database.sqlite"
       SYNKK_STORAGE_DISK: "local"
+      REVERB_SERVER_HOST: "0.0.0.0"
+      REVERB_SERVER_PORT: "8080"
+      REVERB_HOST: "localhost"
+      REVERB_PORT: "${PORT:-8000}"
+      REVERB_SCHEME: "http"
     volumes:
       - synkk_database:/var/www/html/database
       - synkk_storage:/var/www/html/storage/app/private
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   synkk_database:

@@ -41,6 +41,19 @@ class ResolveConflictAction
             throw new RuntimeException("You do not have write permissions for '{$canonicalPath}'.");
         }
 
+        $conflictPermission = $vault->permissionForPath($user, $conflictPath);
+        if ($conflictPermission !== 'read_write') {
+            throw new RuntimeException("You do not have write permissions for '{$conflictPath}'.");
+        }
+
+        $derived = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $conflictPath);
+        if ($derived === $conflictPath) {
+            $derived = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $conflictPath);
+        }
+        if ($derived !== $canonicalPath) {
+            throw new RuntimeException("Conflict path '{$conflictPath}' does not correspond to canonical path '{$canonicalPath}'.");
+        }
+
         return DB::transaction(function () use ($vault, $user, $canonicalPath, $conflictPath, $resolvedContent, $deviceName) {
             $canonicalFile = $vault->files()
                 ->where('path', $canonicalPath)

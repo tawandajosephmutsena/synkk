@@ -1,3 +1,9 @@
+import * as Y from 'yjs';
+import { yCollab } from 'y-codemirror.next';
+import { SynkkYjsProvider, SynkkAwareness } from './collaboration/yjs-provider.js';
+
+const getVaultCrypto = () => (typeof window !== 'undefined' && window.VaultCrypto ? window.VaultCrypto : null);
+
 const escapeHtml = (value = '') => String(value)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -319,6 +325,8 @@ export function createMarkdownEditor(options = {}) {
 
     return {
         activeFileId: options.activeFileId ?? null,
+        documentId: options.documentId ?? null,
+        filePath: options.filePath ?? '',
         content,
         viewMode: options.viewMode || 'split',
         canEdit: Boolean(options.canEdit),
@@ -338,6 +346,20 @@ export function createMarkdownEditor(options = {}) {
         saveFailed: false,
         beforeUnloadHandler: null,
 
+        // CRDT / Yjs Collaboration State
+        user: options.user || { id: null, name: 'Web Editor', color: '#10B981' },
+        collabEnabled: options.collabEnabled ?? Boolean(options.documentId || options.filePath),
+        snapshotDebounceMs: options.snapshotDebounceMs || 2500,
+        ydoc: null,
+        ytext: null,
+        undoManager: null,
+        provider: null,
+        awareness: null,
+        activePeers: [],
+        snapshotTimer: null,
+        isApplyingRemote: false,
+        collabExtension: null,
+
         // E2EE Zero-Knowledge State
         vaultSlug: options.vaultSlug || '',
         isEncrypted: Boolean(options.isEncrypted),
@@ -345,7 +367,7 @@ export function createMarkdownEditor(options = {}) {
         encryptionTag: options.encryptionTag || '',
         vaultSalt: options.vaultSalt || '',
         vaultTestCipher: options.vaultTestCipher || '',
-        isUnlocked: !Boolean(options.isEncrypted) || (Boolean(window.VaultCrypto) && window.VaultCrypto.hasSessionKey(options.vaultSlug || '')),
+        isUnlocked: !Boolean(options.isEncrypted) || Boolean(getVaultCrypto()?.hasSessionKey?.(options.vaultSlug || '')),
         passphraseInput: '',
         unlockError: '',
         isDerivingKey: false,
@@ -355,19 +377,38 @@ export function createMarkdownEditor(options = {}) {
                 this.viewMode = 'source';
             }
 
-            if (this.isEncrypted && window.VaultCrypto && window.VaultCrypto.hasSessionKey(this.vaultSlug)) {
+            if (this.isEncrypted && getVaultCrypto()?.hasSessionKey?.(this.vaultSlug)) {
                 await this.decryptCurrentNote();
             } else {
                 this.updateMetrics();
+            }
+
+            if (this.collabEnabled && this.isUnlocked) {
+                await this.initCollaboration();
             }
 
             this.$watch('content', (value) => {
                 this.updateMetrics();
                 this.isDirty = this.initialContent === null || value !== this.initialContent;
 
+                // CRITICAL E2EE SECURITY: Never assign plaintext to Livewire for encrypted notes!
                 if (this.$wire) {
-                    this.$wire.editorContent = value;
+                    if (!this.isEncrypted) {
+                        this.$wire.editorContent = value;
+                    }
                     this.$wire.editorIsDirty = this.isDirty;
+                }
+
+                // Sync local textarea changes to Yjs
+                if (this.ytext && !this.isApplyingRemote && value !== this.ytext.toString()) {
+                    this.ydoc.transact(() => {
+                        this.ytext.delete(0, this.ytext.length);
+                        this.ytext.insert(0, value);
+                    }, 'local');
+                }
+
+                if (this.canEdit && this.isDirty) {
+                    this.scheduleSnapshotFlush();
                 }
             });
 
@@ -382,13 +423,219 @@ export function createMarkdownEditor(options = {}) {
             }
         },
 
+        async initCollaboration() {
+            if (!this.collabEnabled) return;
+            this.cleanupCollaboration();
+
+            this.ydoc = new Y.Doc();
+            this.ytext = this.ydoc.getText('markdown');
+            this.undoManager = new Y.UndoManager(this.ytext);
+            this.awareness = new SynkkAwareness(this.ydoc);
+
+            this.awareness.setLocalStateField('user', {
+                id: this.user.id || null,
+                name: this.user.name || 'Web Editor',
+                color: this.user.color || '#10B981',
+            });
+
+            this.awareness.on('change', () => {
+                this.activePeers = Array.from(this.awareness.getStates().entries())
+                    .filter(([clientId]) => clientId !== this.awareness.clientID)
+                    .map(([clientId, state]) => ({
+                        peer_id: String(clientId),
+                        name: state.user?.name || 'Collaborator',
+                        color: state.user?.color || '#10B981',
+                        cursor: state.cursor || null,
+                    }));
+            });
+
+            // If initial content exists and ytext is empty, seed it
+            if (this.content && this.ytext.length === 0) {
+                this.ydoc.transact(() => {
+                    this.ytext.insert(0, this.content);
+                }, 'local');
+            }
+
+            // Observe remote Yjs changes
+            this.ytext.observe((event, transaction) => {
+                if (transaction.origin !== 'local') {
+                    this.isApplyingRemote = true;
+                    try {
+                        const incoming = this.ytext.toString();
+                        this.content = incoming;
+                        this.updateMetrics();
+                        if (this.canEdit) {
+                            this.scheduleSnapshotFlush();
+                        }
+                    } finally {
+                        this.isApplyingRemote = false;
+                    }
+                }
+            });
+
+            // If editorView is provided, bind yCollab extension
+            if (options.editorView) {
+                this.collabExtension = yCollab(this.ytext, this.awareness, { undoManager: this.undoManager });
+            }
+
+            let cryptoKey = null;
+            if (this.isEncrypted) {
+                cryptoKey = getVaultCrypto()?.getSessionKey?.(this.vaultSlug) || null;
+            }
+
+            const self = this;
+            this.provider = new SynkkYjsProvider({
+                doc: this.ydoc,
+                vaultId: this.vaultSlug,
+                documentId: this.documentId,
+                path: this.filePath,
+                cryptoKey,
+                echo: typeof window !== 'undefined' ? window.Echo : null,
+                awareness: this.awareness,
+                transport: {
+                    fetchUpdates: async (sinceSeq) => {
+                        if (!self.vaultSlug || typeof fetch === 'undefined') return { updates: [] };
+                        try {
+                            const res = await fetch(`/api/v1/vaults/${self.vaultSlug}/collab/catch-up?document_id=${self.documentId}&after_sequence=${sinceSeq}`, {
+                                headers: { Accept: 'application/json' },
+                            });
+                            return await res.json();
+                        } catch {
+                            return { updates: [] };
+                        }
+                    },
+                    sendUpdate: async (payload) => {
+                        if (!self.vaultSlug || typeof fetch === 'undefined') return { status: 'mocked' };
+                        const csrf = typeof document !== 'undefined' ? (document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '') : '';
+                        try {
+                            const res = await fetch(`/api/v1/vaults/${self.vaultSlug}/collab/append`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    Accept: 'application/json',
+                                    'X-CSRF-TOKEN': csrf,
+                                },
+                                body: JSON.stringify({
+                                    document_id: self.documentId,
+                                    path: self.filePath,
+                                    ...payload,
+                                }),
+                            });
+                            return await res.json();
+                        } catch {
+                            return { status: 'failed' };
+                        }
+                    },
+                    appendUpdate: async (payload) => {
+                        if (!self.vaultSlug || typeof fetch === 'undefined') return { status: 'mocked' };
+                        const csrf = typeof document !== 'undefined' ? (document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '') : '';
+                        try {
+                            const res = await fetch(`/api/v1/vaults/${self.vaultSlug}/collab/append`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    Accept: 'application/json',
+                                    'X-CSRF-TOKEN': csrf,
+                                },
+                                body: JSON.stringify({
+                                    document_id: self.documentId,
+                                    path: self.filePath,
+                                    ...payload,
+                                }),
+                            });
+                            return await res.json();
+                        } catch {
+                            return { status: 'failed' };
+                        }
+                    },
+                    checkpoint: async (payload) => {
+                        if (!self.vaultSlug || typeof fetch === 'undefined') return { status: 'mocked' };
+                        const csrf = typeof document !== 'undefined' ? (document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '') : '';
+                        try {
+                            const res = await fetch(`/api/v1/vaults/${self.vaultSlug}/collab/checkpoint`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    Accept: 'application/json',
+                                    'X-CSRF-TOKEN': csrf,
+                                },
+                                body: JSON.stringify({
+                                    document_id: self.documentId,
+                                    path: self.filePath,
+                                    client_update_id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'ckpt-' + Date.now(),
+                                    acknowledged_base_sequence: self.provider?.latestSequence || 0,
+                                    payload: payload.checkpoint_snapshot,
+                                    encrypted: payload.is_encrypted,
+                                    iv: payload.encryption_iv,
+                                    tag: payload.encryption_tag,
+                                }),
+                            });
+                            return await res.json();
+                        } catch {
+                            return { status: 'failed' };
+                        }
+                    },
+                },
+            });
+
+            await this.provider.connect();
+        },
+
+        scheduleSnapshotFlush() {
+            if (!this.canEdit) return; // READ-ONLY NEVER BECOMES SNAPSHOT WRITER
+            if (this.snapshotTimer) {
+                clearTimeout(this.snapshotTimer);
+            }
+            this.snapshotTimer = setTimeout(async () => {
+                if (this.isDirty && !this.isSaving) {
+                    await this.saveEditor();
+                }
+            }, this.snapshotDebounceMs);
+        },
+
+        cleanupCollaboration() {
+            if (this.snapshotTimer) {
+                clearTimeout(this.snapshotTimer);
+                this.snapshotTimer = null;
+            }
+            if (this.provider) {
+                this.provider.destroy();
+                this.provider = null;
+            }
+            if (this.awareness) {
+                this.awareness.destroy();
+                this.awareness = null;
+            }
+            if (this.undoManager) {
+                this.undoManager.destroy();
+                this.undoManager = null;
+            }
+            if (this.ydoc) {
+                this.ydoc.destroy();
+                this.ydoc = null;
+                this.ytext = null;
+            }
+            this.activePeers = [];
+        },
+
+        lockPassphrase() {
+            getVaultCrypto()?.clearSessionKey?.(this.vaultSlug);
+            this.cleanupCollaboration();
+            this.isUnlocked = false;
+            this.passphraseInput = '';
+            if (this.isEncrypted && this.initialContent) {
+                this.content = this.initialContent;
+            }
+        },
+
         async decryptCurrentNote() {
-            if (!this.isEncrypted || !window.VaultCrypto) return;
-            const key = window.VaultCrypto.getSessionKey(this.vaultSlug);
+            const vc = getVaultCrypto();
+            if (!this.isEncrypted || !vc || typeof vc.decryptText !== 'function') return;
+            const key = vc.getSessionKey?.(this.vaultSlug);
             if (!key) return;
 
             try {
-                const plaintext = await window.VaultCrypto.decryptText(
+                const plaintext = await vc.decryptText(
                     this.content,
                     this.encryptionIv,
                     this.encryptionTag,
@@ -406,12 +653,13 @@ export function createMarkdownEditor(options = {}) {
         },
 
         async unlockWithPassphrase() {
-            if (!this.passphraseInput || this.isDerivingKey || !window.VaultCrypto) return;
+            const vc = getVaultCrypto();
+            if (!this.passphraseInput || this.isDerivingKey || !vc || typeof vc.verifyPassphrase !== 'function') return;
             this.isDerivingKey = true;
             this.unlockError = '';
 
             try {
-                const result = await window.VaultCrypto.verifyPassphrase(
+                const result = await vc.verifyPassphrase(
                     this.passphraseInput,
                     this.vaultSalt,
                     this.vaultTestCipher
@@ -422,12 +670,16 @@ export function createMarkdownEditor(options = {}) {
                     return;
                 }
 
-                window.VaultCrypto.setSessionKey(this.vaultSlug, result.key);
+                vc.setSessionKey(this.vaultSlug, result.key);
                 this.isUnlocked = true;
                 this.passphraseInput = '';
 
                 if (this.content && this.encryptionIv) {
                     await this.decryptCurrentNote();
+                }
+
+                if (this.collabEnabled) {
+                    await this.initCollaboration();
                 }
             } catch (err) {
                 this.unlockError = err.message || 'Key derivation failed.';
@@ -437,6 +689,7 @@ export function createMarkdownEditor(options = {}) {
         },
 
         destroy() {
+            this.cleanupCollaboration();
             if (typeof window !== 'undefined' && this.beforeUnloadHandler) {
                 window.removeEventListener('beforeunload', this.beforeUnloadHandler);
             }
@@ -573,8 +826,9 @@ export function createMarkdownEditor(options = {}) {
             const savedContent = this.content;
 
             try {
-                if (this.isEncrypted && window.VaultCrypto) {
-                    const key = window.VaultCrypto.getSessionKey(this.vaultSlug);
+                const vc = getVaultCrypto();
+                if (this.isEncrypted && vc) {
+                    const key = vc.getSessionKey?.(this.vaultSlug);
                     if (!key) {
                         this.isUnlocked = false;
                         this.unlockError = 'Session key missing. Please unlock with passphrase before saving.';
@@ -582,8 +836,11 @@ export function createMarkdownEditor(options = {}) {
                         return false;
                     }
 
-                    const encrypted = await window.VaultCrypto.encryptText(savedContent, key);
-                    await this.$wire.saveEncryptedFile(encrypted.ciphertextBase64, encrypted.ivHex, encrypted.tagHex);
+                    const encrypted = await vc.encryptText(savedContent, key);
+                    const plaintextSize = typeof TextEncoder !== 'undefined'
+                        ? new TextEncoder().encode(savedContent).length
+                        : savedContent.length;
+                    await this.$wire.saveEncryptedFile(encrypted.ciphertextBase64, encrypted.ivHex, encrypted.tagHex, plaintextSize);
                     this.encryptionIv = encrypted.ivHex;
                     this.encryptionTag = encrypted.tagHex;
                 } else {
@@ -619,11 +876,13 @@ export function createMarkdownEditor(options = {}) {
 
         async openFile(fileId) {
             if (!this.$wire || (this.isDirty && !window.confirm(options.unsavedPrompt || 'Discard unsaved changes?'))) return;
+            this.cleanupCollaboration();
             await this.$wire.selectFile(fileId);
         },
 
         async closeEditor() {
             if (!this.$wire || (this.isDirty && !window.confirm(options.unsavedPrompt || 'Discard unsaved changes?'))) return;
+            this.cleanupCollaboration();
             await this.$wire.$set('activeTab', 'files');
         },
     };

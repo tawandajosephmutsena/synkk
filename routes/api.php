@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\VaultCollaborationController;
 use App\Http\Controllers\Api\VaultSyncController;
 use App\Http\Middleware\AuthenticateDeviceToken;
 use Illuminate\Support\Facades\Route;
@@ -38,10 +39,14 @@ Route::prefix('v1')
             Route::post('conflicts/resolve', [VaultSyncController::class, 'resolveConflict'])->name('api.vaults.conflicts.resolve');
 
             // CRDT Multiplayer Collaboration & Real-Time Relays
-            Route::post('collab/join', [VaultSyncController::class, 'collabJoin'])->name('api.vaults.collab.join');
-            Route::post('collab/sync', [VaultSyncController::class, 'collabSync'])->name('api.vaults.collab.sync');
-            Route::post('collab/leave', [VaultSyncController::class, 'collabLeave'])->name('api.vaults.collab.leave');
-            Route::get('collab/presence', [VaultSyncController::class, 'collabPresence'])->name('api.vaults.collab.presence');
+            Route::post('collab/join', [VaultCollaborationController::class, 'join'])->name('api.vaults.collab.join');
+            Route::get('collab/catch-up', [VaultCollaborationController::class, 'catchUp'])->name('api.vaults.collab.catch_up');
+            Route::get('collab/updates', [VaultCollaborationController::class, 'catchUp'])->name('api.vaults.collab.updates');
+            Route::post('collab/append', [VaultCollaborationController::class, 'append'])->name('api.vaults.collab.append');
+            Route::post('collab/sync', [VaultCollaborationController::class, 'syncLegacyOrAppend'])->name('api.vaults.collab.sync');
+            Route::post('collab/checkpoint', [VaultCollaborationController::class, 'checkpoint'])->name('api.vaults.collab.checkpoint');
+            Route::post('collab/leave', [VaultCollaborationController::class, 'leave'])->name('api.vaults.collab.leave');
+            Route::get('collab/presence', [VaultCollaborationController::class, 'presence'])->name('api.vaults.collab.presence');
 
             // Ghost files (Selective Transport & On-Demand Hydration)
             Route::post('files/hydrate', [VaultSyncController::class, 'hydrateFile'])->name('api.vaults.files.hydrate');

@@ -6,20 +6,25 @@ use App\Actions\Vaults\BatchSyncAction;
 use App\Actions\Vaults\ResolveConflictAction;
 use App\Actions\Vaults\SyncUploadAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\BatchSyncRequest;
+use App\Http\Requests\Api\UploadVaultFileRequest;
 use App\Jobs\IndexVaultRagJob;
 use App\Models\DeviceToken;
 use App\Models\Vault;
 use App\Models\VaultFile;
 use App\Services\CrdtCollabService;
+use App\Services\DeviceVaultAccess;
 use App\Services\E2eeVaultService;
 use App\Services\GhostFileService;
 use App\Services\PlanService;
 use App\Services\ThreeWayDiffService;
+use App\Services\VaultProtocol;
 use App\Services\VaultRagService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class VaultSyncController extends Controller
 {
@@ -31,7 +36,9 @@ class VaultSyncController extends Controller
         protected CrdtCollabService $collabService,
         protected GhostFileService $ghostFileService,
         protected E2eeVaultService $e2eeService,
-        protected VaultRagService $ragService
+        protected VaultRagService $ragService,
+        protected DeviceVaultAccess $vaultAccess,
+        protected VaultProtocol $protocol
     ) {}
 
     /**
@@ -39,15 +46,20 @@ class VaultSyncController extends Controller
      */
     protected function authorizeDeviceForVault(?DeviceToken $deviceToken, Vault $vault): ?JsonResponse
     {
-        if (! $deviceToken || $vault->team_id !== $deviceToken->team_id) {
-            return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
+        if (! $deviceToken) {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        if (! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Device not authorized for this vault'], Response::HTTP_FORBIDDEN);
-        }
+        try {
+            $this->vaultAccess->authorizeVaultAccess($deviceToken, $vault);
 
-        return null;
+            return null;
+        } catch (HttpException $e) {
+            return response()->json([
+                'error' => $e->getStatusCode() === 404 ? 'Vault not found in current team or access not allowed for this device token' : $e->getMessage(),
+                'message' => $e->getMessage(),
+            ], $e->getStatusCode());
+        }
     }
 
     /**
@@ -91,6 +103,8 @@ class VaultSyncController extends Controller
      */
     public function manifest(Request $request, Vault $vault): JsonResponse
     {
+        $this->protocol->validateProtocolVersion($request, $vault);
+
         /** @var DeviceToken $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
         $user = $deviceToken->user;
@@ -156,6 +170,9 @@ class VaultSyncController extends Controller
 
         return response()->json([
             'status' => 'ok',
+            'protocol_version' => VaultProtocol::CURRENT_PROTOCOL_VERSION,
+            'minimum_protocol_version' => VaultProtocol::MINIMUM_PROTOCOL_VERSION,
+            'capabilities' => $this->protocol->manifestCapabilities($vault)['capabilities'],
             'vault' => [
                 'id' => $vault->id,
                 'name' => $vault->name,
@@ -284,49 +301,37 @@ class VaultSyncController extends Controller
     /**
      * Upload or update a file in the vault.
      */
-    public function upload(Request $request, Vault $vault): JsonResponse
+    public function upload(UploadVaultFileRequest $request, Vault $vault): JsonResponse
     {
+        $this->protocol->validateProtocolVersion($request, $vault);
+
         /** @var DeviceToken $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
         $user = $deviceToken->user;
 
-        if ($vault->team_id !== $deviceToken->team_id || ! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
-        }
+        $path = trim((string) $request->input('path'), '/');
 
-        if ($deviceToken->access_scope === 'read_only') {
+        try {
+            $this->vaultAccess->authorizeWrite($deviceToken, $vault, $path);
+        } catch (HttpException $e) {
+            $statusCode = $e->getStatusCode();
+            $message = $e->getMessage();
+            $error = match ($statusCode) {
+                404 => 'Vault not found in current team or access not allowed for this device token',
+                403 => str_contains($message, 'suspended') ? 'Team Suspended' : 'Permission Denied',
+                default => $message,
+            };
+
             return response()->json([
-                'error' => 'Permission Denied',
-                'message' => 'This device token has read-only access and cannot upload, modify, or delete vault files.',
-            ], 403);
+                'error' => $error,
+                'message' => $message,
+            ], $statusCode);
         }
 
-        $request->validate([
-            'path' => ['required', 'string', 'not_regex:/\.\./'],
-            'base_version' => 'nullable|integer',
-        ]);
-
-        $path = trim($request->input('path'), '/');
-
-        // Check permission
-        $permission = $vault->permissionForPath($user, $path);
-        if ($permission !== 'read_write') {
-            return response()->json([
-                'error' => 'Permission Denied',
-                'message' => "You have '{$permission}' permission on '{$path}'. Changes cannot be pushed.",
-                'permission' => $permission,
-            ], 403);
-        }
-
-        if ($deviceToken->team->isSuspended()) {
-            return response()->json([
-                'error' => 'Team Suspended',
-                'message' => 'This team workspace is currently suspended. Please contact your platform administrator.',
-            ], 403);
-        }
+        $envelope = $request->toEnvelope($vault);
 
         $planService = app(PlanService::class);
-        $fileSize = $request->hasFile('file') ? (int) $request->file('file')->getSize() : strlen((string) $request->input('content', ''));
+        $fileSize = strlen($envelope->payload);
         if (! $planService->canUploadStorage($deviceToken->team, $fileSize)) {
             return response()->json([
                 'error' => 'Quota Exceeded',
@@ -335,60 +340,18 @@ class VaultSyncController extends Controller
                 'storage_limit_mb' => $planService->getStorageLimitMb($deviceToken->team),
             ], 402);
         }
-        // Get file contents (supports multipart 'file' or raw base64 / text)
-        if ($request->hasFile('file')) {
-            $uploadedFile = $request->file('file');
-            $contents = file_get_contents($uploadedFile->getRealPath());
-        } elseif ($request->has('content_base64')) {
-            $contents = base64_decode($request->input('content_base64'));
-        } elseif ($request->has('content')) {
-            $contents = $request->input('content');
-        } else {
-            return response()->json(['error' => 'No file or content provided'], 400);
-        }
 
         $baseVersion = (int) $request->input('base_version', 0);
-
-        $isEncrypted = $request->boolean('is_encrypted');
-        $iv = $request->input('encryption_iv');
-        $tag = $request->input('encryption_tag');
-
-        $isGhost = $request->boolean('is_ghost');
-        $originalSize = (int) $request->input('original_size', 0);
-
-        if ($isGhost && $originalSize === 0) {
-            $parsedStub = $this->ghostFileService->parseGhostStub($contents);
-            if ($parsedStub) {
-                $originalSize = $parsedStub['size'];
-            }
-        }
 
         $res = $this->uploadAction->execute(
             $vault,
             $user,
             $deviceToken->name,
             $path,
-            $contents,
-            $baseVersion
+            $envelope->payload,
+            $baseVersion,
+            $envelope
         );
-
-        if ($isEncrypted || $isGhost) {
-            $savedFile = $vault->files()->where('path', $res['path'] ?? $path)->where('is_deleted', false)->first();
-            if ($savedFile) {
-                $updates = [];
-                if ($isEncrypted) {
-                    $updates['is_encrypted'] = true;
-                    $updates['encryption_iv'] = $iv;
-                    $updates['encryption_tag'] = $tag;
-                }
-                if ($isGhost) {
-                    $updates['is_ghost'] = true;
-                    $updates['original_size'] = $originalSize ?: $savedFile->size;
-                    $updates['mime_type'] = $this->guessMimeType($path);
-                }
-                $savedFile->update($updates);
-            }
-        }
 
         $statusCode = ($res['status'] ?? '') === 'created' ? 201 : 200;
 
@@ -398,28 +361,33 @@ class VaultSyncController extends Controller
     /**
      * Process bulk batch file sync.
      */
-    public function batchSync(Request $request, Vault $vault): JsonResponse
+    public function batchSync(BatchSyncRequest $request, Vault $vault): JsonResponse
     {
+        $this->protocol->validateProtocolVersion($request, $vault);
+
         /** @var DeviceToken $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
         $user = $deviceToken->user;
 
-        if ($vault->team_id !== $deviceToken->team_id || ! $deviceToken->canAccessVault($vault->id)) {
-            return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
-        }
+        try {
+            $this->vaultAccess->authorizeVaultAccess($deviceToken, $vault);
 
-        if ($deviceToken->access_scope === 'read_only') {
-            return response()->json([
-                'error' => 'Permission Denied',
-                'message' => 'This device token has read-only access and cannot execute batch sync modifications.',
-            ], 403);
-        }
+            if ($deviceToken->access_scope === 'read_only') {
+                abort(403, 'This device token has read-only access and cannot execute batch sync modifications.');
+            }
+        } catch (HttpException $e) {
+            $statusCode = $e->getStatusCode();
+            $message = $e->getMessage();
+            $error = match ($statusCode) {
+                404 => 'Vault not found in current team or access not allowed for this device token',
+                403 => str_contains($message, 'suspended') ? 'Team Suspended' : 'Permission Denied',
+                default => $message,
+            };
 
-        if ($deviceToken->team->isSuspended()) {
             return response()->json([
-                'error' => 'Team Suspended',
-                'message' => 'This team workspace is currently suspended. Please contact your platform administrator.',
-            ], 403);
+                'error' => $error,
+                'message' => $message,
+            ], $statusCode);
         }
 
         $planService = app(PlanService::class);
@@ -432,24 +400,7 @@ class VaultSyncController extends Controller
             ], 402);
         }
 
-        $maxBatch = config('synkk.max_batch_size', 100);
-
-        $request->validate([
-            'items' => "required|array|max:{$maxBatch}",
-            'items.*.path' => ['required', 'string', 'not_regex:/\.\./'],
-            'items.*.action' => 'nullable|string|in:upload,delete',
-            'items.*.base_version' => 'nullable|integer',
-            'items.*.content_base64' => 'nullable|string',
-            'items.*.content' => 'nullable|string',
-            'items.*.is_encrypted' => 'nullable|boolean',
-            'items.*.encryption_iv' => 'nullable|string',
-            'items.*.encryption_tag' => 'nullable|string',
-            'items.*.is_ghost' => 'nullable|boolean',
-            'items.*.original_size' => 'nullable|integer',
-            'items.*.mime_type' => 'nullable|string',
-        ]);
-
-        $items = $request->input('items', []);
+        $items = $request->extractBatchItems($vault);
 
         $result = $this->batchSyncAction->execute(
             $vault,
@@ -604,6 +555,14 @@ class VaultSyncController extends Controller
             $canonicalPath = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $conflictPath);
         }
 
+        try {
+            $this->vaultAccess->authorizeRead($deviceToken, $vault, $conflictPath);
+            $this->vaultAccess->authorizeRead($deviceToken, $vault, $canonicalPath);
+            $this->vaultAccess->validateConflictRelationship($canonicalPath, $conflictPath);
+        } catch (HttpException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
+        }
+
         $conflictFile = $vault->files()->where('path', $conflictPath)->where('is_deleted', false)->firstOrFail();
         $canonicalFile = $vault->files()->where('path', $canonicalPath)->where('is_deleted', false)->first();
 
@@ -659,6 +618,14 @@ class VaultSyncController extends Controller
             'resolved_content' => ['required', 'string'],
         ]);
 
+        try {
+            $this->vaultAccess->authorizeWrite($deviceToken, $vault, $validated['canonical_path']);
+            $this->vaultAccess->authorizeWrite($deviceToken, $vault, $validated['conflict_path']);
+            $this->vaultAccess->validateConflictRelationship($validated['canonical_path'], $validated['conflict_path']);
+        } catch (HttpException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
+        }
+
         $res = $this->resolveConflictAction->execute(
             vault: $vault,
             user: $deviceToken->user,
@@ -678,108 +645,6 @@ class VaultSyncController extends Controller
     }
 
     /**
-     * Join a note collaboration room.
-     */
-    public function collabJoin(Request $request, Vault $vault): JsonResponse
-    {
-        /** @var DeviceToken|null $deviceToken */
-        $deviceToken = $request->attributes->get('device_token');
-        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
-            return $authError;
-        }
-
-        $validated = $request->validate([
-            'path' => ['required', 'string'],
-            'peer_id' => ['required', 'string'],
-        ]);
-
-        $res = $this->collabService->join(
-            vault: $vault,
-            user: $deviceToken->user,
-            path: $validated['path'],
-            peerId: $validated['peer_id']
-        );
-
-        return response()->json($res);
-    }
-
-    /**
-     * Sync CRDT deltas and cursor position with note collaboration room.
-     */
-    public function collabSync(Request $request, Vault $vault): JsonResponse
-    {
-        /** @var DeviceToken|null $deviceToken */
-        $deviceToken = $request->attributes->get('device_token');
-        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
-            return $authError;
-        }
-
-        $validated = $request->validate([
-            'path' => ['required', 'string'],
-            'peer_id' => ['required', 'string'],
-            'deltas' => ['nullable', 'array'],
-            'cursor' => ['nullable', 'array'],
-            'since_clock' => ['nullable', 'integer'],
-        ]);
-
-        $res = $this->collabService->sync(
-            vault: $vault,
-            user: $deviceToken->user,
-            path: $validated['path'],
-            peerId: $validated['peer_id'],
-            localDeltas: $validated['deltas'] ?? [],
-            cursor: $validated['cursor'] ?? null,
-            sinceClock: (int) ($validated['since_clock'] ?? 0)
-        );
-
-        return response()->json($res);
-    }
-
-    /**
-     * Leave a note collaboration room.
-     */
-    public function collabLeave(Request $request, Vault $vault): JsonResponse
-    {
-        /** @var DeviceToken|null $deviceToken */
-        $deviceToken = $request->attributes->get('device_token');
-        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
-            return $authError;
-        }
-
-        $validated = $request->validate([
-            'path' => ['required', 'string'],
-            'peer_id' => ['required', 'string'],
-        ]);
-
-        $this->collabService->leave($vault, $validated['path'], $validated['peer_id']);
-
-        return response()->json(['status' => 'left']);
-    }
-
-    /**
-     * Get active collaborator presence list for a note.
-     */
-    public function collabPresence(Request $request, Vault $vault): JsonResponse
-    {
-        /** @var DeviceToken|null $deviceToken */
-        $deviceToken = $request->attributes->get('device_token');
-        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
-            return $authError;
-        }
-
-        $validated = $request->validate([
-            'path' => ['required', 'string'],
-        ]);
-
-        $peers = $this->collabService->getPresence($vault, $validated['path']);
-
-        return response()->json([
-            'status' => 'ok',
-            'peers' => $peers,
-        ]);
-    }
-
-    /**
      * Hydrate an on-demand ghost file to fetch full binary payload.
      */
     public function hydrateFile(Request $request, Vault $vault): JsonResponse
@@ -794,9 +659,10 @@ class VaultSyncController extends Controller
             'path' => ['required', 'string'],
         ]);
 
-        $permission = $vault->permissionForPath($deviceToken->user, $validated['path']);
-        if ($permission === 'hidden') {
-            return response()->json(['error' => 'File not found or permission denied'], 404);
+        try {
+            $this->vaultAccess->authorizeRead($deviceToken, $vault, $validated['path']);
+        } catch (HttpException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
         }
 
         try {
@@ -832,6 +698,12 @@ class VaultSyncController extends Controller
         ]);
 
         try {
+            $this->vaultAccess->authorizeWrite($deviceToken, $vault, $validated['path']);
+        } catch (HttpException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
+        }
+
+        try {
             $file = $this->ghostFileService->dehydrate($vault, $validated['path']);
 
             return response()->json([
@@ -856,8 +728,10 @@ class VaultSyncController extends Controller
             return $authError;
         }
 
-        if ($deviceToken->access_scope === 'read_only') {
-            return response()->json(['error' => 'Read-only device tokens cannot change vault security settings'], 403);
+        try {
+            $this->vaultAccess->authorizeAdmin($deviceToken, $vault);
+        } catch (HttpException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
         }
 
         $validated = $request->validate([
@@ -986,6 +860,12 @@ class VaultSyncController extends Controller
         $deviceToken = $request->attributes->get('device_token');
         if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
             return $authError;
+        }
+
+        try {
+            $this->vaultAccess->authorizeAdmin($deviceToken, $vault);
+        } catch (HttpException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
         }
 
         $force = (bool) $request->input('force', false);

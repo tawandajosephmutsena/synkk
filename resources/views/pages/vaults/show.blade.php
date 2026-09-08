@@ -1,21 +1,27 @@
 <?php
 
+use App\Actions\Vaults\ResolveConflictAction;
 use App\Actions\Vaults\RestoreFileVersionAction;
 use App\Actions\Vaults\SyncUploadAction;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultChangeLog;
+use App\Models\VaultCollaborationDocument;
 use App\Models\VaultFile;
-use App\Actions\Vaults\ResolveConflictAction;
 use App\Models\VaultFileVersion;
 use App\Models\VaultPermission;
 use App\Services\CrdtCollabService;
 use App\Services\E2eeVaultService;
+use App\Services\GhostFileService;
 use App\Services\KnowledgeGraphService;
+use App\Services\PlanService;
 use App\Services\ThreeWayDiffService;
 use App\Services\VaultAnalyticsService;
+use App\Services\VaultRagService;
+use App\ValueObjects\VaultContentEnvelope;
 use Flux\Flux;
+use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -25,8 +31,10 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-new #[Title('Vault Details')] class extends Component {
+new #[Title('Vault Details')] class extends Component
+{
     public Vault $vault;
 
     #[Url(as: 'tab')]
@@ -40,26 +48,43 @@ new #[Title('Vault Details')] class extends Component {
 
     // Active Editor File State
     public ?int $activeFileId = null;
+
     public ?VaultFile $activeFile = null;
+
     public string $editorContent = '';
+
     public string $editorTitle = '';
+
     public string $editorViewMode = 'split'; // 'split', 'source', 'preview'
+
     public ?int $editorBaseVersion = null;
+
     public bool $editorIsDirty = false;
 
     // 3-Way Conflict Sandbox State
     public ?string $conflictCanonicalPath = null;
+
     public ?string $conflictPath = null;
+
     public array $conflictHunks = [];
+
     public bool $conflictHasConflicts = false;
+
     public int $conflictCount = 0;
+
     public string $conflictReconciledContent = '';
+
     public string $conflictCanonicalContent = '';
+
     public string $conflictTheirsContent = '';
 
     // CRDT Multiplayer State
+    public ?int $collaborationDocumentId = null;
+
     public string $collabPeerId = '';
+
     public array $collabActivePeers = [];
+
     public int $collabClock = 0;
 
     // New Note Modal State
@@ -67,31 +92,42 @@ new #[Title('Vault Details')] class extends Component {
 
     // New Permission Rule Form
     public ?int $ruleUserId = null;
+
     public string $rulePath = '';
+
     public string $rulePermission = 'read_only';
+
     public bool $ruleIsFolder = true;
 
     // Vault Edit Form
     public string $editName = '';
+
     public string $editDescription = '';
+
     public string $editDefaultPermission = 'read_write';
 
     // Search
     public string $fileSearch = '';
+
     public string $editorSearch = '';
 
     // Vault Intelligence & Analytics
     public string $analyticsTimeframe = '30d';
+
     public string $analyticsSearchQuery = '';
+
     public string $analyticsActionFilter = 'all';
 
     // Version History Modal State
     public ?int $selectedFileId = null;
+
     public ?VaultFile $selectedFile = null;
 
     // Vault Copilot & RAG State
     public string $copilotQuery = '';
+
     public array $copilotMessages = [];
+
     public ?string $copilotStatusMessage = null;
 
     public function mount(Vault $vault): void
@@ -168,6 +204,12 @@ new #[Title('Vault Details')] class extends Component {
         $this->editorBaseVersion = $file->version;
         $this->editorIsDirty = false;
 
+        $collabDoc = VaultCollaborationDocument::firstOrCreate(
+            ['vault_id' => $this->vault->id, 'path' => $file->path],
+            ['latest_sequence' => 0, 'is_active' => true]
+        );
+        $this->collaborationDocumentId = $collabDoc->id;
+
         return true;
     }
 
@@ -237,8 +279,10 @@ new #[Title('Vault Details')] class extends Component {
     /**
      * Save client-side WebCrypto AES-GCM encrypted note without the server ever seeing plaintext.
      */
-    public function saveEncryptedFile(string $ciphertextBase64, string $ivHex, string $tagHex, SyncUploadAction $uploader): void
+    public function saveEncryptedFile(string $ciphertextBase64, string $ivHex, string $tagHex, int $plaintextSize = 0, ?SyncUploadAction $uploader = null): void
     {
+        $uploader ??= app(SyncUploadAction::class);
+
         if (! $this->activeFileId) {
             return;
         }
@@ -257,6 +301,19 @@ new #[Title('Vault Details')] class extends Component {
         }
 
         $rawCiphertext = (string) base64_decode($ciphertextBase64);
+        $effectivePlaintextSize = $plaintextSize > 0 ? $plaintextSize : strlen($rawCiphertext);
+
+        $envelope = new VaultContentEnvelope(
+            payload: $rawCiphertext,
+            payloadSha256: hash('sha256', $rawCiphertext),
+            plaintextSize: $effectivePlaintextSize,
+            encrypted: true,
+            iv: $ivHex,
+            tag: $tagHex,
+            ghost: false,
+            mimeType: 'text/markdown',
+            formatVersion: 2,
+        );
 
         $result = $uploader->execute(
             vault: $this->vault,
@@ -265,6 +322,7 @@ new #[Title('Vault Details')] class extends Component {
             path: $activeFile->path,
             contents: $rawCiphertext,
             baseVersion: $this->editorBaseVersion ?? $activeFile->version,
+            envelope: $envelope,
         );
 
         $savedPath = (isset($result['path']) && is_string($result['path'])) ? $result['path'] : $activeFile->path;
@@ -557,7 +615,7 @@ new #[Title('Vault Details')] class extends Component {
     {
         $this->authorize('managePermissions', $this->vault);
 
-        $planService = app(\App\Services\PlanService::class);
+        $planService = app(PlanService::class);
         if (! $planService->hasFeature($this->vault->team, 'path_acls')) {
             $this->dispatch('modal-close', name: 'add-path-permission');
             Flux::toast(
@@ -625,18 +683,18 @@ new #[Title('Vault Details')] class extends Component {
     public function hydrateGhostFile(int $fileId): void
     {
         $file = $this->vault->files()->findOrFail($fileId);
-        app(\App\Services\GhostFileService::class)->hydrateFile($file);
+        app(GhostFileService::class)->hydrateFile($file);
         Flux::toast(variant: 'success', text: __("Note ':path' successfully hydrated.", ['path' => $file->path]));
     }
 
     public function dehydrateGhostFile(int $fileId): void
     {
         $file = $this->vault->files()->findOrFail($fileId);
-        app(\App\Services\GhostFileService::class)->dehydrateFile($file);
+        app(GhostFileService::class)->dehydrateFile($file);
         Flux::toast(variant: 'info', text: __("Attachment ':path' converted to on-demand ghost stub.", ['path' => $file->path]));
     }
 
-    public function exportVaultZip(): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\Response
+    public function exportVaultZip(): BinaryFileResponse|Response
     {
         $user = Auth::user();
         abort_unless($user->can('view', $this->vault), 403);
@@ -654,9 +712,9 @@ new #[Title('Vault Details')] class extends Component {
 
         $disk = config('synkk.storage_disk', 'local');
         $tempFile = tempnam(sys_get_temp_dir(), 'synkk_vault_zip_');
-        $zip = new \ZipArchive();
+        $zip = new ZipArchive;
 
-        if ($zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+        if ($zip->open($tempFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             Flux::toast(variant: 'danger', text: __('Failed to initialize zip archive on server.'));
 
             return response()->noContent();
@@ -672,7 +730,7 @@ new #[Title('Vault Details')] class extends Component {
         $zip->close();
 
         $safeSlug = Str::slug($this->vault->name) ?: 'vault';
-        $filename = "{$safeSlug}-export-" . now()->format('Ymd-His') . ".zip";
+        $filename = "{$safeSlug}-export-".now()->format('Ymd-His').'.zip';
 
         Flux::toast(variant: 'success', text: __('Vault exported successfully. Download starting...'));
 
@@ -915,7 +973,7 @@ new #[Title('Vault Details')] class extends Component {
         $this->copilotQuery = '';
 
         try {
-            $ragService = app(\App\Services\VaultRagService::class);
+            $ragService = app(VaultRagService::class);
             $response = $ragService->query($this->vault, $queryText, [
                 'expand_graph' => true,
                 'max_citations' => 4,
@@ -930,10 +988,10 @@ new #[Title('Vault Details')] class extends Component {
                 'duration_ms' => $response['duration_ms'],
                 'time' => now()->format('H:i'),
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->copilotMessages[] = [
                 'role' => 'assistant',
-                'content' => 'Error querying Vault Copilot: ' . $e->getMessage(),
+                'content' => 'Error querying Vault Copilot: '.$e->getMessage(),
                 'citations' => [],
                 'graph_nodes' => [],
                 'model' => 'error',
@@ -946,7 +1004,7 @@ new #[Title('Vault Details')] class extends Component {
     {
         abort_unless(Auth::user()->can('update', $this->vault), 403);
 
-        $ragService = app(\App\Services\VaultRagService::class);
+        $ragService = app(VaultRagService::class);
         $result = $ragService->indexVault($this->vault, force: true);
 
         $this->copilotStatusMessage = "Re-indexed {$result['files_indexed']} files ({$result['chunks_count']} chunks) in {$result['duration_ms']}ms.";
@@ -964,7 +1022,7 @@ new #[Title('Vault Details')] class extends Component {
     #[Computed]
     public function ragTelemetry(): array
     {
-        return app(\App\Services\VaultRagService::class)->getStatus($this->vault);
+        return app(VaultRagService::class)->getStatus($this->vault);
     }
 }; ?>
 
@@ -1136,7 +1194,13 @@ new #[Title('Vault Details')] class extends Component {
                 encryptionIv: {{ Js::from($this->activeFile?->encryption_iv) }},
                 encryptionTag: {{ Js::from($this->activeFile?->encryption_tag) }},
                 vaultSalt: {{ Js::from($vault->e2ee_salt) }},
-                vaultTestCipher: {{ Js::from($vault->e2ee_test_cipher) }}
+                vaultTestCipher: {{ Js::from($vault->e2ee_test_cipher) }},
+                documentId: {{ Js::from($this->collaborationDocumentId) }},
+                filePath: {{ Js::from($this->activeFile?->path) }},
+                user: {
+                    id: {{ Js::from(auth()->id()) }},
+                    name: {{ Js::from(auth()->user()?->name) }}
+                }
             })"
             wire:key="vault-editor-{{ $this->activeFileId ?? 'empty' }}"
             data-vault-editor

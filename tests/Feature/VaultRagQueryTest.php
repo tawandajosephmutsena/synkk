@@ -53,6 +53,7 @@ MD;
     ]);
 
     $ragService = app(VaultRagService::class);
+    $ragService->indexVault($vault);
     $results = $ragService->search($vault, 'secret detection and high entropy AWS tokens', limit: 2);
 
     expect($results)->not->toBeEmpty()
@@ -104,6 +105,7 @@ MD;
     ]);
 
     $ragService = app(VaultRagService::class);
+    $ragService->indexVault($vault);
     $response = $ragService->query($vault, 'How does the sync protocol handle hashes and conflicts?', [
         'expand_graph' => true,
         'max_citations' => 3,

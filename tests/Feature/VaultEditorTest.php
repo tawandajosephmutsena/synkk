@@ -6,8 +6,10 @@ use App\Models\Team;
 use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultChangeLog;
+use App\Models\VaultCollaborationDocument;
 use App\Models\VaultFileVersion;
 use App\Models\VaultPermission;
+use App\ValueObjects\VaultContentEnvelope;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -718,6 +720,17 @@ test('can save client-side encrypted note via saveEncryptedFile in Livewire', fu
         'e2ee_test_cipher' => '{"ciphertextBase64":"xyz","ivHex":"abc","tagHex":"def"}',
     ]);
 
+    $envelope = new VaultContentEnvelope(
+        payload: 'Initial ciphertext placeholder',
+        payloadSha256: hash('sha256', 'Initial ciphertext placeholder'),
+        plaintextSize: 30,
+        encrypted: true,
+        iv: bin2hex(random_bytes(12)),
+        tag: bin2hex(random_bytes(16)),
+        ghost: false,
+        mimeType: 'text/markdown',
+        formatVersion: 2,
+    );
     $uploader = app(SyncUploadAction::class);
     $uploader->execute(
         vault: $vault,
@@ -726,6 +739,7 @@ test('can save client-side encrypted note via saveEncryptedFile in Livewire', fu
         path: 'SecretNote.md',
         contents: 'Initial ciphertext placeholder',
         baseVersion: 0,
+        envelope: $envelope,
     );
 
     $this->actingAs($user);
@@ -781,4 +795,223 @@ test('vault owner can enable and disable E2EE in Livewire settings', function ()
     $vault->refresh();
     expect($vault->is_e2ee)->toBeFalse()
         ->and($vault->e2ee_salt)->toBeNull();
+});
+
+test('hidden-note refusal prevents note selection in editor', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => TeamRole::Member->value]);
+    $user->update(['current_team_id' => $team->id]);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Restricted Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $uploader = app(SyncUploadAction::class);
+    $uploader->execute(
+        vault: $vault,
+        user: $user,
+        deviceName: 'Web',
+        path: 'Public.md',
+        contents: '# Public Note',
+        baseVersion: 0,
+    );
+    $uploader->execute(
+        vault: $vault,
+        user: $user,
+        deviceName: 'Web',
+        path: 'Confidential/Classified.md',
+        contents: '# Top Secret',
+        baseVersion: 0,
+    );
+
+    // Explicit hidden rule for user
+    VaultPermission::create([
+        'vault_id' => $vault->id,
+        'user_id' => $user->id,
+        'path' => 'Confidential',
+        'permission' => 'hidden',
+        'is_folder' => true,
+    ]);
+
+    $this->actingAs($user);
+
+    $component = Livewire::test('pages::vaults.show', ['vault' => $vault]);
+
+    $hiddenFile = $vault->files()->where('path', 'Confidential/Classified.md')->firstOrFail();
+
+    $component->call('selectFile', $hiddenFile->id);
+
+    expect($component->get('activeFileId'))->not->toBe($hiddenFile->id);
+    expect($component->get('editorContent'))->not->toContain('Top Secret');
+});
+
+test('read-only note permits viewing but rejects saveFile', function () {
+    $owner = User::factory()->create();
+    $reader = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+    $team->members()->attach($reader, ['role' => TeamRole::Member->value]);
+    $reader->switchTeam($team);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Docs Vault',
+        'default_permission' => 'read_only',
+        'created_by' => $owner->id,
+    ]);
+
+    $uploader = app(SyncUploadAction::class);
+    $uploader->execute(
+        vault: $vault,
+        user: $owner,
+        deviceName: 'Web',
+        path: 'Guidelines.md',
+        contents: "# Guidelines\nRead only.",
+        baseVersion: 0,
+    );
+
+    $this->actingAs($reader);
+
+    $component = Livewire::test('pages::vaults.show', ['vault' => $vault]);
+
+    expect($component->get('canEditActiveFile'))->toBeFalse();
+
+    $file = $vault->files()->where('path', 'Guidelines.md')->firstOrFail();
+    $component->set('editorContent', '# Mutated Guidelines');
+    $component->call('saveFile');
+
+    $file->refresh();
+    expect($file->getContents())->toBe("# Guidelines\nRead only.");
+});
+
+test('selecting a file establishes VaultCollaborationDocument and exposes documentId', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $user->switchTeam($team);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Collab Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $uploader = app(SyncUploadAction::class);
+    $uploader->execute(
+        vault: $vault,
+        user: $user,
+        deviceName: 'Web',
+        path: 'Design.md',
+        contents: '# Design Specs',
+        baseVersion: 0,
+    );
+
+    $this->actingAs($user);
+
+    $component = Livewire::test('pages::vaults.show', ['vault' => $vault]);
+
+    $docId = $component->get('collaborationDocumentId');
+    expect($docId)->not->toBeNull();
+
+    $collabDoc = VaultCollaborationDocument::find($docId);
+    expect($collabDoc)->not->toBeNull()
+        ->and($collabDoc->path)->toBe('Design.md')
+        ->and($collabDoc->vault_id)->toBe($vault->id);
+});
+
+test('web session can authenticate to collaboration endpoints without bearer token', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $user->switchTeam($team);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Web Collab Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $uploader = app(SyncUploadAction::class);
+    $uploader->execute(
+        vault: $vault,
+        user: $user,
+        deviceName: 'Web',
+        path: 'CollabNote.md',
+        contents: '# Real-Time Collaboration',
+        baseVersion: 0,
+    );
+
+    $this->actingAs($user);
+
+    // Call join API endpoint with session cookie (no Bearer token)
+    $response = $this->postJson(route('api.vaults.collab.join', ['vault' => $vault->slug]), [
+        'path' => 'CollabNote.md',
+        'peer_id' => 'web_test_peer',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonStructure([
+            'status',
+            'document_id',
+            'room_id',
+            'latest_sequence',
+            'clock',
+            'peers',
+        ])
+        ->assertJson([
+            'status' => 'joined',
+        ]);
+});
+
+test('CRITICAL E2EE: selecting encrypted note assigns base64 ciphertext to editorContent, never plaintext', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $user->update(['current_team_id' => $team->id]);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Zero-Knowledge Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+        'is_e2ee' => true,
+        'e2ee_salt' => bin2hex(random_bytes(16)),
+        'e2ee_test_cipher' => '{"ciphertextBase64":"test","ivHex":"123","tagHex":"456"}',
+    ]);
+
+    $opaqueCiphertext = 'encrypted-raw-binary-ciphertext-data';
+
+    $uploader = app(SyncUploadAction::class);
+    $uploader->execute(
+        vault: $vault,
+        user: $user,
+        deviceName: 'Obsidian',
+        path: 'SuperSecret.md',
+        contents: $opaqueCiphertext,
+        baseVersion: 0,
+        envelope: new VaultContentEnvelope(
+            payload: $opaqueCiphertext,
+            payloadSha256: hash('sha256', $opaqueCiphertext),
+            plaintextSize: 50,
+            encrypted: true,
+            iv: bin2hex(random_bytes(12)),
+            tag: bin2hex(random_bytes(16)),
+            ghost: false,
+            mimeType: 'text/markdown',
+            formatVersion: 2,
+        ),
+    );
+
+    $this->actingAs($user);
+
+    $component = Livewire::test('pages::vaults.show', ['vault' => $vault]);
+
+    $editorContent = $component->get('editorContent');
+    expect($editorContent)->toBe(base64_encode($opaqueCiphertext));
 });

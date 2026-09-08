@@ -1226,7 +1226,7 @@
                                     <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
                                     <span>REAL-TIME MULTIPLAYER CRDT (Yjs)</span>
                                 </div>
-                                <span class="synkk-moonshot-phase">STAGE 2 COLLAB SPEC</span>
+                                <span class="synkk-moonshot-phase synkk-moonshot-phase--live">LIVE IN V1.0</span>
                             </div>
                             <div class="synkk-moonshot-card__body">
                                 <div class="synkk-moonshot-card__content">
@@ -1382,7 +1382,7 @@
                                     <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
                                     <span>ZERO-KNOWLEDGE TEAM E2EE (CLIENT-SIDE ENCRYPTION)</span>
                                 </div>
-                                <span class="synkk-moonshot-phase">FUTURE HORIZON</span>
+                                <span class="synkk-moonshot-phase synkk-moonshot-phase--live">LIVE IN V1.0</span>
                             </div>
                             <div class="synkk-moonshot-card__body">
                                 <div class="synkk-moonshot-card__content">
@@ -1748,7 +1748,7 @@
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>Not yet. CRDT collaboration and the visual conflict sandbox are the next public milestone after launch.</p>
+                            <p>Yes. Synkk provides real-time character-level CRDT multiplayer editing powered by Yjs over Laravel Reverb, featuring remote cursor awareness, shared undo history, and offline convergence across both the web editor and Obsidian.</p>
                         </div>
                     </details>
                     <details>
@@ -1793,7 +1793,7 @@
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>Synkk only receives the files and paths your configured device and team permissions allow. With client-side zero-knowledge E2EE (WebCrypto AES-256-GCM), all notes are encrypted on your device and the server only ever sees opaque ciphertext.</p>
+                            <p>Synkk only receives the files and paths your configured device and team permissions allow. When End-to-End Encryption (E2EE) is enabled, notes and real-time collaboration updates are encrypted and decrypted strictly on your device using WebCrypto AES-256-GCM before transmission, so the server only ever sees opaque ciphertext blobs. For E2EE vaults, server-side search and RAG indexing are disabled to guarantee zero server knowledge.</p>
                         </div>
                     </details>
                 </div>

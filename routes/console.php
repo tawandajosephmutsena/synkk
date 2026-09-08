@@ -11,3 +11,4 @@ Schedule::call(function () {
 })->daily()->description('Delete expired team invitations');
 
 Schedule::command('vaults:prune-deleted')->daily()->description('Prune soft-deleted vault files');
+Schedule::command('vaults:prune-collaboration')->daily()->description('Prune superseded collaboration journal updates');

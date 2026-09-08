@@ -74,10 +74,13 @@ class PackageCommunityEdition extends Command
         $rootFiles = [
             'artisan',
             'composer.json',
+            'composer.lock',
             'package.json',
+            'package-lock.json',
             'vite.config.js',
             'phpunit.xml',
             '.env.example',
+            '.dockerignore',
             'README.md',
             'Dockerfile',
             'docker-compose.yml',

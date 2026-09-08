@@ -15,6 +15,13 @@ use Illuminate\Support\Carbon;
  * @property string $storage_path
  * @property string $sha256
  * @property int $size
+ * @property bool $is_encrypted
+ * @property string|null $encryption_iv
+ * @property string|null $encryption_tag
+ * @property bool $is_ghost
+ * @property int|null $original_size
+ * @property string|null $mime_type
+ * @property int $format_version
  * @property int|null $created_by
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -22,9 +29,36 @@ use Illuminate\Support\Carbon;
  * @property-read Vault $vault
  * @property-read User|null $creator
  */
-#[Fillable(['vault_file_id', 'vault_id', 'version', 'storage_path', 'sha256', 'size', 'created_by'])]
+#[Fillable([
+    'vault_file_id',
+    'vault_id',
+    'version',
+    'storage_path',
+    'sha256',
+    'size',
+    'created_by',
+    'is_encrypted',
+    'encryption_iv',
+    'encryption_tag',
+    'is_ghost',
+    'original_size',
+    'mime_type',
+    'format_version',
+])]
 class VaultFileVersion extends Model
 {
+    protected function casts(): array
+    {
+        return [
+            'is_encrypted' => 'boolean',
+            'is_ghost' => 'boolean',
+            'size' => 'integer',
+            'original_size' => 'integer',
+            'version' => 'integer',
+            'format_version' => 'integer',
+        ];
+    }
+
     /**
      * @return BelongsTo<VaultFile, $this>
      */

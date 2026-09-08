@@ -40,10 +40,10 @@ test('Vault details page provides interactive Vault Copilot tab with chat and re
         ->set('activeTab', 'copilot')
         ->assertSee('Vault Copilot & Agentic RAG Server')
         ->assertSee('Local RAG Active')
-        ->call('askCopilot', 'How does Synkk pair wikilinks with embeddings?')
-        ->assertSee('Overview.md')
         ->call('reindexVaultEmbeddings')
         ->assertSee('Re-indexed 1 files')
+        ->call('askCopilot', 'How does Synkk pair wikilinks with embeddings?')
+        ->assertSee('Overview.md')
         ->call('openCitationNote', 'Overview.md')
         ->assertSet('activeTab', 'editor')
         ->assertSet('activeFileId', $file->id);

@@ -204,15 +204,13 @@ class VaultRagService
      */
     public function search(Vault $vault, string $query, int $limit = 5): array
     {
-        $cleanQuery = trim($query);
-        if ($cleanQuery === '') {
+        if ($vault->is_e2ee) {
             return [];
         }
 
-        // Auto-index if embeddings are empty
-        $existingCount = VaultFileEmbedding::where('vault_id', $vault->id)->count();
-        if ($existingCount === 0) {
-            $this->indexVault($vault);
+        $cleanQuery = trim($query);
+        if ($cleanQuery === '') {
+            return [];
         }
 
         $queryVector = $this->embeddingService->generate($cleanQuery);

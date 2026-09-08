@@ -122,7 +122,7 @@ test('RAG API returns 403 when device token is not authorized for vault', functi
             'query' => 'Leaked info?',
         ]);
 
-    $res->assertForbidden();
+    $res->assertNotFound();
 });
 
 test('RAG progress endpoint reports live indexing status and percentage', function () {

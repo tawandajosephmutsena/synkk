@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Vault;
 use App\Services\VaultRagService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class IndexVaultRagJob implements ShouldQueue
+class IndexVaultRagJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -26,10 +27,23 @@ class IndexVaultRagJob implements ShouldQueue
      */
     public int $timeout = 600;
 
+    /**
+     * The number of seconds after which the job's unique lock will be released.
+     */
+    public int $uniqueFor = 660;
+
     public function __construct(
         public Vault $vault,
         public bool $force = false
     ) {}
+
+    /**
+     * The unique ID of the job by vault to prevent concurrent duplicate indexing runs.
+     */
+    public function uniqueId(): string
+    {
+        return (string) $this->vault->id;
+    }
 
     public function handle(VaultRagService $ragService): void
     {

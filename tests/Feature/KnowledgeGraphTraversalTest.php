@@ -4,6 +4,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Models\Vault;
 use App\Services\KnowledgeGraphService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -173,4 +174,62 @@ test('KnowledgeGraphService getInteractiveGraph generates index-based graph form
         ->and($interactive['edges'][0]['target'])->toBe(1)
         ->and($interactive['nodes'][0]['linksCount'])->toBe(1)
         ->and($interactive['nodes'][1]['linksCount'])->toBe(1);
+});
+
+test('KnowledgeGraphService caches interactive graph and busts cache on version increment', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => 'owner']);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Cache Test Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $contentA = "# Doc One\nLinks to [[Doc Two]].";
+    Storage::disk('local')->put("vaults/{$vault->id}/doc1.md", $contentA);
+    $vault->files()->create([
+        'path' => 'Doc One.md',
+        'storage_path' => "vaults/{$vault->id}/doc1.md",
+        'sha256' => hash('sha256', $contentA),
+        'size' => strlen($contentA),
+        'version' => 1,
+        'is_deleted' => false,
+    ]);
+
+    $service = app(KnowledgeGraphService::class);
+    $cacheKeyV1 = "vault_graph_{$vault->id}_v1";
+
+    expect(Cache::has($cacheKeyV1))->toBeFalse();
+
+    $result1 = $service->getInteractiveGraph($vault);
+    expect(Cache::has($cacheKeyV1))->toBeTrue()
+        ->and($result1['nodes'])->toHaveCount(1);
+
+    // Modify file contents on disk without changing DB version; cache should return cached result
+    Storage::disk('local')->put("vaults/{$vault->id}/doc1.md", '# Modified without version bump');
+    $cachedResult = $service->getInteractiveGraph($vault);
+    expect($cachedResult)->toEqual($result1);
+
+    // Now bump version by adding a second file at version 2
+    $contentB = "# Doc Two\nLinked note to [[Doc One]].";
+    Storage::disk('local')->put("vaults/{$vault->id}/doc2.md", $contentB);
+    $vault->files()->create([
+        'path' => 'Doc Two.md',
+        'storage_path' => "vaults/{$vault->id}/doc2.md",
+        'sha256' => hash('sha256', $contentB),
+        'size' => strlen($contentB),
+        'version' => 2,
+        'is_deleted' => false,
+    ]);
+
+    $cacheKeyV2 = "vault_graph_{$vault->id}_v2";
+    expect(Cache::has($cacheKeyV2))->toBeFalse();
+
+    $result2 = $service->getInteractiveGraph($vault);
+    expect(Cache::has($cacheKeyV2))->toBeTrue()
+        ->and($result2['nodes'])->toHaveCount(2)
+        ->and($result2['edges'])->toHaveCount(1);
 });

@@ -22,6 +22,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
     public string $allowedIpSubnets = '';
     public ?string $generatedPlainToken = null;
     public ?string $generatedQrCodeSvg = null;
+    public ?string $pairingSessionId = null;
 
     public ?int $editingTokenId = null;
     public string $editName = '';
@@ -82,25 +83,20 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
 
         $this->generatedPlainToken = $result['plain_token'];
 
-        // Generate instant pairing QR code payload
+        // Generate scoped one-scan pairing session & QR SVG
         try {
-            $qrPayload = json_encode([
-                'v' => 1,
-                'name' => $this->deviceName,
-                'server' => url('/api/v1'),
-                'token' => $result['plain_token'],
-                'vault' => $team->vaults()->first()?->slug ?? '',
-            ], JSON_UNESCAPED_SLASHES);
-
-            $renderer = new ImageRenderer(
-                new RendererStyle(220, 1, null, null, Fill::uniformColor(new Rgb(255, 255, 255), new Rgb(24, 24, 27))),
-                new SvgImageBackEnd
+            $pairingService = app(\App\Services\QrPairingService::class);
+            $sessionData = $pairingService->createPairingSession(
+                user: Auth::user(),
+                team: $team,
+                vault: $team->vaults()->first(),
+                accessScope: $this->accessScope,
             );
-            $writer = new Writer($renderer);
-            $svg = $writer->writeString($qrPayload);
-            $this->generatedQrCodeSvg = trim(substr($svg, strpos($svg, "\n") + 1));
+            $this->generatedQrCodeSvg = $sessionData['qr_svg'];
+            $this->pairingSessionId = $sessionData['session'];
         } catch (\Throwable $e) {
             $this->generatedQrCodeSvg = null;
+            $this->pairingSessionId = null;
         }
 
         $this->reset('deviceName', 'allowedIpSubnets');
@@ -116,6 +112,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
     {
         $this->generatedPlainToken = null;
         $this->generatedQrCodeSvg = null;
+        $this->pairingSessionId = null;
         $this->dispatch('modal-close', name: 'show-token-modal');
     }
 
@@ -507,10 +504,44 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                 activeTab: 'qr',
                 copyState: 'idle',
                 confirmed: false,
+                sessionId: @js($pairingSessionId),
+                pairStatus: 'pending',
+                claimedDevice: '',
+                pollTimer: null,
+                startPolling() {
+                    if (!this.sessionId) return;
+                    if (this.pollTimer) clearInterval(this.pollTimer);
+                    this.pollTimer = setInterval(async () => {
+                        try {
+                            const res = await fetch(`/api/v1/pairing/status?session=${encodeURIComponent(this.sessionId)}`);
+                            if (!res.ok) return;
+                            const data = await res.json();
+                            this.pairStatus = data.status;
+                            if (data.status === 'paired') {
+                                this.confirmed = true;
+                                this.claimedDevice = data.claimed_device_name || '';
+                                clearInterval(this.pollTimer);
+                                $wire.$refresh();
+                            } else if (data.status === 'expired') {
+                                clearInterval(this.pollTimer);
+                            }
+                        } catch (e) {}
+                    }, 2000);
+                },
+                stopPolling() {
+                    if (this.pollTimer) {
+                        clearInterval(this.pollTimer);
+                        this.pollTimer = null;
+                    }
+                },
                 resetCopyState() {
                     this.copyState = 'idle';
                     this.confirmed = false;
                     this.activeTab = 'qr';
+                    this.pairStatus = 'pending';
+                    this.claimedDevice = '';
+                    this.sessionId = @js($pairingSessionId);
+                    this.startPolling();
                     this.$nextTick(() => {
                         this.$refs.tokenInput?.focus();
                         this.$refs.tokenInput?.select();
@@ -534,6 +565,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                 },
             }"
             x-on:modal-show.document="if ($event.detail.name === 'show-token-modal') { resetCopyState(); }"
+            x-on:modal-close.document="if ($event.detail.name === 'show-token-modal') { stopPolling(); }"
         >
             <!-- Warning Banner -->
             <div class="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-950/40">
@@ -541,7 +573,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                     <flux:icon icon="exclamation-triangle" class="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div>
                         <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">{{ __('Save this token or scan QR now — it won\'t be shown again') }}</p>
-                        <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">{{ __('For maximum cryptographic safety, this token is only displayed once. Scan the QR code with mobile or store the token safely.') }}</p>
+                        <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">{{ __('For maximum cryptographic safety, the QR code uses one-scan scoped exchange and the manual token is only displayed once.') }}</p>
                     </div>
                 </div>
             </div>
@@ -556,7 +588,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                 >
                     <span class="flex items-center justify-center gap-1.5">
                         <flux:icon icon="qr-code" class="size-4" />
-                        {{ __('Instant QR Pairing') }}
+                        {{ __('One-Scan QR Pairing') }}
                     </span>
                 </button>
                 <button
@@ -582,7 +614,29 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                     </div>
                     <div>
                         <p class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{{ __('Scan with Obsidian Mobile Camera') }}</p>
-                        <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{{ __('Instantly pairs your server endpoint, target vault, and authentication token in seconds.') }}</p>
+                        <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{{ __('Instantly pairs your server endpoint, target vault, and scoped device token via obsidian://synkk-pair.') }}</p>
+                    </div>
+
+                    <!-- Dynamic Pairing Status Badge -->
+                    <div class="pt-1">
+                        <template x-if="pairStatus === 'pending'">
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                                <span class="size-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                {{ __('Waiting for mobile device to scan…') }}
+                            </span>
+                        </template>
+                        <template x-if="pairStatus === 'paired'">
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                                <flux:icon icon="check-circle" class="size-3.5" />
+                                <span x-text="claimedDevice ? '{{ __('Paired with ') }}' + claimedDevice : '{{ __('Paired successfully!') }}'"></span>
+                            </span>
+                        </template>
+                        <template x-if="pairStatus === 'expired'">
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+                                <flux:icon icon="x-circle" class="size-3.5" />
+                                {{ __('Pairing session expired. Please generate a new QR code.') }}
+                            </span>
+                        </template>
                     </div>
                 @else
                     <div class="p-6 text-center text-xs text-zinc-400">
