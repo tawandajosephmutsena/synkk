@@ -57,6 +57,7 @@
                     <a href="{{ route('home') }}#workflow">How it works</a>
                     <a href="{{ route('home') }}#safety">Safety</a>
                     <a href="{{ route('home') }}#pricing">Pricing</a>
+                    <a href="{{ route('about') }}">About</a>
                     <a href="{{ route('public.docs') }}" class="font-bold text-emerald-950">Docs</a>
                 </nav>
 
@@ -86,6 +87,7 @@
                             <a href="{{ route('home') }}#product">Product <span>01</span></a>
                             <a href="{{ route('home') }}#workflow">How it works <span>02</span></a>
                             <a href="{{ route('home') }}#safety">Safety <span>03</span></a>
+                            <a href="{{ route('about') }}">About &amp; Philosophy <span>04</span></a>
                             <a href="{{ route('public.docs') }}">Documentation <span>↗</span></a>
                             @guest
                                 <a href="{{ route('login') }}">Log in <span>↗</span></a>

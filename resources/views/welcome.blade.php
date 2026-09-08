@@ -64,6 +64,7 @@
                     <a href="#moonshot">Moonshot</a>
                     <a href="#pricing">Pricing</a>
                     <a href="#roadmap">Roadmap</a>
+                    <a href="{{ route('about') }}">About</a>
                     <a href="{{ route('public.docs') }}">Docs</a>
                 </nav>
 
@@ -97,6 +98,7 @@
                             <a href="#moonshot">Moonshot <span>05</span></a>
                             <a href="#pricing">Pricing <span>06</span></a>
                             <a href="#roadmap">Roadmap <span>07</span></a>
+                            <a href="{{ route('about') }}">About &amp; Philosophy <span>08</span></a>
                             <a href="{{ route('public.docs') }}">Documentation <span>↗</span></a>
                             @guest
                                 <a href="{{ route('login') }}">Log in <span>↗</span></a>
@@ -118,9 +120,9 @@
             <section class="synkk-hero synkk-shell" aria-labelledby="hero-heading">
                 <div class="synkk-hero__frame">
                     <div class="synkk-hero__copy">
-                        <p class="synkk-eyebrow synkk-reveal synkk-reveal--one">Self-hosted sync for Obsidian</p>
+                        <p class="synkk-eyebrow synkk-reveal synkk-reveal--one">Sovereign Team Sync &amp; Local AI for Obsidian</p>
                         <h1 id="hero-heading" class="synkk-reveal--two"><span class="synkk-hero__line"><span>Your vault.</span></span> <span class="synkk-hero__line"><span>On every</span></span> <span class="synkk-hero__line synkk-hero__line--accent"><span>device.</span><svg viewBox="0 0 100 100" fill="none" aria-hidden="true"><path d="M18 51h64M53 22l29 29-29 29" stroke="currentColor" stroke-width="5"/></svg></span></h1>
-                        <p class="synkk-hero__lede synkk-reveal synkk-reveal--three">A home for your notes. A connection between your devices. All on infrastructure you control.</p>
+                        <p class="synkk-hero__lede synkk-reveal synkk-reveal--three">A home for your notes. A connection between your devices. All on infrastructure you control. Granular folder permissions, zero-loss conflict safety, private local RAG, and instant mobile pairing.</p>
                         <div class="synkk-hero__actions synkk-reveal synkk-reveal--four">
                             @auth
                                 <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--accent">Open your vaults <span aria-hidden="true">→</span></a>
@@ -135,6 +137,7 @@
                             <li>Plain Markdown</li>
                             <li>Self-hostable</li>
                             <li>Recoverable history</li>
+                            <li>Path-Level ACLs</li>
                         </ul>
                     </div>
 
@@ -456,6 +459,66 @@
                 </div>
             </section>
 
+            <!-- Spotlight 1: 3-Way Visual Conflict Sandbox & Live Carets -->
+            <section class="synkk-spotlight synkk-viewport-section synkk-shell" aria-labelledby="spotlight-conflict-heading">
+                <div class="synkk-spotlight__ambient" aria-hidden="true"></div>
+                <div class="synkk-spotlight__grid">
+                    <div class="synkk-spotlight__copy">
+                        <div class="synkk-spotlight-badge">
+                            <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                            <span>Visual Reconciliation · Zero Corrupted Markdown</span>
+                        </div>
+                        <p class="synkk-eyebrow">Interactive Conflict Sandbox</p>
+                        <h2 id="spotlight-conflict-heading">Never lose a paragraph to merge collisions.</h2>
+                        <p>No more broken YAML frontmatter or cryptic <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> delimiters. When teammates edit the same document simultaneously, Synkk isolates changes into an interactive 3-way visual diff buffer with CodeMirror 6 live carets.</p>
+                        <ul class="synkk-feature-card__list">
+                            <li><strong>3-Way visual diffing:</strong> Side-by-side comparison of Canonical Server, Incoming, and Reconciled state.</li>
+                            <li><strong>1-Click hunk commits:</strong> Take Mine, Take Theirs, or Keep Both with deterministic commit checks.</li>
+                            <li><strong>CodeMirror 6 live carets:</strong> Color-coded collaborator presence avatars directly inside Obsidian.</li>
+                        </ul>
+                        <div class="synkk-spotlight__actions">
+                            <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Download Plugin v1.0.0 <span aria-hidden="true">↗</span></a>
+                            <a href="{{ route('public.docs') }}#safety-shield" class="synkk-button synkk-button--paper">Conflict Sandbox Guide <span aria-hidden="true">→</span></a>
+                        </div>
+                    </div>
+
+                    <div class="synkk-spotlight-terminal" aria-label="3-Way visual conflict sandbox preview">
+                        <div class="synkk-spotlight-terminal__header">
+                            <div class="synkk-spotlight-terminal__controls" aria-hidden="true">
+                                <span class="synkk-dot synkk-dot--red"></span>
+                                <span class="synkk-dot synkk-dot--amber"></span>
+                                <span class="synkk-dot synkk-dot--green"></span>
+                            </div>
+                            <span class="synkk-spotlight-terminal__title">synkk-diff-sandbox.tsx</span>
+                            <span class="synkk-spotlight-terminal__badge">3-Way Reconciler</span>
+                        </div>
+                        <div class="synkk-spotlight-terminal__body">
+                            <div class="flex items-center justify-between text-xs font-mono pb-2 border-b border-white/10 text-zinc-400">
+                                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Strategy/2026-Vision.md</span>
+                                <span class="synkk-terminal-tag synkk-terminal-tag--amber">Conflict Fork #1042</span>
+                            </div>
+                            <div class="synkk-diff-chunk synkk-diff-chunk--mine">
+                                <span class="synkk-terminal-tag synkk-terminal-tag--green mb-1">Mine (Local Laptop)</span>
+                                <div>+ Synkk enables surgical folder permissions and local RAG.</div>
+                            </div>
+                            <div class="synkk-diff-chunk synkk-diff-chunk--theirs">
+                                <span class="synkk-terminal-tag synkk-terminal-tag--amber mb-1">Server (Marcus / iPhone)</span>
+                                <div>~ Synkk enables surgical folder ACLs and local Ollama inference.</div>
+                            </div>
+                            <div class="synkk-diff-chunk synkk-diff-chunk--reconciled">
+                                <span class="synkk-terminal-tag synkk-terminal-tag--green mb-1">Reconciled Output [1-Click Merged]</span>
+                                <div>✓ Synkk enables surgical folder ACLs and local RAG with Ollama inference.</div>
+                            </div>
+                            <div class="synkk-code-output">
+                                <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                                <span>Reconciled revision committed · v79 SHA-256 verified</span>
+                            </div>
+                            <div class="synkk-code-line synkk-code-line--comment"># Live carets: Alice (L14:C8), Marcus (L14:C42)</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="workflow" class="synkk-workflow synkk-viewport-section" aria-labelledby="workflow-heading">
                 <div class="synkk-shell">
                     <header class="synkk-section-heading synkk-section-heading--inverse">
@@ -500,6 +563,58 @@
                 </div>
             </section>
 
+            <!-- Spotlight 2: Ghost Files & On-Demand Mobile Storage Hydration -->
+            <section class="synkk-spotlight synkk-spotlight--alt synkk-viewport-section synkk-shell" aria-labelledby="spotlight-ghost-heading">
+                <div class="synkk-spotlight__ambient" aria-hidden="true"></div>
+                <div class="synkk-spotlight__grid synkk-spotlight__grid--reverse">
+                    <div class="synkk-spotlight__copy">
+                        <div class="synkk-spotlight-badge">
+                            <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                            <span>Mobile Storage Solved · 50GB Vaults on 64GB Phones</span>
+                        </div>
+                        <p class="synkk-eyebrow">Ghost File Dehydration</p>
+                        <h2 id="spotlight-ghost-heading">Sync massive archives without filling your phone.</h2>
+                        <p>Large team vaults packed with PDFs, audio recordings, and visual canvas boards shouldn't overwhelm your mobile storage. Synkk replaces heavy attachments with lightweight ghost stubs and hydrates full binary content on demand in under 0.4 seconds upon tap.</p>
+                        <ul class="synkk-feature-card__list">
+                            <li><strong>Lightweight ghost stubs:</strong> Replaces heavy attachments with 180-byte metadata placeholders.</li>
+                            <li><strong>Sub-second hydration:</strong> Tap any note or trigger ribbon command to pull full content via API.</li>
+                            <li><strong>Zero broken links:</strong> Preserves wikilinks, file names, and frontmatter across the entire vault.</li>
+                        </ul>
+                        <div class="synkk-spotlight__actions">
+                            <a href="{{ route('public.docs') }}#quickstart" class="synkk-button synkk-button--accent">See Hydration Protocol <span aria-hidden="true">→</span></a>
+                        </div>
+                    </div>
+
+                    <div class="synkk-spotlight-terminal" aria-label="Ghost file dehydration preview">
+                        <div class="synkk-spotlight-terminal__header">
+                            <div class="synkk-spotlight-terminal__controls" aria-hidden="true">
+                                <span class="synkk-dot synkk-dot--red"></span>
+                                <span class="synkk-dot synkk-dot--amber"></span>
+                                <span class="synkk-dot synkk-dot--green"></span>
+                            </div>
+                            <span class="synkk-spotlight-terminal__title">Archive/2025-Financial-Audit.pdf</span>
+                            <span class="synkk-spotlight-terminal__badge">Ghost Hydrator</span>
+                        </div>
+                        <div class="synkk-spotlight-terminal__body">
+                            <div class="synkk-code-line synkk-code-line--comment">&lt;!-- synkk-ghost-file: {"path":"Archive/2025-Audit.pdf","size":48291044,"sha256":"e3b0c442..."} --&gt;</div>
+                            <div class="p-3 rounded-lg bg-zinc-950/60 border border-white/10 space-y-2">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-mono text-zinc-300">👻 <strong>This file is currently dehydrated.</strong></span>
+                                    <span class="synkk-terminal-tag synkk-terminal-tag--blue">48.2 MB Remote</span>
+                                </div>
+                                <p class="text-xs text-zinc-400">Local stub: 184 bytes. Click "Hydrate Active File" to load complete content.</p>
+                            </div>
+                            <div class="synkk-code-line"><span class="synkk-prompt">&gt;</span> <span class="synkk-cmd">POST /api/v1/vaults/team-vault/files/hydrate</span></div>
+                            <div class="synkk-code-output">
+                                <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                                <span>Streamed 48.2 MB · Hydrated and decrypted in 380ms</span>
+                            </div>
+                            <div class="synkk-code-line synkk-code-line--comment"># Phone storage saved: 48.28 MB preserved on local flash memory</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="safety" class="synkk-safety synkk-viewport-section synkk-shell" aria-labelledby="safety-heading">
                 <header class="synkk-section-heading">
                     <div>
@@ -540,6 +655,61 @@
                             <li><i></i><span><strong>v76 · 2h</strong><small>Content retained</small></span></li>
                         </ol>
                     </article>
+                </div>
+            </section>
+
+            <!-- Spotlight 3: Agentic Knowledge Graph & Local RAG Copilot -->
+            <section class="synkk-spotlight synkk-viewport-section synkk-shell" aria-labelledby="spotlight-rag-heading">
+                <div class="synkk-spotlight__ambient" aria-hidden="true"></div>
+                <div class="synkk-spotlight__grid">
+                    <div class="synkk-spotlight__copy">
+                        <div class="synkk-spotlight-badge">
+                            <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                            <span>Zero Cloud Leakage · Local Ollama &amp; Graph Traversal</span>
+                        </div>
+                        <p class="synkk-eyebrow">Vault Copilot &amp; Graph RAG</p>
+                        <h2 id="spotlight-rag-heading">Ask your vault anything. Keep thoughts confidential.</h2>
+                        <p>Turn your personal knowledge base into an autonomous research assistant. Query your vault with deterministic 128-dimension hypersphere embeddings or local Ollama—traversing bidirectional wikilinks with verified citations and zero third-party API exposure.</p>
+                        <ul class="synkk-feature-card__list">
+                            <li><strong>Graph-augmented retrieval:</strong> Traverses connected notes (<code>[[wikilinks]]</code>) to pull surrounding context.</li>
+                            <li><strong>Verified fact citations:</strong> Every answer links to the exact note name, section, and line numbers.</li>
+                            <li><strong>100% Offline embeddings:</strong> Sublinear TF-IDF character hashing works with zero API costs.</li>
+                        </ul>
+                        <div class="synkk-spotlight__actions">
+                            <a href="{{ route('public.docs') }}#architecture" class="synkk-button synkk-button--accent">Explore RAG Architecture <span aria-hidden="true">→</span></a>
+                        </div>
+                    </div>
+
+                    <div class="synkk-spotlight-terminal" aria-label="Local RAG copilot preview">
+                        <div class="synkk-spotlight-terminal__header">
+                            <div class="synkk-spotlight-terminal__controls" aria-hidden="true">
+                                <span class="synkk-dot synkk-dot--red"></span>
+                                <span class="synkk-dot synkk-dot--amber"></span>
+                                <span class="synkk-dot synkk-dot--green"></span>
+                            </div>
+                            <span class="synkk-spotlight-terminal__title">synkk-vault-copilot.py</span>
+                            <span class="synkk-spotlight-terminal__badge">Ollama / Llama-3.2</span>
+                        </div>
+                        <div class="synkk-spotlight-terminal__body">
+                            <div class="synkk-code-line"><span class="synkk-prompt">&gt; Query:</span> <span class="synkk-cmd">"What is our team deletion policy and how does Safety Shield prevent data loss?"</span></div>
+                            <div class="p-2.5 rounded-md bg-zinc-950/80 border border-white/10 space-y-1.5 text-xs">
+                                <div class="text-zinc-400 font-mono text-[0.65rem] flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Graph backlink hops traversed:
+                                </div>
+                                <div class="flex flex-wrap gap-1.5 font-mono text-[0.62rem]">
+                                    <span class="synkk-terminal-tag synkk-terminal-tag--green">[[Security/Safety-Shield.md]] (score 0.98)</span>
+                                    <span class="synkk-terminal-tag synkk-terminal-tag--blue">[[Architecture/Path-ACLs.md]] (score 0.94)</span>
+                                </div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/20 text-xs text-emerald-200">
+                                <strong>Vault Copilot:</strong> Synkk enforces an automatic 10% mass deletion abort guard. If more than 10% of notes are deleted in a single sync batch, synchronization halts immediately until an admin issues a cryptographic override. All pre-sync notes are saved to immutable local snapshots.
+                                <div class="mt-2 pt-2 border-t border-emerald-500/20 text-[0.65rem] text-emerald-400/80 font-mono">
+                                    Citations: Safety-Shield.md:L42-58 · Path-ACLs.md:L12-25
+                                </div>
+                            </div>
+                            <div class="synkk-code-line synkk-code-line--comment"># Zero external requests: 100% processed locally on Apple Silicon / CUDA</div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -847,6 +1017,152 @@
                                             <span class="synkk-cell-sub">Manual CouchDB credentials, base64 encryption keys, and sync URI setup.</span>
                                         </div>
                                     </td>
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Live Multiplayer Carets</strong>
+                                        <p class="synkk-cell-dim-desc">Live cursor presence widgets and simultaneous collaborative typing in Obsidian.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> CodeMirror 6 Carets</strong>
+                                            <span class="synkk-cell-sub">Live presence avatars and atomic cache locking directly inside Obsidian.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">No multiplayer cursors or live co-authoring support.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Asynchronous git commits only; zero live collaboration.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Blind file pull/push without live presence layer.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Partial</strong>
+                                            <span class="synkk-cell-sub">Document-level replication; no in-editor live presence avatars.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Mobile Ghost Files</strong>
+                                        <p class="synkk-cell-dim-desc">On-demand hydration of large media and attachments to prevent mobile storage exhaustion.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Ghost Hydration</strong>
+                                            <span class="synkk-cell-sub">180B lightweight stubs; full content hydrates in 380ms upon tap.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Forces full vault download onto mobile device memory.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Requires complete git clone; large attachments choke mobile git.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">All-or-nothing bucket synchronization.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Every document and attachment replicates into CouchDB.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Private Local RAG &amp; Copilot</strong>
+                                        <p class="synkk-cell-dim-desc">Semantic vector search, graph backlink traversal, and local LLM question answering.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> 100% Private Local RAG</strong>
+                                            <span class="synkk-cell-sub">Deterministic hypersphere + Ollama. Graph-augmented with verified citations.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">No vector indexing or semantic search capabilities.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Standard git version control only.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">Raw file storage only.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No</strong>
+                                            <span class="synkk-cell-sub">No graph reasoning or vector search.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th scope="row" class="synkk-col-dim">
+                                        <strong>Zero-Knowledge Team E2EE</strong>
+                                        <p class="synkk-cell-dim-desc">Client-side encryption ensuring the central server only ever stores opaque ciphertext.</p>
+                                    </th>
+                                    <td class="synkk-col-featured">
+                                        <div class="synkk-cell-check">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> AES-256-GCM + PBKDF2</strong>
+                                            <span class="synkk-cell-sub">100,000 PBKDF2 iterations; server administrators cannot inspect notes.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Proprietary E2EE</strong>
+                                            <span class="synkk-cell-sub">Closed proprietary cloud infrastructure.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-cross">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg> No E2EE</strong>
+                                            <span class="synkk-cell-sub">Raw Markdown and secrets pushed in plaintext to Git servers.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Optional Plugin</strong>
+                                            <span class="synkk-cell-sub">Optional client-side password encryption before upload.</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="synkk-cell-warn">
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg> Optional</strong>
+                                            <span class="synkk-cell-sub">Encrypted string storage in CouchDB with complex passphrase setup.</span>
+                                        </div>
+                                    </td>
                                 </tr>
 
                                 <tr>
@@ -1112,6 +1428,63 @@
                                 </div>
                             </div>
                         </article>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Spotlight 4: Zero-Knowledge E2EE & High-Entropy Fleet DLP Shield -->
+            <section class="synkk-spotlight synkk-spotlight--alt synkk-viewport-section synkk-shell" aria-labelledby="spotlight-e2ee-heading">
+                <div class="synkk-spotlight__ambient" aria-hidden="true"></div>
+                <div class="synkk-spotlight__grid synkk-spotlight__grid--reverse">
+                    <div class="synkk-spotlight__copy">
+                        <div class="synkk-spotlight-badge">
+                            <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                            <span>Military-Grade Security · Zero-Knowledge E2EE</span>
+                        </div>
+                        <p class="synkk-eyebrow">Enterprise Vault Protection</p>
+                        <h2 id="spotlight-e2ee-heading">Enterprise privacy on infrastructure you own.</h2>
+                        <p>Every note and attachment is encrypted on your client device using 256-bit AES-GCM with PBKDF2 key derivation before transmission. The Synkk server only ever sees opaque ciphertext blobs. In-app DLP scanning intercepts leaked OpenAI tokens or AWS credentials in real time before they leave your machine.</p>
+                        <ul class="synkk-feature-card__list">
+                            <li><strong>Client-Side AES-256-GCM:</strong> 100,000 PBKDF2 iterations ensure master keys never touch server disks.</li>
+                            <li><strong>High-Entropy DLP Secret Scanner:</strong> Catches leaked AWS, GitHub, Slack, and OpenAI keys instantly.</li>
+                            <li><strong>1-Click Fleet Remote Wipe:</strong> Revoke compromised device tokens and trigger automatic local vault purge.</li>
+                        </ul>
+                        <div class="synkk-spotlight__actions">
+                            <a href="{{ route('public.docs') }}#docker" class="synkk-button synkk-button--accent">Read Security Spec <span aria-hidden="true">→</span></a>
+                        </div>
+                    </div>
+
+                    <div class="synkk-spotlight-terminal" aria-label="E2EE and fleet DLP scanner preview">
+                        <div class="synkk-spotlight-terminal__header">
+                            <div class="synkk-spotlight-terminal__controls" aria-hidden="true">
+                                <span class="synkk-dot synkk-dot--red"></span>
+                                <span class="synkk-dot synkk-dot--amber"></span>
+                                <span class="synkk-dot synkk-dot--green"></span>
+                            </div>
+                            <span class="synkk-spotlight-terminal__title">synkk-fleet-security.sh</span>
+                            <span class="synkk-spotlight-terminal__badge">E2EE &amp; DLP Interceptor</span>
+                        </div>
+                        <div class="synkk-spotlight-terminal__body">
+                            <div class="synkk-code-line"><span class="synkk-prompt">$</span> <span class="synkk-cmd">synkk-agent verify-e2ee --vault="Engineering"</span></div>
+                            <div class="synkk-code-output">
+                                <span class="synkk-status-dot" aria-hidden="true"></span>
+                                <span>AES-256-GCM Active · PBKDF2 100k iterations · Server blinded</span>
+                            </div>
+                            <div class="p-2.5 rounded-lg bg-red-950/40 border border-red-500/30 text-xs text-red-200 space-y-1">
+                                <div class="flex items-center justify-between font-mono text-[0.65rem]">
+                                    <span class="text-red-400 font-bold">⚠️ DLP LEAK INTERCEPTED BEFORE UPLOAD</span>
+                                    <span class="synkk-terminal-tag synkk-terminal-tag--red">BLOCKED</span>
+                                </div>
+                                <div class="font-mono text-[0.65rem] text-zinc-300">File: Config/Environment.md (line 28)</div>
+                                <div class="font-mono text-[0.62rem] text-red-300">Pattern: OPENAI_API_KEY (sk-proj-98f24a1b...)</div>
+                            </div>
+                            <div class="synkk-code-line synkk-code-line--comment"># Upload rejected locally. Device token alert dispatched to admin audit log.</div>
+                            <div class="synkk-code-line"><span class="synkk-prompt">&gt;</span> <span class="synkk-cmd">admin remote-wipe --device="Lost-MacBook-Pro"</span></div>
+                            <div class="synkk-code-output">
+                                <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
+                                <span>HTTP 410 issued · Local device token invalidated · Vault pruned</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1494,6 +1867,7 @@
                         <a href="#pricing">Pricing</a>
                         <a href="#roadmap">Roadmap</a>
                         <a href="#faq">FAQ</a>
+                        <a href="{{ route('about') }}">About</a>
                         <a href="{{ route('public.docs') }}">Documentation</a>
                         <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
                     </nav>

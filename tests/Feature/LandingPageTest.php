@@ -171,7 +171,30 @@ test('the landing page renders the comprehensive obsidian sync comparison matrix
         ->assertSee('100% Self-Hosted')
         ->assertSee('Path-Level ACLs')
         ->assertSee('Data Loss Prevention (DLP)')
-        ->assertSee('Atomic Safety Shield');
+        ->assertSee('Atomic Safety Shield')
+        ->assertSee('Live Multiplayer Carets')
+        ->assertSee('Mobile Ghost Files')
+        ->assertSee('Private Local RAG &amp; Copilot', escape: false)
+        ->assertSee('Zero-Knowledge Team E2EE');
+});
+
+test('the landing page renders the four terminal showcase spotlight components', function () {
+    $response = $this->get(route('home'));
+
+    $response
+        ->assertOk()
+        ->assertSee('Never lose a paragraph to merge collisions.')
+        ->assertSee('synkk-diff-sandbox.tsx')
+        ->assertSee('3-Way Reconciler')
+        ->assertSee('Sync massive archives without filling your phone.')
+        ->assertSee('Archive/2025-Financial-Audit.pdf')
+        ->assertSee('Ghost Hydrator')
+        ->assertSee('Ask your vault anything. Keep thoughts confidential.')
+        ->assertSee('synkk-vault-copilot.py')
+        ->assertSee('Ollama / Llama-3.2')
+        ->assertSee('Enterprise privacy on infrastructure you own.')
+        ->assertSee('synkk-fleet-security.sh')
+        ->assertSee('E2EE &amp; DLP Interceptor', escape: false);
 });
 
 test('the landing page defaults to dark mode on initial load', function () {

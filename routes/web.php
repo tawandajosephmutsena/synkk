@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
+Route::view('/about', 'about')->name('about');
 
 if (app()->environment('local')) {
     Route::get('dev-login', function () {
