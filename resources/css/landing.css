@@ -112,13 +112,47 @@ summary:focus-visible,
     gap: 2rem;
 }
 .synkk-brand {
+    position: relative;
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex: none;
+    isolation: isolate;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    text-decoration: none;
+}
+.synkk-brand::before {
+    content: '';
+    position: absolute;
+    inset: -4px -12px;
+    border-radius: 9999px;
+    background: radial-gradient(ellipse 65% 55% at 50% 50%, rgba(16, 185, 129, 0.55) 0%, rgba(14, 165, 233, 0.45) 45%, rgba(5, 150, 105, 0.2) 70%, transparent 90%);
+    filter: blur(14px);
+    opacity: 0.6;
+    z-index: 0;
+    pointer-events: none;
+    transform-origin: center center;
+    animation: synkk-logo-glow-heartbeat 2.4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    will-change: transform, opacity;
 }
 .synkk-brand img {
     display: block;
     width: 8rem;
     height: auto;
+    position: relative;
+    z-index: 1;
+    transform-origin: center center;
+    filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.55)) drop-shadow(0 0 14px rgba(14, 165, 233, 0.35));
+    animation: synkk-logo-pulse-heartbeat 2.4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    will-change: transform, filter;
+}
+.synkk-brand:hover img {
+    animation-duration: 1.5s;
+}
+.synkk-brand:hover::before {
+    animation-duration: 1.5s;
+    opacity: 0.9;
 }
 .synkk-nav,
 .synkk-header__actions {
@@ -4697,10 +4731,19 @@ html.dark .synkk-callout--danger {
 }
 
 /* Footer & Logo in Dark Mode */
-html.dark .synkk-brand img,
 html.dark .synkk-footer__top img {
     filter: brightness(0) invert(1);
     opacity: 0.95;
+}
+html.dark .synkk-brand::before {
+    background: radial-gradient(ellipse 65% 55% at 50% 50%, rgba(52, 211, 153, 0.75) 0%, rgba(56, 189, 248, 0.7) 45%, rgba(16, 185, 129, 0.25) 70%, transparent 90%);
+    filter: blur(16px);
+    opacity: 0.75;
+}
+html.dark .synkk-brand img {
+    filter: brightness(0) invert(1) drop-shadow(0 0 5px rgba(52, 211, 153, 0.5)) drop-shadow(0 0 14px rgba(56, 189, 248, 0.4));
+    opacity: 0.96;
+    animation-name: synkk-logo-pulse-heartbeat-dark;
 }
 
 html.dark .synkk-footer {
@@ -4733,3 +4776,113 @@ html.dark .synkk-footer__bottom {
     border-top-color: #1e293b;
     color: #64748b;
 }
+
+/* Logo Heartbeat & Green-Blue Gradient Pulse Animations */
+@keyframes synkk-logo-pulse-heartbeat {
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.45)) drop-shadow(0 0 12px rgba(14, 165, 233, 0.3));
+    }
+    14% {
+        transform: scale(1.055);
+        filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.85)) drop-shadow(0 0 22px rgba(14, 165, 233, 0.65));
+    }
+    24% {
+        transform: scale(1.015);
+        filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.5)) drop-shadow(0 0 13px rgba(14, 165, 233, 0.35));
+    }
+    38% {
+        transform: scale(1.075);
+        filter: drop-shadow(0 0 14px rgba(16, 185, 129, 1)) drop-shadow(0 0 28px rgba(14, 165, 233, 0.8));
+    }
+    55% {
+        transform: scale(1.008);
+        filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.55)) drop-shadow(0 0 14px rgba(14, 165, 233, 0.4));
+    }
+    68% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.45)) drop-shadow(0 0 12px rgba(14, 165, 233, 0.3));
+    }
+}
+
+@keyframes synkk-logo-pulse-heartbeat-dark {
+    0%,
+    100% {
+        transform: scale(1);
+        filter: brightness(0) invert(1) drop-shadow(0 0 5px rgba(52, 211, 153, 0.5)) drop-shadow(0 0 14px rgba(56, 189, 248, 0.4));
+        opacity: 0.95;
+    }
+    14% {
+        transform: scale(1.055);
+        filter: brightness(0) invert(1) drop-shadow(0 0 12px rgba(52, 211, 153, 0.95)) drop-shadow(0 0 26px rgba(56, 189, 248, 0.8));
+        opacity: 1;
+    }
+    24% {
+        transform: scale(1.015);
+        filter: brightness(0) invert(1) drop-shadow(0 0 6px rgba(52, 211, 153, 0.6)) drop-shadow(0 0 15px rgba(56, 189, 248, 0.45));
+        opacity: 0.97;
+    }
+    38% {
+        transform: scale(1.075);
+        filter: brightness(0) invert(1) drop-shadow(0 0 16px rgba(52, 211, 153, 1)) drop-shadow(0 0 34px rgba(56, 189, 248, 0.95));
+        opacity: 1;
+    }
+    55% {
+        transform: scale(1.008);
+        filter: brightness(0) invert(1) drop-shadow(0 0 7px rgba(52, 211, 153, 0.65)) drop-shadow(0 0 16px rgba(56, 189, 248, 0.5));
+        opacity: 0.97;
+    }
+    68% {
+        transform: scale(1);
+        filter: brightness(0) invert(1) drop-shadow(0 0 5px rgba(52, 211, 153, 0.5)) drop-shadow(0 0 14px rgba(56, 189, 248, 0.4));
+        opacity: 0.95;
+    }
+}
+
+@keyframes synkk-logo-glow-heartbeat {
+    0%,
+    100% {
+        transform: scale(0.96);
+        opacity: 0.45;
+        filter: blur(14px);
+    }
+    14% {
+        transform: scale(1.16);
+        opacity: 0.85;
+        filter: blur(16px);
+    }
+    24% {
+        transform: scale(1.02);
+        opacity: 0.55;
+        filter: blur(14px);
+    }
+    38% {
+        transform: scale(1.24);
+        opacity: 1;
+        filter: blur(18px);
+    }
+    55% {
+        transform: scale(1.01);
+        opacity: 0.5;
+        filter: blur(14px);
+    }
+    68% {
+        transform: scale(0.96);
+        opacity: 0.45;
+        filter: blur(14px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .synkk-brand::before,
+    .synkk-brand img,
+    html.dark .synkk-brand img {
+        animation: none;
+        transform: none;
+    }
+    .synkk-brand::before {
+        opacity: 0.5;
+    }
+}
+
