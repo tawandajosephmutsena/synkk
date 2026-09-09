@@ -55,17 +55,6 @@ Route::get('docs', function () {
     return redirect()->route('public.docs');
 })->name('docs.redirect');
 
-Route::prefix('{current_team}')
-    ->middleware(['auth', 'verified', EnsureTeamMembership::class])
-    ->scopeBindings()
-    ->group(function () {
-        Route::livewire('dashboard', 'pages::dashboard.index')->name('dashboard');
-        Route::livewire('vaults', 'pages::vaults.index')->name('vaults.index');
-        Route::livewire('vaults/{vault}', 'pages::vaults.show')->name('vaults.show');
-        Route::livewire('devices', 'pages::devices.index')->name('devices.index');
-        Route::livewire('docs', 'pages::docs.index')->name('docs');
-    });
-
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Middleware\EnsureSuperAdmin;
 
@@ -80,5 +69,16 @@ Route::prefix('admin')
 Route::post('admin/stop-impersonation', [ImpersonationController::class, 'stop'])
     ->middleware(['auth'])
     ->name('admin.stop-impersonation');
+
+Route::prefix('{current_team}')
+    ->middleware(['auth', 'verified', EnsureTeamMembership::class])
+    ->scopeBindings()
+    ->group(function () {
+        Route::livewire('dashboard', 'pages::dashboard.index')->name('dashboard');
+        Route::livewire('vaults', 'pages::vaults.index')->name('vaults.index');
+        Route::livewire('vaults/{vault}', 'pages::vaults.show')->name('vaults.show');
+        Route::livewire('devices', 'pages::devices.index')->name('devices.index');
+        Route::livewire('docs', 'pages::docs.index')->name('docs');
+    });
 
 require __DIR__.'/settings.php';

@@ -330,7 +330,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                                             @elseif ($token->client_platform === 'windows')
                                                 <flux:icon icon="computer-desktop" class="size-4 text-teal-600 dark:text-teal-400" />
                                             @else
-                                                <flux:icon icon="laptop" class="size-4 text-zinc-400" />
+                                                <flux:icon icon="computer-desktop" class="size-4 text-zinc-400" />
                                             @endif
                                         </div>
                                         <div>
