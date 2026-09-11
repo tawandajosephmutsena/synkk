@@ -19,7 +19,7 @@ class UploadVaultFileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'path' => ['required', 'string', 'not_regex:/\.\./'],
+            'path' => ['required', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
             'base_version' => ['nullable', 'integer'],
             'content' => ['nullable', 'string'],
             'content_base64' => ['nullable', 'string'],

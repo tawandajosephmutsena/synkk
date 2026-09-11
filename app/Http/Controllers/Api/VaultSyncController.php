@@ -433,7 +433,7 @@ class VaultSyncController extends Controller
         }
 
         $request->validate([
-            'path' => ['required', 'string', 'not_regex:/\.\./'],
+            'path' => ['required', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
         ]);
 
         $path = trim($request->input('path'), '/');
@@ -542,8 +542,8 @@ class VaultSyncController extends Controller
         }
 
         $validated = $request->validate([
-            'conflict_path' => ['required', 'string', 'not_regex:/\.\./'],
-            'canonical_path' => ['nullable', 'string', 'not_regex:/\.\./'],
+            'conflict_path' => ['required', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
+            'canonical_path' => ['nullable', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
         ]);
 
         $conflictPath = ltrim(str_replace('\\', '/', $validated['conflict_path']), '/');

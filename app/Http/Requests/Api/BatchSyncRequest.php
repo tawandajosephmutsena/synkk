@@ -30,7 +30,7 @@ class BatchSyncRequest extends FormRequest
 
         return [
             'changes' => ['required', 'array', "max:{$maxBatch}"],
-            'changes.*.path' => ['required', 'string', 'not_regex:/\.\./'],
+            'changes.*.path' => ['required', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
             'changes.*.action' => ['nullable', 'string', 'in:upload,delete'],
             'changes.*.content' => ['nullable', 'string'],
             'changes.*.content_base64' => ['nullable', 'string'],
