@@ -34,11 +34,6 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
 
         Route::bind('vault', function (string $value): Vault {
-            $vault = Vault::where('slug', $value)->first();
-            if ($vault) {
-                return $vault;
-            }
-
             $request = request();
             /** @var DeviceToken|null $deviceToken */
             $deviceToken = $request->attributes->get('device_token');
@@ -53,7 +48,14 @@ class AppServiceProvider extends ServiceProvider
             $team = $deviceToken?->team ?? $user?->currentTeam ?? $user?->teams()->first();
             $userId = $deviceToken?->user_id ?? $user?->id;
 
-            if ($team && $userId) {
+            // First: If vault slug exists anywhere in database, return it (controllers enforce team_id matching)
+            $existingVault = Vault::where('slug', $value)->first();
+            if ($existingVault) {
+                return $existingVault;
+            }
+
+            // Second: If slug does not exist anywhere and request is authenticated, auto-create for current team
+            if ($team) {
                 $slug = Str::slug($value);
                 if (empty($slug)) {
                     $slug = 'vault-'.Str::random(6);
@@ -73,7 +75,7 @@ class AppServiceProvider extends ServiceProvider
                         'name' => $name,
                         'description' => "Auto-created vault for {$name}",
                         'default_permission' => 'read_write',
-                        'created_by' => $userId,
+                        'created_by' => $userId ?? 1,
                     ]
                 );
             }
