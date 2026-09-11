@@ -1221,6 +1221,26 @@ new #[Title('Dashboard')] class extends Component {
                         <div>• <strong>Live Multiplayer CRDT</strong></div>
                         <div>• <strong>Priority Support</strong></div>
                     </div>
+
+                    @if ($this->team?->hasActiveDodoSubscription())
+                        <form method="POST" action="{{ route('billing.dodo.portal', ['current_team' => $this->team->slug]) }}" class="mt-4">
+                            @csrf
+                            <flux:button type="submit" variant="primary" class="w-full !rounded-full !bg-teal-700 !text-white hover:!bg-teal-800 text-xs font-bold">
+                                {{ __('Manage billing') }}
+                            </flux:button>
+                        </form>
+                    @elseif (filled(config('services.dodo.api_key')) && filled(config('services.dodo.cloud_product_id')))
+                        <form method="POST" action="{{ route('billing.dodo.checkout', ['current_team' => $this->team->slug]) }}" class="mt-4">
+                            @csrf
+                            <flux:button type="submit" variant="primary" class="w-full !rounded-full !bg-teal-700 !text-white hover:!bg-teal-800 text-xs font-bold">
+                                {{ __('Subscribe with Dodo') }}
+                            </flux:button>
+                        </form>
+                    @else
+                        <p class="mt-4 text-[10px] font-semibold text-teal-800/70 dark:text-teal-200/70">
+                            {{ __('Cloud checkout will appear after Dodo Payments is connected.') }}
+                        </p>
+                    @endif
                 </div>
             </div>
 

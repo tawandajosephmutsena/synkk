@@ -1541,7 +1541,7 @@
                                 <li>In-App DLP Secret Scanning (intercepts leaked OpenAI / AWS keys)</li>
                                 <li>IP Whitelisting &amp; Subnet restriction rules</li>
                                 <li>1-Click Instant Remote Device Wipe (HTTP 410 token purge)</li>
-                                <li>Webhook automation &amp; event relays (Slack, Discord, Zapier)</li>
+                                <li>Webhook automation &amp; event relays (Slack, Discord, Zapier) <span class="synkk-roadmap-pill">Q4 Roadmap</span></li>
                                 <li>Granular Path-Level ACLs (Inbox vs Client vs Internal)</li>
                                 <li>Priority Support directly from core maintainers</li>
                             </ul>
@@ -1564,7 +1564,7 @@
                                 <li>Zero DevOps: no Docker, PHP, SSL certs, or database backups</li>
                                 <li>1-Click team setup — hosted in Frankfurt (GDPR) or US-East</li>
                                 <li>Automated hourly offsite encrypted backups &amp; failover</li>
-                                <li>Full Pro feature suite: DLP scanning, remote wipe &amp; webhooks</li>
+                                <li>Full Pro feature suite: DLP scanning, remote wipe &amp; webhooks <span class="synkk-roadmap-pill">Webhooks Q4</span></li>
                                 <li>Automated updates, security patches, and zero maintenance</li>
                                 <li>99.99% uptime SLA &amp; dedicated priority cloud support</li>
                                 <li>Multi-device sync with instant 2-second QR pairing</li>
@@ -1626,6 +1626,7 @@
                                 <div><small>SERVER ENGINE</small><span>SQLite WAL</span></div>
                                 <div><small>COLLAB SPEC</small><span>CRDT / Yjs</span></div>
                                 <div><small>INTEGRITY</small><span>SHA-256 Verified</span></div>
+                                <div><small>ACTIVE DEV</small><span>Webhooks &amp; CM6</span></div>
                             </div>
                         </div>
                     </header>
@@ -1662,12 +1663,12 @@
                             <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
                             <div>
                                 <strong>Safety and collaboration</strong>
-                                <p>Character-level CRDT multiplayer editing directly in Obsidian and web, and an in-editor visual conflict sandbox for side-by-side 3-way note reconciliation.</p>
+                                <p>Character-level CRDT multiplayer editing directly inside the native Obsidian desktop plugin (y-codemirror.next), and an in-editor visual conflict sandbox for side-by-side 3-way note reconciliation.</p>
                                 <div class="synkk-roadmap-chips">
-                                    <span>CRDT Multiplayer</span>
+                                    <span>Obsidian CRDT</span>
                                     <span>3-Way Diff Sandbox</span>
                                     <span>Side-by-Side Visuals</span>
-                                    <span>Real-time Relays</span>
+                                    <span>Presence Relays</span>
                                 </div>
                             </div>
                         </li>
@@ -1694,6 +1695,33 @@
                                     <span>Semantic Search</span>
                                     <span>Local RAG</span>
                                     <span>Private AI</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="is-next">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>IN PROGRESS · Q4</span>
+                            <div>
+                                <strong>Enterprise Webhook Automation &amp; Event Relays</strong>
+                                <p>Signed HMAC-SHA256 webhooks dispatching instant notifications to Slack security channels on DLP secret violations, Discord team channels on vault syncs, and custom Zapier automation triggers on note updates.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>Slack DLP Relays</span>
+                                    <span>Discord Sync Alerts</span>
+                                    <span>Zapier Triggers</span>
+                                    <span>Signed HMAC-SHA256</span>
+                                    <span>Event Filtering</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="is-next">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>IN PROGRESS · Q4</span>
+                            <div>
+                                <strong>Full CodeMirror 6 Web CRDT Collaborative Editor</strong>
+                                <p>Upgrading the web Markdown editor from basic form sync to a fully bound CodeMirror 6 collaborative canvas with live remote carets, operational transforms, and multiplayer undo/redo matching the Obsidian desktop plugin.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>CodeMirror 6 Web</span>
+                                    <span>Live Remote Carets</span>
+                                    <span>Character-Level CRDT</span>
+                                    <span>Zero Caret Jumps</span>
                                 </div>
                             </div>
                         </li>

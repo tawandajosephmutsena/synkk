@@ -35,4 +35,20 @@ return [
         ],
     ],
 
+    'dodo' => [
+        'api_key' => env('DODO_PAYMENTS_API_KEY'),
+        'webhook_key' => env('DODO_PAYMENTS_WEBHOOK_KEY'),
+        'environment' => env('DODO_PAYMENTS_ENVIRONMENT', 'live_mode'),
+        'base_url' => env(
+            'DODO_PAYMENTS_BASE_URL',
+            env('DODO_PAYMENTS_ENVIRONMENT', 'live_mode') === 'test_mode'
+                ? 'https://test.dodopayments.com'
+                : 'https://live.dodopayments.com',
+        ),
+        'cloud_product_id' => env('DODO_PAYMENTS_CLOUD_PRODUCT_ID'),
+        'currency' => env('DODO_PAYMENTS_CURRENCY', 'USD'),
+        'grace_period_days' => (int) env('DODO_PAYMENTS_GRACE_PERIOD_DAYS', 7),
+        'webhook_tolerance_seconds' => (int) env('DODO_PAYMENTS_WEBHOOK_TOLERANCE_SECONDS', 300),
+    ],
+
 ];

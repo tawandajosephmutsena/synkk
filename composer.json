@@ -31,8 +31,10 @@
         "laravel/pint": "^1.27",
         "laravel/sail": "^1.53",
         "mockery/mockery": "^1.6",
+        "nikic/php-parser": "^5.8",
         "nunomaduro/collision": "^8.9.3",
         "pestphp/pest": "^5.1",
+        "pestphp/pest-plugin-browser": "^5.0",
         "pestphp/pest-plugin-laravel": "^5.0"
     },
     "autoload": {

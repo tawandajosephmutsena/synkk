@@ -3,8 +3,14 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\VaultCollaborationController;
 use App\Http\Controllers\Api\VaultSyncController;
+use App\Http\Controllers\Billing\DodoWebhookController;
 use App\Http\Middleware\AuthenticateDeviceToken;
 use Illuminate\Support\Facades\Route;
+
+// Public Dodo webhook endpoint. Authenticity is enforced by Standard Webhooks
+// signature validation in the controller, so no session or CSRF token is used.
+Route::post('v1/billing/dodo/webhook', DodoWebhookController::class)
+    ->name('api.billing.dodo.webhook');
 
 // Public Mobile Pairing endpoints
 Route::prefix('v1')

@@ -59,6 +59,7 @@
                     <a href="{{ route('home') }}#safety">Safety</a>
                     <a href="{{ route('home') }}#comparison">Why Synkk</a>
                     <a href="{{ route('home') }}#pricing">Pricing</a>
+                    <a href="{{ route('home') }}#roadmap">Roadmap</a>
                     <a href="{{ route('about') }}" class="font-bold text-emerald-950 dark:text-emerald-300">About</a>
                     <a href="{{ route('public.docs') }}">Docs</a>
                 </nav>
@@ -91,7 +92,8 @@
                             <a href="{{ route('home') }}#safety">Safety <span>03</span></a>
                             <a href="{{ route('home') }}#comparison">Why Synkk <span>04</span></a>
                             <a href="{{ route('home') }}#pricing">Pricing <span>05</span></a>
-                            <a href="{{ route('about') }}">About &amp; Philosophy <span>06</span></a>
+                            <a href="{{ route('home') }}#roadmap">Roadmap <span>06</span></a>
+                            <a href="{{ route('about') }}">About &amp; Philosophy <span>07</span></a>
                             <a href="{{ route('public.docs') }}">Documentation <span>↗</span></a>
                             @guest
                                 <a href="{{ route('login') }}">Log in <span>↗</span></a>
@@ -107,24 +109,24 @@
             <section class="synkk-hero synkk-shell" aria-labelledby="about-hero-heading">
                 <div class="synkk-hero__frame">
                     <div class="synkk-hero__copy">
-                        <p class="synkk-eyebrow synkk-reveal synkk-reveal--one">The Synkk Philosophy</p>
+                        <p class="synkk-eyebrow synkk-reveal synkk-reveal--one">The Synkk Philosophy — The Sovereign PKM Manifesto</p>
                         <h1 id="about-hero-heading" class="synkk-reveal--two">
-                            <span class="synkk-hero__line"><span>Thinking is</span></span>
-                            <span class="synkk-hero__line"><span>personal.</span></span>
+                            <span class="synkk-hero__line"><span>Thinking is personal.</span></span>
                             <span class="synkk-hero__line synkk-hero__line--accent"><span>Keep it yours.</span><svg viewBox="0 0 100 100" fill="none" aria-hidden="true"><path d="M18 51h64M53 22l29 29-29 29" stroke="currentColor" stroke-width="5"/></svg></span>
                         </h1>
                         <p class="synkk-hero__lede synkk-reveal synkk-reveal--three">
-                            Obsidian is celebrated worldwide because it is local, durable, and free from corporate database silos. We built Synkk so teams, founders, and researchers can collaborate with the full power of Obsidian without surrendering data sovereignty.
+                            Obsidian is celebrated worldwide because it is local, durable, and free from corporate database silos. We built Synkk so teams, founders, and researchers can collaborate with the full power of Obsidian without surrendering data sovereignty to commercial cloud gatekeepers.
                         </p>
                         <div class="synkk-hero__actions synkk-reveal synkk-reveal--four">
                             <a href="#pillars" class="synkk-button synkk-button--accent">Explore the pillars <span aria-hidden="true">↓</span></a>
-                            <a href="#architecture" class="synkk-button synkk-button--quiet">System architecture <span aria-hidden="true">→</span></a>
+                            <a href="#manifesto" class="synkk-button synkk-button--paper">Read our manifesto <span aria-hidden="true">→</span></a>
+                            <a href="#comparison" class="synkk-button synkk-button--quiet">Tech comparison <span aria-hidden="true">↗</span></a>
                         </div>
                         <ul class="synkk-hero__proof synkk-reveal synkk-reveal--four" aria-label="Synkk Core Guarantees">
-                            <li>100% Plain Markdown</li>
-                            <li>Zero Cloud Exposure</li>
-                            <li>Self-Hosted Engine</li>
-                            <li>Granular Path ACLs</li>
+                            <li>100% Plain Markdown (.md)</li>
+                            <li>Zero Cloud Silos or Lock-In</li>
+                            <li>Self-Hosted SQLite WAL Engine</li>
+                            <li>Granular Path-Level ACLs</li>
                         </ul>
                     </div>
 
@@ -132,10 +134,17 @@
                         <div class="synkk-orbit synkk-orbit--outer" aria-hidden="true"><i></i></div>
                         <div class="synkk-orbit synkk-orbit--inner" aria-hidden="true"><i></i></div>
                         <span class="synkk-stage-label">Sovereignty First</span>
+                        
                         <div class="synkk-device-chip synkk-device-chip--desktop" aria-hidden="true">
                             <img src="/images/platforms/obsidian.svg" alt="" width="20" height="20">
                             Local-First Vault <span>↗</span>
                         </div>
+
+                        <!-- Floating Mascot Accent -->
+                        <div class="absolute -right-4 -top-8 z-30 hidden sm:block pointer-events-none" aria-hidden="true">
+                            <img src="/images/character/synkk-diver-premium.webp" alt="" width="110" height="110" class="drop-shadow-2xl opacity-90 hover:opacity-100 transition-opacity">
+                        </div>
+
                         <div class="synkk-laptop" data-hero-layer aria-label="Synkk dashboard overview">
                             <div class="synkk-laptop__screen">
                                 <div class="synkk-window-bar" aria-hidden="true">
@@ -146,13 +155,15 @@
                                 <img src="/images/showcase/dashboard-overview.webp" alt="Synkk Dashboard Overview" width="2300" height="1294" fetchpriority="high">
                             </div>
                         </div>
+                        
                         <div class="synkk-hero-status" data-hero-layer>
                             <span>Core Philosophy</span>
                             <strong><i aria-hidden="true"></i> No Cloud Silos</strong>
-                            <small>Plain .md files forever</small>
+                            <small>Plain .md files forever · AES-256-GCM · SQLite WAL</small>
                         </div>
+                        
                         <div class="synkk-stage-footer">
-                            <span>YOUR HARDWARE. YOUR BRAIN.</span>
+                            <span>YOUR HARDWARE. YOUR INTELLECT.</span>
                             <span aria-hidden="true">↙</span>
                         </div>
                     </div>
@@ -166,32 +177,76 @@
                         <p class="synkk-eyebrow">01 / The Problem Space</p>
                         <h2 id="paradigms-heading">Why existing sync solutions break down for teams.</h2>
                     </div>
-                    <p>Personal Knowledge Management (PKM) tools are magical for solo thinkers, but collaboration has historically forced a series of painful compromises.</p>
+                    <p>Personal Knowledge Management (PKM) tools are magical for solo thinkers, but collaboration has historically forced a series of painful, risky compromises.</p>
                 </header>
 
-                <div class="synkk-safety-grid">
+                <div class="synkk-paradigms-grid">
                     <article class="synkk-safety-card">
                         <div class="synkk-safety-card__top"><span>PARADIGM 01</span><strong>ALL-OR-NOTHING</strong></div>
                         <h3>The Cost &amp; Privacy Dilemma of Proprietary Sync</h3>
-                        <p>Official Obsidian Sync is well-suited for individuals, but rapidly escalates to $48–$120 per user each year. Worst of all, it provides <strong>zero granular folder permissions</strong>: either an employee or contractor has access to your entire vault, or nothing at all.</p>
+                        <p>Official Obsidian Sync is well-suited for solo individuals, but escalates to $48–$120 per user each year. Worst of all, it provides <strong>zero granular folder permissions</strong>: an employee or external contractor either gets access to your entire vault, or nothing at all.</p>
+                        
+                        <div class="synkk-paradigm-contrast">
+                            <div class="synkk-paradigm-contrast__broken">
+                                <span class="synkk-contrast-label synkk-contrast-label--broken">Proprietary Sync</span>
+                                <p>$120/seat/yr · All-or-Nothing vault access · Zero contractor folder scoping</p>
+                            </div>
+                            <div class="synkk-paradigm-contrast__synkk">
+                                <span class="synkk-contrast-label synkk-contrast-label--synkk">Synkk Guarantee</span>
+                                <p>Self-Hosted $0 or Lifetime License · Surgical Path ACLs (Read/Write, Read-Only, Hidden)</p>
+                            </div>
+                        </div>
                     </article>
 
                     <article class="synkk-safety-card">
                         <div class="synkk-safety-card__top"><span>PARADIGM 02</span><strong>MERGE COLLISION</strong></div>
                         <h3>The Fragility of Community Git Plugins</h3>
-                        <p>Git-based sync plugins are notorious for silent merge conflicts. A single conflict marker (<code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code>) written into a Markdown file destroys frontmatter parsing, breaks Dataview queries, and causes mobile sync battery drain.</p>
+                        <p>Git-based sync plugins are notorious for silent merge conflicts. A single conflict marker (<code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code>) written into a Markdown file destroys frontmatter parsing, breaks Dataview queries, and causes severe mobile sync battery drain.</p>
+                        
+                        <div class="synkk-paradigm-contrast">
+                            <div class="synkk-paradigm-contrast__broken">
+                                <span class="synkk-contrast-label synkk-contrast-label--broken">Git Sync Plugins</span>
+                                <p>Cryptic conflict markers ruin YAML frontmatter · Silent merge failure · Heavy battery drain</p>
+                            </div>
+                            <div class="synkk-paradigm-contrast__synkk">
+                                <span class="synkk-contrast-label synkk-contrast-label--synkk">Synkk Guarantee</span>
+                                <p>Optimistic Concurrency Control · Zero silent overwrites · Visual 3-way diff reconciliation</p>
+                            </div>
+                        </div>
                     </article>
 
                     <article class="synkk-safety-card">
                         <div class="synkk-safety-card__top"><span>PARADIGM 03</span><strong>SURRENDERED PRIVACY</strong></div>
                         <h3>The Data Exposure of Cloud Monoliths</h3>
                         <p>Teams migrating to Notion or Confluence surrender data sovereignty. Company strategy, customer notes, and API keys are stored in multi-tenant commercial cloud databases vulnerable to vendor outages and third-party AI training scrapers.</p>
+                        
+                        <div class="synkk-paradigm-contrast">
+                            <div class="synkk-paradigm-contrast__broken">
+                                <span class="synkk-contrast-label synkk-contrast-label--broken">Cloud SaaS Monoliths</span>
+                                <p>Closed database schemas · Data scraped for AI training · Vulnerable to third-party outages</p>
+                            </div>
+                            <div class="synkk-paradigm-contrast__synkk">
+                                <span class="synkk-contrast-label synkk-contrast-label--synkk">Synkk Guarantee</span>
+                                <p>100% Plain Markdown on your disk · Zero third-party telemetry · Zero-Knowledge E2EE</p>
+                            </div>
+                        </div>
                     </article>
 
                     <article class="synkk-safety-card">
                         <div class="synkk-safety-card__top"><span>PARADIGM 04</span><strong>STORAGE CRUNCH</strong></div>
                         <h3>The Mobile Storage Constraint</h3>
-                        <p>Team vaults with PDFs, audio recordings, and canvas boards exceed 50GB, quickly overwhelming mobile storage on iPhones and Android devices when traditional sync engines force full vault cloning.</p>
+                        <p>Team vaults with PDFs, audio recordings, and canvas boards easily exceed 50GB, quickly overwhelming mobile storage on iPhones and Android devices when traditional sync engines force full vault cloning.</p>
+                        
+                        <div class="synkk-paradigm-contrast">
+                            <div class="synkk-paradigm-contrast__broken">
+                                <span class="synkk-contrast-label synkk-contrast-label--broken">Full Vault Cloning</span>
+                                <p>50GB media libraries fill mobile storage · Long initial sync freezes device bandwidth</p>
+                            </div>
+                            <div class="synkk-paradigm-contrast__synkk">
+                                <span class="synkk-contrast-label synkk-contrast-label--synkk">Synkk Guarantee</span>
+                                <p>Selective Ghost Files: Markdown syncs instantly; heavy media hydrates on-demand</p>
+                            </div>
+                        </div>
                     </article>
                 </div>
             </section>
@@ -203,7 +258,7 @@
                         <p class="synkk-eyebrow">02 / The Five Pillars</p>
                         <h2 id="pillars-heading">The foundational principles behind Synkk.</h2>
                     </div>
-                    <p>Every line of code in Synkk is written to honor five unbreakable commitments to data sovereignty, safety, and velocity.</p>
+                    <p>Every line of code in Synkk is written to honor five unbreakable commitments to data sovereignty, safety, and team velocity.</p>
                 </header>
 
                 <div class="synkk-feature-cards">
@@ -216,7 +271,7 @@
                             <h3>Local-First &amp; 100% Sovereign.</h3>
                             <p>Your notes remain plain Markdown files (<code>.md</code>) stored on your local disk. If Synkk is turned off tomorrow, every single file, folder, and link in your vault continues working in Obsidian exactly as before. The server runs on your own hardware, home server, or private VPS.</p>
                             <ul class="synkk-feature-card__list">
-                                <li><strong>No proprietary database lock-in:</strong> Clean, standard Markdown files with YAML frontmatter.</li>
+                                <li><strong>No proprietary database lock-in:</strong> Clean, standard Markdown files with standard YAML frontmatter.</li>
                                 <li><strong>Self-hosted autonomy:</strong> Run via Docker Compose or native PHP on your private server.</li>
                                 <li><strong>Zero external dependencies:</strong> Complete vault management without commercial cloud silos.</li>
                             </ul>
@@ -233,7 +288,7 @@
                         </div>
                     </article>
 
-                    <!-- Pillar 2 (Reverse) -->
+                    <!-- Pillar 2 (Reverse) with Interactive Role Simulator Full Width -->
                     <article class="synkk-feature-card synkk-feature-card--reverse">
                         <div class="synkk-feature-card__copy">
                             <div class="synkk-feature-card__badge">
@@ -255,6 +310,38 @@
                                     <span>↗</span>
                                 </div>
                                 <img src="/images/showcase/permissions-full.webp" alt="Granular Path Permissions Matrix" width="1280" height="720" loading="lazy">
+                            </div>
+                        </div>
+
+                        <!-- Full Width Interactive ACL Simulator (Below the image and text columns) -->
+                        <div class="synkk-feature-card__fullwidth">
+                            <div class="synkk-role-simulator" id="role-simulator">
+                                <div class="flex items-center justify-between mb-3 pb-2 border-b border-emerald-950/10 dark:border-emerald-500/20">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 font-mono">Interactive ACL Simulator</span>
+                                    </div>
+                                    <span class="text-xs text-zinc-500 dark:text-zinc-400">Select an organization role to test real-time path boundaries:</span>
+                                </div>
+                                <div class="synkk-role-simulator__tabs">
+                                    <button type="button" class="synkk-role-btn is-active" data-role="lead">Lead Engineer</button>
+                                    <button type="button" class="synkk-role-btn" data-role="contractor">External Contractor</button>
+                                    <button type="button" class="synkk-role-btn" data-role="client">Client Stakeholder</button>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="synkk-role-simulator__table">
+                                        <thead>
+                                            <tr>
+                                                <th>Vault Folder Path</th>
+                                                <th>Enforced Permission</th>
+                                                <th>Obsidian Visibility</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="role-sim-body">
+                                            <!-- Populated via script below -->
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </article>
@@ -335,7 +422,7 @@
                             <ul class="synkk-feature-card__list">
                                 <li><strong>Client-Side AES-256-GCM:</strong> Keys are derived locally with 100,000 PBKDF2 iterations.</li>
                                 <li><strong>In-App DLP Secret Scanner:</strong> Intercepts high-entropy credential leaks automatically.</li>
-                                <li><strong>1-Click Remote Device Wipe:</strong> Revoke compromised device tokens instantly.</li>
+                                <li><strong>1-Click Remote Device Wipe:</strong> Revoke compromised device tokens instantly (HTTP 410 purge).</li>
                             </ul>
                         </div>
                         <div class="synkk-feature-card__media">
@@ -349,7 +436,8 @@
   "key_derivation": "pbkdf2_sha256_100k",
   "dlp_scanner": "active",
   "server_storage": "opaque_ciphertext",
-  "remote_wipe_support": true
+  "remote_wipe_support": true,
+  "zero_knowledge": true
 }</code></pre>
                                 <div class="synkk-graphic-wipe-tag">
                                     <span>🔒 Zero-Knowledge Verified</span>
@@ -361,11 +449,140 @@
                 </div>
             </section>
 
+            <!-- Section 03: The Synkk Manifesto -->
+            <section id="manifesto" class="synkk-manifesto synkk-viewport-section synkk-shell" aria-labelledby="manifesto-heading">
+                <div class="synkk-manifesto__card">
+                    <p class="synkk-eyebrow text-emerald-400">03 / The Founding Manifesto</p>
+                    <h2 id="manifesto-heading" class="text-3xl sm:text-4xl font-bold tracking-tight text-white mt-2">Why We Will Never Sell Your Thoughts.</h2>
+                    
+                    <blockquote class="synkk-manifesto__quote">
+                        “If software requires cloud servers you do not control to read your own thoughts, you do not own your mind — you are renting it from a landlord.”
+                    </blockquote>
+
+                    <p class="text-zinc-300 text-sm sm:text-base leading-relaxed max-w-3xl">
+                        In an era where every major tech company is training AI models on private user repositories, selling knowledge graphs to ad exchanges, and locking customers into closed proprietary database schemas, Synkk is a line in the sand. We believe personal and team knowledge is an extension of human cognition. It must be private, sovereign, and portable forever.
+                    </p>
+
+                    <div class="synkk-manifesto__commitments">
+                        <div class="synkk-manifesto-item">
+                            <strong>1. Plain Text Forever</strong>
+                            <p>No proprietary schemas, no opaque database blobs. You can delete Synkk at any second and your notes remain untouched on your hard drive.</p>
+                        </div>
+                        <div class="synkk-manifesto-item">
+                            <strong>2. Sustainable Independence</strong>
+                            <p>We sell software licenses and optional managed hosting. We will never take venture capital conditioned on monetizing user data or AI scrapers.</p>
+                        </div>
+                        <div class="synkk-manifesto-item">
+                            <strong>3. Strict Zero Telemetry</strong>
+                            <p>No Google Analytics, no Mixpanel, no behavioral fingerprinting in the sync engine. What happens in your vault stays strictly in your vault.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-zinc-800">
+                        <div class="flex items-center gap-3">
+                            <div class="size-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-300 text-sm font-mono">
+                                SK
+                            </div>
+                            <div>
+                                <strong class="text-white text-sm block">The Synkk Core Team</strong>
+                                <span class="text-zinc-400 text-xs">Independent Maintainers &amp; PKM Crafters</span>
+                            </div>
+                        </div>
+                        <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--paper">
+                            Inspect Our Source Code on GitHub <span aria-hidden="true">↗</span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 04: Technical Comparison Matrix -->
+            <section id="comparison" class="synkk-viewport-section synkk-shell" aria-labelledby="comp-heading">
+                <header class="synkk-section-heading">
+                    <div>
+                        <p class="synkk-eyebrow">04 / Decisive Architecture</p>
+                        <h2 id="comp-heading">How Synkk Compares to Alternative Solutions.</h2>
+                    </div>
+                    <p>Compare the engineering guarantees of Synkk against Official Obsidian Sync, Community Git Plugins, and Closed Cloud SaaS.</p>
+                </header>
+
+                <div class="synkk-comparison-wrap">
+                    <table class="synkk-comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Architectural Capability</th>
+                                <th class="is-synkk">⚡ Synkk Sovereign</th>
+                                <th>Official Obsidian Sync</th>
+                                <th>Community Git Plugins</th>
+                                <th>Cloud SaaS (Notion / Confluence)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>File Format &amp; Portability</strong></td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Plain .md on your disk</td>
+                                <td><span class="text-emerald-500 font-bold">✓</span> Plain .md on your disk</td>
+                                <td><span class="text-emerald-500 font-bold">✓</span> Plain .md on your disk</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Closed proprietary cloud DB</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Granular Folder/Path ACLs</strong></td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Surgical Path ACLs</td>
+                                <td><span class="text-red-500 font-bold">✗</span> All-or-Nothing Vault</td>
+                                <td><span class="text-red-500 font-bold">✗</span> All-or-Nothing Repo</td>
+                                <td><span class="text-amber-500 font-bold">~</span> Complex Workspace ACLs</td>
+                            </tr>
+                            <tr>
+                                <td><strong>In-Flight DLP Secret Scanner</strong></td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Intercepts AWS / API keys</td>
+                                <td><span class="text-red-500 font-bold">✗</span> None</td>
+                                <td><span class="text-red-500 font-bold">✗</span> None (Committed to Git)</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Scanned for AI Training</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Merge Conflict Safety</strong></td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> 3-Way Visual Diff Sandbox</td>
+                                <td><span class="text-amber-500 font-bold">~</span> Duplicate conflict copies</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Destructive Git markers</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Last-write-wins overwrites</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Selective Mobile Ghost Storage</strong></td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Hydrates media on demand</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Full vault cloning only</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Full repo clone (Large size)</td>
+                                <td><span class="text-amber-500 font-bold">~</span> Cloud streaming</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Local Private RAG &amp; AI Graph</strong></td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Local Ollama + Embeddings</td>
+                                <td><span class="text-red-500 font-bold">✗</span> None</td>
+                                <td><span class="text-red-500 font-bold">✗</span> None</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Third-party cloud LLMs</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Self-Hosted Infrastructure</strong></td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> 1-Click Docker / Compose</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Closed Obsidian Cloud</td>
+                                <td><span class="text-amber-500 font-bold">~</span> Requires GitHub / GitLab</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Closed Multi-Tenant SaaS</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cost &amp; Licensing Model</strong></td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Free CE or Lifetime Deal</td>
+                                <td>$48–$120 / seat / year</td>
+                                <td>Free (Complex setup)</td>
+                                <td>$96–$240 / seat / year</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- Architecture & Engineering Blueprint -->
             <section id="architecture" class="synkk-viewport-section synkk-shell" aria-labelledby="arch-heading">
                 <header class="synkk-section-heading">
                     <div>
-                        <p class="synkk-eyebrow">03 / Engineering Blueprint</p>
+                        <p class="synkk-eyebrow">05 / Engineering Blueprint</p>
                         <h2 id="arch-heading">Built upon a battle-tested, decoupled stack.</h2>
                     </div>
                     <p>Synkk is designed as two tightly synchronized halves: the high-concurrency Core Server and the native Obsidian client plugin.</p>
@@ -405,6 +622,38 @@
                         </ol>
                     </article>
                 </div>
+
+                <!-- Interactive Pipeline Flow Diagram -->
+                <div class="mt-8">
+                    <span class="text-xs font-bold uppercase tracking-wider text-zinc-500 font-mono block mb-2">Cryptographic Sync Pipeline (Step-by-Step Flow)</span>
+                    <div class="synkk-arch-pipeline">
+                        <div class="synkk-pipeline-step">
+                            <span class="synkk-pipeline-step__num">01 · CLIENT EDIT</span>
+                            <strong>Obsidian Event Trigger</strong>
+                            <p>File modification detected locally; pre-sync snapshot archived to .synkk/snapshots/.</p>
+                        </div>
+                        <div class="synkk-pipeline-step">
+                            <span class="synkk-pipeline-step__num">02 · CRYPTO TRANSIT</span>
+                            <strong>SHA-256 Fingerprint</strong>
+                            <p>Content hashed and encrypted via client-side AES-256-GCM before transport dispatch.</p>
+                        </div>
+                        <div class="synkk-pipeline-step">
+                            <span class="synkk-pipeline-step__num">03 · DLP GATEWAY</span>
+                            <strong>In-Flight Secret Inspection</strong>
+                            <p>Regex scanner checks for leaked tokens (AWS, GitHub, Slack) to prevent credential propagation.</p>
+                        </div>
+                        <div class="synkk-pipeline-step">
+                            <span class="synkk-pipeline-step__num">04 · OCC VERIFICATION</span>
+                            <strong>Atomic WAL Ingestion</strong>
+                            <p>Server executes lockForUpdate(); checks baseVersion. Rejects overwrites; creates conflict files.</p>
+                        </div>
+                        <div class="synkk-pipeline-step">
+                            <span class="synkk-pipeline-step__num">05 · VERSION ARCHIVE</span>
+                            <strong>Historical Retention</strong>
+                            <p>Prior version archived into VaultFileVersion for 1-click historical rollback anytime.</p>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Spotlight Terminal CTA Component -->
@@ -439,7 +688,10 @@
                                 <span class="synkk-dot synkk-dot--green"></span>
                             </div>
                             <span class="synkk-cta-terminal__title">synkk-sovereign-deploy.sh</span>
-                            <span class="synkk-cta-terminal__badge">Docker / Compose</span>
+                            <button type="button" id="copy-deploy-btn" class="text-[11px] font-mono font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded-md transition-colors flex items-center gap-1 cursor-pointer">
+                                <span>Copy</span>
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
                         </div>
                         <div class="synkk-cta-terminal__body">
                             <div class="synkk-code-line"><span class="synkk-prompt">$</span> <span class="synkk-cmd">git clone https://github.com/tawandajosephmutsena/synkk.git</span></div>
@@ -477,6 +729,7 @@
                         <a href="{{ route('home') }}#safety">Safety</a>
                         <a href="{{ route('home') }}#comparison">Why Synkk</a>
                         <a href="{{ route('home') }}#pricing">Pricing</a>
+                        <a href="{{ route('home') }}#roadmap">Roadmap</a>
                         <a href="{{ route('about') }}">About</a>
                         <a href="{{ route('public.docs') }}">Documentation</a>
                         <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
@@ -489,5 +742,80 @@
                 </div>
             </div>
         </footer>
+
+        <!-- Interactive Script for Role Simulator & Copy Deployment Button -->
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                // 1. Role & Path Simulator
+                const roles = {
+                    lead: [
+                        { path: 'engineering/rfcs/**', perm: 'read_write', label: 'Read/Write', visibility: 'Full Sync & Push' },
+                        { path: 'clients/deliverables/**', perm: 'read_write', label: 'Read/Write', visibility: 'Full Sync & Push' },
+                        { path: 'executive/strategy/**', perm: 'read_write', label: 'Read/Write', visibility: 'Full Sync & Push' },
+                        { path: 'internal/salaries/**', perm: 'hidden', label: 'Hidden', visibility: 'Redacted from Manifest' }
+                    ],
+                    contractor: [
+                        { path: 'engineering/rfcs/**', perm: 'read_only', label: 'Read-Only', visibility: 'Read Only (Push Blocked)' },
+                        { path: 'clients/deliverables/**', perm: 'read_write', label: 'Read/Write', visibility: 'Assigned Scoped Write' },
+                        { path: 'executive/strategy/**', perm: 'hidden', label: 'Hidden', visibility: 'Completely Redacted' },
+                        { path: 'internal/salaries/**', perm: 'hidden', label: 'Hidden', visibility: 'Completely Redacted' }
+                    ],
+                    client: [
+                        { path: 'engineering/rfcs/**', perm: 'hidden', label: 'Hidden', visibility: 'Completely Redacted' },
+                        { path: 'clients/deliverables/**', perm: 'read_only', label: 'Read-Only', visibility: 'Read Only (Review View)' },
+                        { path: 'executive/strategy/**', perm: 'hidden', label: 'Hidden', visibility: 'Completely Redacted' },
+                        { path: 'internal/salaries/**', perm: 'hidden', label: 'Hidden', visibility: 'Completely Redacted' }
+                    ]
+                };
+
+                const roleBody = document.getElementById('role-sim-body');
+                const roleButtons = document.querySelectorAll('.synkk-role-btn');
+
+                function renderRole(roleKey) {
+                    if (!roleBody || !roles[roleKey]) return;
+                    const items = roles[roleKey];
+                    roleBody.innerHTML = items.map(item => {
+                        const badgeClass = item.perm === 'read_write' 
+                            ? 'synkk-perm-badge--rw' 
+                            : (item.perm === 'read_only' ? 'synkk-perm-badge--ro' : 'synkk-perm-badge--hidden');
+                        return `
+                            <tr>
+                                <td class="font-mono text-xs text-zinc-700 dark:text-zinc-300">${item.path}</td>
+                                <td><span class="synkk-perm-badge ${badgeClass}">${item.label}</span></td>
+                                <td class="text-xs text-zinc-500 dark:text-zinc-400">${item.visibility}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+
+                roleButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        roleButtons.forEach(b => b.classList.remove('is-active'));
+                        btn.classList.add('is-active');
+                        renderRole(btn.dataset.role);
+                    });
+                });
+
+                renderRole('lead');
+
+                // 2. Terminal Copy Button
+                const copyBtn = document.getElementById('copy-deploy-btn');
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', async () => {
+                        const cmd = 'git clone https://github.com/tawandajosephmutsena/synkk.git && cd synkk && docker compose up -d';
+                        try {
+                            await navigator.clipboard.writeText(cmd);
+                            const originalHtml = copyBtn.innerHTML;
+                            copyBtn.innerHTML = '<span class="text-emerald-400">Copied! ✓</span>';
+                            setTimeout(() => {
+                                copyBtn.innerHTML = originalHtml;
+                            }, 2000);
+                        } catch (err) {
+                            console.error('Failed to copy command:', err);
+                        }
+                    });
+                }
+            });
+        </script>
     </body>
 </html>

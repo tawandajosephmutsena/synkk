@@ -56,6 +56,7 @@ Route::get('docs', function () {
 })->name('docs.redirect');
 
 use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Billing\DodoBillingController;
 use App\Http\Middleware\EnsureSuperAdmin;
 
 Route::prefix('admin')
@@ -79,6 +80,12 @@ Route::prefix('{current_team}')
         Route::livewire('vaults/{vault}', 'pages::vaults.show')->name('vaults.show');
         Route::livewire('devices', 'pages::devices.index')->name('devices.index');
         Route::livewire('docs', 'pages::docs.index')->name('docs');
+        Route::post('billing/dodo/checkout', [DodoBillingController::class, 'checkout'])
+            ->name('billing.dodo.checkout');
+        Route::post('billing/dodo/portal', [DodoBillingController::class, 'portal'])
+            ->name('billing.dodo.portal');
+        Route::get('billing/dodo/return', [DodoBillingController::class, 'checkoutReturn'])
+            ->name('billing.dodo.return');
     });
 
 require __DIR__.'/settings.php';

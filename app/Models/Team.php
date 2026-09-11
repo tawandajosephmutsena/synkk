@@ -23,6 +23,16 @@ use Illuminate\Support\Carbon;
  * @property string $license_status
  * @property string $plan
  * @property string $status
+ * @property string|null $billing_provider
+ * @property string|null $billing_customer_id
+ * @property string|null $billing_subscription_id
+ * @property string|null $billing_product_id
+ * @property string|null $billing_status
+ * @property string|null $billing_previous_plan
+ * @property Carbon|null $billing_next_billing_at
+ * @property Carbon|null $billing_access_until
+ * @property Carbon|null $billing_cancelled_at
+ * @property Carbon|null $billing_last_event_at
  * @property int|null $storage_limit_mb
  * @property int|null $max_devices
  * @property int|null $max_vaults
@@ -44,6 +54,16 @@ use Illuminate\Support\Carbon;
     'license_activated_at',
     'plan',
     'status',
+    'billing_provider',
+    'billing_customer_id',
+    'billing_subscription_id',
+    'billing_product_id',
+    'billing_status',
+    'billing_previous_plan',
+    'billing_next_billing_at',
+    'billing_access_until',
+    'billing_cancelled_at',
+    'billing_last_event_at',
     'storage_limit_mb',
     'max_devices',
     'max_vaults',
@@ -56,7 +76,8 @@ class Team extends Model
 
     public function isSuspended(): bool
     {
-        return $this->status === 'suspended';
+        return $this->status === 'suspended'
+            || ($this->plan === 'cloud' && $this->billing_access_until?->isPast());
     }
 
     public function isActive(): bool
@@ -84,6 +105,29 @@ class Team extends Model
         }
 
         return $this->license_status === 'active';
+    }
+
+    /**
+     * Determine whether the team has a current Dodo subscription or recovery window.
+     */
+    public function hasActiveDodoSubscription(): bool
+    {
+        if ($this->billing_provider !== 'dodo' || blank($this->billing_subscription_id)) {
+            return false;
+        }
+
+        if ($this->billing_access_until?->isPast()) {
+            return false;
+        }
+
+        return in_array($this->billing_status, [
+            'pending',
+            'active',
+            'past_due',
+            'on_hold',
+            'paused',
+            'cancelled',
+        ], true);
     }
 
     /**
@@ -183,6 +227,10 @@ class Team extends Model
             'max_vaults' => 'integer',
             'max_members' => 'integer',
             'license_activated_at' => 'datetime',
+            'billing_next_billing_at' => 'datetime',
+            'billing_access_until' => 'datetime',
+            'billing_cancelled_at' => 'datetime',
+            'billing_last_event_at' => 'datetime',
         ];
     }
 
