@@ -2,14 +2,18 @@
 
 namespace App\Providers;
 
+use App\Models\DeviceToken;
+use App\Models\Vault;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
@@ -28,6 +32,54 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Route::bind('vault', function (string $value): Vault {
+            $vault = Vault::where('slug', $value)->first();
+            if ($vault) {
+                return $vault;
+            }
+
+            $request = request();
+            /** @var DeviceToken|null $deviceToken */
+            $deviceToken = $request->attributes->get('device_token');
+
+            if (! $deviceToken && $request->bearerToken()) {
+                $deviceToken = DeviceToken::with(['user', 'team'])
+                    ->where('token_hash', hash('sha256', $request->bearerToken()))
+                    ->first();
+            }
+
+            $user = $request->user() ?? $deviceToken?->user;
+            $team = $deviceToken?->team ?? $user?->currentTeam ?? $user?->teams()->first();
+            $userId = $deviceToken?->user_id ?? $user?->id;
+
+            if ($team && $userId) {
+                $slug = Str::slug($value);
+                if (empty($slug)) {
+                    $slug = 'vault-'.Str::random(6);
+                }
+
+                $name = Str::headline($value);
+                if (empty($name)) {
+                    $name = 'New Vault';
+                }
+
+                return Vault::firstOrCreate(
+                    [
+                        'team_id' => $team->id,
+                        'slug' => $slug,
+                    ],
+                    [
+                        'name' => $name,
+                        'description' => "Auto-created vault for {$name}",
+                        'default_permission' => 'read_write',
+                        'created_by' => $userId,
+                    ]
+                );
+            }
+
+            abort(404, "Vault '{$value}' not found.");
+        });
     }
 
     /**

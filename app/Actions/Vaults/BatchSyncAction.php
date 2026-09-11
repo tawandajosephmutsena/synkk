@@ -119,23 +119,32 @@ class BatchSyncAction
 
                 $baseVersion = (int) ($item['base_version'] ?? 0);
 
-                $res = $this->uploadAction->execute(
-                    $vault,
-                    $user,
-                    $deviceName,
-                    $path,
-                    $envelope->payload,
-                    $baseVersion,
-                    $envelope
-                );
+                try {
+                    $res = $this->uploadAction->execute(
+                        $vault,
+                        $user,
+                        $deviceName,
+                        $path,
+                        $envelope->payload,
+                        $baseVersion,
+                        $envelope
+                    );
 
-                if (($res['status'] ?? '') === 'conflict') {
-                    $conflicts++;
-                } elseif (($res['status'] ?? '') === 'created' || ($res['status'] ?? '') === 'updated') {
-                    $pushed++;
+                    if (($res['status'] ?? '') === 'conflict') {
+                        $conflicts++;
+                    } elseif (($res['status'] ?? '') === 'created' || ($res['status'] ?? '') === 'updated') {
+                        $pushed++;
+                    }
+
+                    $results[] = $res;
+                } catch (\Throwable $e) {
+                    $errors++;
+                    $results[] = [
+                        'path' => $path,
+                        'status' => 'error',
+                        'message' => $e->getMessage(),
+                    ];
                 }
-
-                $results[] = $res;
             }
         });
 

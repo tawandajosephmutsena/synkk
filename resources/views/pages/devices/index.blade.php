@@ -22,6 +22,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
     public string $allowedIpSubnets = '';
     public ?string $generatedPlainToken = null;
     public ?string $generatedQrCodeSvg = null;
+    public ?string $generatedPairingUrl = null;
     public ?string $pairingSessionId = null;
 
     public ?int $editingTokenId = null;
@@ -93,9 +94,11 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                 accessScope: $this->accessScope,
             );
             $this->generatedQrCodeSvg = $sessionData['qr_svg'];
+            $this->generatedPairingUrl = $sessionData['pairing_url'] ?? null;
             $this->pairingSessionId = $sessionData['session'];
         } catch (\Throwable $e) {
             $this->generatedQrCodeSvg = null;
+            $this->generatedPairingUrl = null;
             $this->pairingSessionId = null;
         }
 
@@ -112,6 +115,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
     {
         $this->generatedPlainToken = null;
         $this->generatedQrCodeSvg = null;
+        $this->generatedPairingUrl = null;
         $this->pairingSessionId = null;
         $this->dispatch('modal-close', name: 'show-token-modal');
     }
@@ -615,6 +619,17 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                     <div>
                         <p class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{{ __('Scan with Obsidian Mobile Camera') }}</p>
                         <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{{ __('Instantly pairs your server endpoint, target vault, and scoped device token via obsidian://synkk-pair.') }}</p>
+                        @if ($generatedPairingUrl)
+                            <div class="mt-2.5">
+                                <flux:button
+                                    size="xs"
+                                    icon="link"
+                                    x-on:click="navigator.clipboard.writeText('{{ $generatedPairingUrl }}'); $flux.toast({ text: '{{ __('Deep link URL copied to clipboard') }}', variant: 'success' })"
+                                >
+                                    {{ __('Copy Deep Link URL') }}
+                                </flux:button>
+                            </div>
+                        @endif
                     </div>
 
                     <!-- Dynamic Pairing Status Badge -->
