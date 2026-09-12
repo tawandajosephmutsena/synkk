@@ -311,19 +311,19 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
             <div class="overflow-x-auto">
                 <flux:table>
                     <flux:table.columns>
-                        <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Device Name') }}</flux:table.column>
+                        <flux:table.column class="py-3.5 text-xs font-semibold uppercase tracking-wider text-zinc-400"><div class="ps-6 sm:ps-8 pe-2">{{ __('Device Name') }}</div></flux:table.column>
                         <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Platform & State') }}</flux:table.column>
                         <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Token Preview') }}</flux:table.column>
                         <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Owner') }}</flux:table.column>
                         <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Last Active') }}</flux:table.column>
-                        <flux:table.column align="end" class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Actions') }}</flux:table.column>
+                        <flux:table.column align="end" class="py-3.5 text-xs font-semibold uppercase tracking-wider text-zinc-400"><div class="ps-2 pe-6 sm:pe-8">{{ __('Actions') }}</div></flux:table.column>
                     </flux:table.columns>
 
                     <flux:table.rows>
                         @foreach ($this->tokens as $token)
                             <flux:table.row :key="$token->id" class="hover:bg-zinc-50/50 dark:hover:bg-white/5 transition-colors">
-                                <flux:table.cell class="py-3.5 px-4 font-medium text-xs">
-                                    <div class="flex items-center gap-3">
+                                <flux:table.cell class="py-3.5 font-medium text-xs">
+                                    <div class="flex items-center gap-3 ps-6 sm:ps-8 pe-2">
                                         <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300">
                                             @if ($token->client_platform === 'ios')
                                                 <flux:icon icon="device-phone-mobile" class="size-4 text-zinc-700 dark:text-zinc-300" />
@@ -385,8 +385,8 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                                     @endif
                                 </flux:table.cell>
 
-                                <flux:table.cell align="end" class="py-3.5 px-4">
-                                    <div class="flex items-center justify-end gap-1.5">
+                                <flux:table.cell align="end" class="py-3.5">
+                                    <div class="flex items-center justify-end gap-1.5 ps-2 pe-6 sm:pe-8">
                                         @if (! $token->is_wiped)
                                             <flux:tooltip :content="__('Remote Wipe device')">
                                                 <flux:button
