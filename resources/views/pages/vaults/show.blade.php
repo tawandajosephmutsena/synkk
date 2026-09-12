@@ -2401,17 +2401,17 @@ new #[Title('Vault Details')] class extends Component
                 @else
                     <flux:table>
                         <flux:table.columns>
-                            <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Path / Folder') }}</flux:table.column>
+                            <flux:table.column class="py-3.5 text-xs font-semibold uppercase tracking-wider text-zinc-400"><div class="ps-6 sm:ps-8 pe-2">{{ __('Path / Folder') }}</div></flux:table.column>
                             <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Target Scope') }}</flux:table.column>
                             <flux:table.column class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Access Level') }}</flux:table.column>
-                            <flux:table.column align="end" class="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">{{ __('Actions') }}</flux:table.column>
+                            <flux:table.column align="end" class="py-3.5 text-xs font-semibold uppercase tracking-wider text-zinc-400"><div class="ps-2 pe-6 sm:pe-8">{{ __('Actions') }}</div></flux:table.column>
                         </flux:table.columns>
 
                         <flux:table.rows>
                             @foreach ($this->permissionRules as $rule)
                                 <flux:table.row :key="$rule->id" class="hover:bg-zinc-50/50 dark:hover:bg-white/5 transition-colors">
-                                    <flux:table.cell class="py-3.5 px-4 font-mono text-xs font-semibold">
-                                        <div class="flex items-center gap-2.5">
+                                    <flux:table.cell class="py-3.5 font-mono text-xs font-semibold">
+                                        <div class="flex items-center gap-2.5 ps-6 sm:ps-8 pe-2">
                                             @if ($rule->is_folder)
                                                 <flux:icon icon="folder" class="size-4 text-amber-500 shrink-0" />
                                             @else
@@ -2445,15 +2445,17 @@ new #[Title('Vault Details')] class extends Component
                                         @endif
                                     </flux:table.cell>
 
-                                    <flux:table.cell align="end" class="py-3.5 px-4">
-                                        <flux:button
-                                            variant="subtle"
-                                            size="sm"
-                                            icon="trash"
-                                            wire:click="deletePermission({{ $rule->id }})"
-                                            wire:confirm="Remove this path permission rule?"
-                                            class="text-red-500 hover:text-red-600"
-                                        />
+                                    <flux:table.cell align="end" class="py-3.5">
+                                        <div class="flex items-center justify-end ps-2 pe-6 sm:pe-8">
+                                            <flux:button
+                                                variant="subtle"
+                                                size="sm"
+                                                icon="trash"
+                                                wire:click="deletePermission({{ $rule->id }})"
+                                                wire:confirm="Remove this path permission rule?"
+                                                class="text-red-500 hover:text-red-600"
+                                            />
+                                        </div>
                                     </flux:table.cell>
                                 </flux:table.row>
                             @endforeach
@@ -2624,12 +2626,12 @@ new #[Title('Vault Details')] class extends Component
                 <flux:card class="p-0 overflow-hidden shadow-xs border-slate-200/80 dark:border-zinc-800">
                     <flux:table>
                         <flux:table.columns>
-                            <flux:table.column class="ps-6 pe-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Note / Path') }}</flux:table.column>
+                            <flux:table.column class="py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400"><div class="ps-6 sm:ps-8 pe-2">{{ __('Note / Path') }}</div></flux:table.column>
                             <flux:table.column class="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Size') }}</flux:table.column>
                             <flux:table.column class="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Revision') }}</flux:table.column>
                             <flux:table.column class="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Modified By') }}</flux:table.column>
                             <flux:table.column class="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Last Synced') }}</flux:table.column>
-                            <flux:table.column align="end" class="ps-4 pe-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Actions') }}</flux:table.column>
+                            <flux:table.column align="end" class="py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400"><div class="ps-2 pe-6 sm:pe-8">{{ __('Actions') }}</div></flux:table.column>
                         </flux:table.columns>
 
                         <flux:table.rows>
@@ -2642,8 +2644,8 @@ new #[Title('Vault Details')] class extends Component
                                     $dirname = dirname($file->path);
                                 @endphp
                                 <flux:table.row :key="$file->id" class="group hover:bg-slate-50/80 dark:hover:bg-zinc-900/50 transition-colors">
-                                    <flux:table.cell class="ps-6 pe-4 py-3.5 font-mono text-xs font-medium">
-                                        <div class="flex items-center gap-2.5">
+                                    <flux:table.cell class="py-3.5 font-mono text-xs font-medium">
+                                        <div class="flex items-center gap-2.5 ps-6 sm:ps-8 pe-2">
                                             <div class="size-8 rounded-lg flex items-center justify-center shrink-0 {{ $isMd ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : ($isCanvas ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400') }}">
                                                 @if ($isMd)
                                                     <flux:icon icon="document-text" class="size-4" />
@@ -2724,8 +2726,8 @@ new #[Title('Vault Details')] class extends Component
                                         {{ $file->updated_at->diffForHumans() }}
                                     </flux:table.cell>
 
-                                    <flux:table.cell align="end" class="ps-4 pe-6 py-3.5">
-                                        <div class="flex items-center justify-end gap-1">
+                                    <flux:table.cell align="end" class="py-3.5">
+                                        <div class="flex items-center justify-end gap-1 ps-2 pe-6 sm:pe-8">
                                             @if ($isMd)
                                                 <flux:button
                                                     variant="subtle"
@@ -2989,18 +2991,18 @@ new #[Title('Vault Details')] class extends Component
             @else
                 <flux:table>
                     <flux:table.columns>
-                        <flux:table.column>{{ __('Action') }}</flux:table.column>
+                        <flux:table.column><div class="ps-6 sm:ps-8 pe-2">{{ __('Action') }}</div></flux:table.column>
                         <flux:table.column>{{ __('File Path') }}</flux:table.column>
                         <flux:table.column>{{ __('Member & Device') }}</flux:table.column>
                         <flux:table.column>{{ __('Revision') }}</flux:table.column>
-                        <flux:table.column align="end">{{ __('Timestamp') }}</flux:table.column>
+                        <flux:table.column align="end"><div class="ps-2 pe-6 sm:pe-8">{{ __('Timestamp') }}</div></flux:table.column>
                     </flux:table.columns>
 
                     <flux:table.rows>
                         @foreach ($this->activities as $act)
                             <flux:table.row :key="$act->id">
                                 <flux:table.cell>
-                                    <div class="flex flex-wrap items-center gap-1.5">
+                                    <div class="flex flex-wrap items-center gap-1.5 ps-6 sm:ps-8 pe-2">
                                         @if ($act->action === 'created')
                                             <flux:badge color="emerald" size="sm">{{ __('Created') }}</flux:badge>
                                         @elseif ($act->action === 'updated')
@@ -3038,7 +3040,7 @@ new #[Title('Vault Details')] class extends Component
                                 </flux:table.cell>
 
                                 <flux:table.cell align="end" class="text-xs text-zinc-400">
-                                    {{ $act->created_at->diffForHumans() }}
+                                    <div class="ps-2 pe-6 sm:pe-8">{{ $act->created_at->diffForHumans() }}</div>
                                 </flux:table.cell>
                             </flux:table.row>
                         @endforeach
