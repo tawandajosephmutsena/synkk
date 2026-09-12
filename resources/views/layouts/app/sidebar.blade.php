@@ -30,37 +30,45 @@
             <livewire:team-switcher />
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('MENU')">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
-                    </flux:sidebar.item>
+                <div class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 in-data-flux-sidebar-collapsed-desktop:hidden">
+                    {{ __('MENU') }}
+                </div>
 
-                    <flux:sidebar.item icon="folder" :href="route('vaults.index')" :current="request()->routeIs('vaults.*')" wire:navigate>
-                        {{ __('Vaults') }}
-                    </flux:sidebar.item>
+                <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
+                    {{ __('Dashboard') }}
+                </flux:sidebar.item>
 
-                    <flux:sidebar.item icon="device-phone-mobile" :href="route('devices.index')" :current="request()->routeIs('devices.*')" wire:navigate>
-                        {{ __('Devices & Tokens') }}
-                    </flux:sidebar.item>
-                </flux:sidebar.group>
+                <flux:sidebar.item icon="folder" :href="route('vaults.index')" :current="request()->routeIs('vaults.*')" wire:navigate>
+                    {{ __('Vaults') }}
+                </flux:sidebar.item>
+
+                <flux:sidebar.item icon="device-phone-mobile" :href="route('devices.index')" :current="request()->routeIs('devices.*')" wire:navigate>
+                    {{ __('Devices & Tokens') }}
+                </flux:sidebar.item>
 
                 @if (auth()->user()?->isSuperAdmin())
-                    <flux:sidebar.group :heading="__('PLATFORM')">
-                        <flux:sidebar.item icon="shield-check" :href="route('admin.dashboard')" :current="request()->routeIs('admin.*')" wire:navigate class="text-amber-600 dark:text-amber-400 font-semibold">
-                            {{ __('Super Admin') }}
-                        </flux:sidebar.item>
-                    </flux:sidebar.group>
+                    <div class="pt-4 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 in-data-flux-sidebar-collapsed-desktop:hidden">
+                        {{ __('PLATFORM') }}
+                    </div>
+                    <div class="my-2 border-t border-zinc-200/60 dark:border-white/10 not-in-data-flux-sidebar-collapsed-desktop:hidden"></div>
+
+                    <flux:sidebar.item icon="shield-check" :href="route('admin.dashboard')" :current="request()->routeIs('admin.*')" wire:navigate class="text-amber-600 dark:text-amber-400 font-semibold">
+                        {{ __('Super Admin') }}
+                    </flux:sidebar.item>
                 @endif
 
-                <flux:sidebar.group :heading="__('RESOURCES')">
-                    <flux:sidebar.item icon="book-open-text" :href="route('docs')" :current="request()->routeIs('docs')" wire:navigate>
-                        {{ __('Documentation') }}
-                    </flux:sidebar.item>
+                <div class="pt-4 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 in-data-flux-sidebar-collapsed-desktop:hidden">
+                    {{ __('RESOURCES') }}
+                </div>
+                <div class="my-2 border-t border-zinc-200/60 dark:border-white/10 not-in-data-flux-sidebar-collapsed-desktop:hidden"></div>
 
-                    <flux:sidebar.item icon="folder-git-2" href="https://github.com/tawandajosephmutsena/synkk" target="_blank">
-                        {{ __('Repository') }}
-                    </flux:sidebar.item>
-                </flux:sidebar.group>
+                <flux:sidebar.item icon="book-open-text" :href="route('docs')" :current="request()->routeIs('docs')" wire:navigate>
+                    {{ __('Documentation') }}
+                </flux:sidebar.item>
+
+                <flux:sidebar.item icon="folder-git-2" href="https://github.com/tawandajosephmutsena/synkk" target="_blank">
+                    {{ __('Repository') }}
+                </flux:sidebar.item>
             </flux:sidebar.nav>
 
             <flux:spacer />
