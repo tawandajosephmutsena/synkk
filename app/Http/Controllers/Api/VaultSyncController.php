@@ -443,11 +443,14 @@ class VaultSyncController extends Controller
             ], 403);
         }
 
+        $rawPath = (string) $request->input('path');
+        $path = trim(str_replace('\\', '/', $rawPath), '/');
+        $request->merge(['path' => $path]);
+
         $request->validate([
-            'path' => ['required', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
+            'path' => ['required', 'string'],
         ]);
 
-        $path = trim($request->input('path'), '/');
         if (! $path) {
             return response()->json(['error' => 'Path parameter is required'], 400);
         }

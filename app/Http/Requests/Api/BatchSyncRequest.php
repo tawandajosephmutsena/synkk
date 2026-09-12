@@ -16,8 +16,18 @@ class BatchSyncRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if (! $this->has('changes') && $this->has('items')) {
-            $this->merge(['changes' => $this->input('items')]);
+        $rawChanges = $this->input('changes') ?? $this->input('items') ?? [];
+        if (is_array($rawChanges)) {
+            $normalized = [];
+            foreach ($rawChanges as $change) {
+                if (is_array($change)) {
+                    if (isset($change['path'])) {
+                        $change['path'] = trim(str_replace('\\', '/', (string) $change['path']), '/');
+                    }
+                    $normalized[] = $change;
+                }
+            }
+            $this->merge(['changes' => $normalized]);
         }
     }
 

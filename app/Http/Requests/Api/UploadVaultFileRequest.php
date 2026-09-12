@@ -13,6 +13,15 @@ class UploadVaultFileRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('path')) {
+            $this->merge([
+                'path' => trim(str_replace('\\', '/', (string) $this->input('path')), '/'),
+            ]);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
