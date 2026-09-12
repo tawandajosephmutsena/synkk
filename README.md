@@ -26,11 +26,11 @@ Synkk is the web server and dashboard for a controlled Obsidian sync workflow. T
 Deploy your private Synkk team vault sync server instantly:
 
 <p align="left">
-  <a href="https://railway.app/template?referralCode=synkk">
-    <img src="https://railway.app/button.svg" alt="Deploy on Railway" height="30">
-  </a>
-  <a href="https://render.com/deploy">
+  <a href="https://render.com/deploy?repo=https://github.com/tawandajosephmutsena/synkk">
     <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="30">
+  </a>
+  <a href="https://railway.app/new/template?template=https://github.com/tawandajosephmutsena/synkk">
+    <img src="https://railway.app/button.svg" alt="Deploy on Railway" height="30">
   </a>
   <a href="https://synkk.space/docs">
     <img src="https://elest.io/images/deploy-on-elestio-btn.svg" alt="Deploy on Elestio" height="30">

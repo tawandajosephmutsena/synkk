@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: synkk
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: oregon
+    envVars:
+      - key: APP_NAME
+        value: Synkk Vault Sync
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: DB_DATABASE
+        value: /var/www/html/database/database.sqlite
+      - key: SYNKK_STORAGE_DISK
+        value: local
+      - key: REVERB_SERVER_HOST
+        value: 0.0.0.0
+      - key: REVERB_SERVER_PORT
+        value: "8080"
+      - key: REVERB_SCHEME
+        value: https
+      - key: REVERB_PORT
+        value: "443"
+    disk:
+      name: synkk-data
+      mountPath: /var/www/html/database
+      sizeGB: 1
