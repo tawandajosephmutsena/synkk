@@ -604,7 +604,7 @@ new #[Title('Platform Super Admin')] class extends Component {
                     <div class="rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-3.5 dark:border-emerald-500/20 dark:bg-emerald-950/20">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-semibold text-emerald-800 dark:text-emerald-300">{{ __('Pro Lifetime Deal') }}</span>
-                            <span class="rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-300">$79 LTD</span>
+                            <span class="rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-300">{{ config('synkk.pricing.pro_ltd.currency_symbol', '$') }}{{ number_format((float) config('synkk.pricing.pro_ltd.amount', 79), 0) }} LTD</span>
                         </div>
                         <p class="mt-2 text-xl font-bold text-emerald-900 dark:text-emerald-200">{{ Team::where('plan', 'pro_ltd')->count() }}</p>
                         <p class="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-1">{{ __('15 Vaults • 25 Devices • DLP & ACLs') }}</p>
@@ -613,7 +613,7 @@ new #[Title('Platform Super Admin')] class extends Component {
                     <div class="rounded-xl border border-teal-500/30 bg-teal-50/40 p-3.5 dark:border-teal-500/20 dark:bg-teal-950/20">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-semibold text-teal-800 dark:text-teal-300">{{ __('Synkk Cloud') }}</span>
-                            <span class="rounded bg-teal-200 px-1.5 py-0.5 text-[10px] font-bold text-teal-900 dark:bg-teal-900/60 dark:text-teal-300">$12/mo</span>
+                            <span class="rounded bg-teal-200 px-1.5 py-0.5 text-[10px] font-bold text-teal-900 dark:bg-teal-900/60 dark:text-teal-300">{{ config('synkk.pricing.cloud.currency_symbol', '$') }}{{ number_format((float) config('synkk.pricing.cloud.amount', 12), 0) }}/mo</span>
                         </div>
                         <p class="mt-2 text-xl font-bold text-teal-900 dark:text-teal-200">{{ Team::where('plan', 'cloud')->count() }}</p>
                         <p class="text-[11px] text-teal-700/80 dark:text-teal-400/80 mt-1">{{ __('50 Vaults • 100 Devices • CRDT & RAG') }}</p>
@@ -1435,7 +1435,7 @@ new #[Title('Platform Super Admin')] class extends Component {
                             wire:model="newLicenseTier"
                             class="w-full rounded-xl border border-gray-200/90 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-2xs focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 cursor-pointer"
                         >
-                            <option value="pro_ltd">{{ __('Pro Lifetime Deal ($79 LTD)') }}</option>
+                            <option value="pro_ltd">{{ __('Pro Lifetime Deal (:price LTD)', ['price' => config('synkk.pricing.pro_ltd.currency_symbol', '$').number_format((float) config('synkk.pricing.pro_ltd.amount', 79), 0)]) }}</option>
                             <option value="cloud">{{ __('Synkk Cloud Managed SaaS') }}</option>
                         </select>
                     </div>

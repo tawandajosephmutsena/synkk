@@ -50,6 +50,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Public Pricing Display
+    |--------------------------------------------------------------------------
+    |
+    | Keep the public pricing copy aligned with the currently configured
+    | commercial offers. Cloud checkout creates one product per workspace.
+    |
+    */
+    'pricing' => [
+        'pro_ltd' => [
+            'amount' => 79,
+            'currency_symbol' => '$',
+            'billing_label' => 'one-time lifetime deal',
+        ],
+        'cloud' => [
+            'amount' => 12,
+            'currency_symbol' => '$',
+            'billing_label' => 'per workspace / month',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Subscription Plans & Limitation Matrix
     |--------------------------------------------------------------------------
     |

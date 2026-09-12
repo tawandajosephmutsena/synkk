@@ -110,7 +110,7 @@ To launch your self-hosted Synkk server instantly with zero pre-installed PHP de
 - Edit `.env` or set environment variables in `docker-compose.yml`.
 - Enter your LemonSqueezy license key under Team Settings to activate your Lifetime License.
 
-Support & Docs: https://synkk.ottomate.space
+Support & Docs: https://synkk.space
 TEXT;
 
         $zip->addFromString('synkk-self-hosted/SETUP_GUIDE.md', $guideContent);

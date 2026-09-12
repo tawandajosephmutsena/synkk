@@ -27,7 +27,9 @@ test('super admins can successfully view the super admin dashboard', function ()
         ->get('/admin')
         ->assertOk()
         ->assertSee('Synkk Platform Super Admin')
-        ->assertSee('Multi-Tenant SaaS Control');
+        ->assertSee('Multi-Tenant SaaS Control')
+        ->assertSee('$79 LTD')
+        ->assertSee('$12/mo');
 });
 
 test('super admin livewire component can update a tenant plan', function () {

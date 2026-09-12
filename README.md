@@ -10,8 +10,8 @@
 </p>
 
 <p align="center">
-  <a href="https://synkk.ottomate.space">Website</a> ·
-  <a href="https://synkk.ottomate.space/docs">Docs</a> ·
+  <a href="https://synkk.space">Website</a> ·
+  <a href="https://synkk.space/docs">Docs</a> ·
   <a href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/tag/1.0.0">Plugin v1.0.0</a> ·
   <a href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin">Obsidian plugin repo</a> ·
   <a href="https://ottomate.space">Ottomate</a>
@@ -43,8 +43,8 @@ Synkk is the web server and dashboard for a controlled Obsidian sync workflow. T
 
 ## Launch Links
 
-- Public app: [synkk.ottomate.space](https://synkk.ottomate.space)
-- Documentation: [synkk.ottomate.space/docs](https://synkk.ottomate.space/docs)
+- Public app: [synkk.space](https://synkk.space)
+- Documentation: [synkk.space/docs](https://synkk.space/docs)
 - Web/server repo: [github.com/tawandajosephmutsena/synkk](https://github.com/tawandajosephmutsena/synkk)
 - Obsidian plugin repo: [github.com/tawandajosephmutsena/synk-obsidian-plugin](https://github.com/tawandajosephmutsena/synk-obsidian-plugin)
 - Plugin release: [v1.0.0](https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/tag/1.0.0)

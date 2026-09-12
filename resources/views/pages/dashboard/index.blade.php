@@ -1219,7 +1219,10 @@ new #[Title('Dashboard')] class extends Component {
                         {{ __('Popular LTD') }}
                     </span>
                     <div class="font-bold text-sm text-emerald-950 dark:text-emerald-200">{{ __('Pro Lifetime') }}</div>
-                    <div class="text-xl font-black text-emerald-900 dark:text-white mt-1">$79 <span class="text-xs font-normal text-slate-500">one-time</span></div>
+                    <div class="text-xl font-black text-emerald-900 dark:text-white mt-1">
+                        {{ config('synkk.pricing.pro_ltd.currency_symbol', '$') }}{{ number_format((float) config('synkk.pricing.pro_ltd.amount', 79), 0) }}
+                        <span class="text-xs font-normal text-slate-500">{{ config('synkk.pricing.pro_ltd.billing_label', 'one-time lifetime deal') }}</span>
+                    </div>
                     <div class="text-[11px] text-slate-600 dark:text-zinc-300 mt-2 space-y-1">
                         <div>• <strong>15 Vaults</strong></div>
                         <div>• <strong>25 Connected Devices</strong></div>
@@ -1232,7 +1235,10 @@ new #[Title('Dashboard')] class extends Component {
                 <!-- Cloud SaaS -->
                 <div class="rounded-2xl border border-teal-200 p-4 bg-teal-50/30 dark:border-teal-800/60 dark:bg-teal-950/20">
                     <div class="font-bold text-sm text-teal-950 dark:text-teal-200">{{ __('Cloud Managed') }}</div>
-                    <div class="text-xl font-black text-teal-900 dark:text-white mt-1">$12 <span class="text-xs font-normal text-slate-500">/month</span></div>
+                    <div class="text-xl font-black text-teal-900 dark:text-white mt-1">
+                        {{ config('synkk.pricing.cloud.currency_symbol', '$') }}{{ number_format((float) config('synkk.pricing.cloud.amount', 12), 0) }}
+                        <span class="text-xs font-normal text-slate-500">{{ config('synkk.pricing.cloud.billing_label', 'per workspace / month') }}</span>
+                    </div>
                     <div class="text-[11px] text-slate-600 dark:text-zinc-300 mt-2 space-y-1">
                         <div>• <strong>50+ Vaults</strong></div>
                         <div>• <strong>100 Connected Devices</strong></div>

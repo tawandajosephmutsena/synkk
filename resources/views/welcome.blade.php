@@ -39,6 +39,13 @@
             $storeReady = filled($storeUrl)
                 && filled(config('synkk.lemon_squeezy.store_id'))
                 && filled(config('synkk.lemon_squeezy.product_id'));
+            $proPricing = config('synkk.pricing.pro_ltd', []);
+            $cloudPricing = config('synkk.pricing.cloud', []);
+            $proPrice = ($proPricing['currency_symbol'] ?? '$').number_format((float) ($proPricing['amount'] ?? 79), 0);
+            $cloudPrice = ($cloudPricing['currency_symbol'] ?? '$').number_format((float) ($cloudPricing['amount'] ?? 12), 0);
+            $dodoReady = filled(config('services.dodo.api_key'))
+                && filled(config('services.dodo.cloud_product_id'));
+            $dodoTestMode = config('services.dodo.environment') === 'test_mode';
             $userTeam = auth()->check()
                 ? (auth()->user()->currentTeam ?? auth()->user()->personalTeam() ?? auth()->user()->teams->first())
                 : null;
@@ -1172,8 +1179,8 @@
                                     </th>
                                     <td class="synkk-col-featured">
                                         <div class="synkk-cell-check">
-                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> $0 Free / $79 LTD</strong>
-                                            <span class="synkk-cell-sub">100% free open-source, or $79 lifetime team server (up to 10 users). Zero per-seat tax.</span>
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> $0 Free / {{ $proPrice }} LTD / {{ $cloudPrice }} Cloud</strong>
+                                            <span class="synkk-cell-sub">100% free open-source, {{ $proPrice }} lifetime self-hosted license, or {{ $cloudPrice }} managed workspace subscription. No per-seat tax.</span>
                                         </div>
                                     </td>
                                     <td>
@@ -1494,9 +1501,9 @@
                     <header class="synkk-section-heading">
                         <div>
                             <p class="synkk-eyebrow">07 / Packaging &amp; Pricing Architecture</p>
-                            <h2 id="pricing-heading">Own your team brain. No recurring seat tax.</h2>
+                            <h2 id="pricing-heading">Choose how your team runs Synkk.</h2>
                         </div>
-                        <p>Choose the model that fits your workflow: 100% free open-source self-hosting, lifetime commercial team server ownership, or zero-config managed cloud.</p>
+                        <p>Start free, own a self-hosted commercial license once, or subscribe to zero-config managed cloud for {{ $cloudPrice }} {{ $cloudPricing['billing_label'] ?? 'per workspace / month' }}.</p>
                     </header>
 
                     <div class="synkk-pricing-grid">
@@ -1528,10 +1535,10 @@
                             </div>
                             <div class="synkk-price-heading">
                                 <span>SELF-HOSTED COMMERCIAL LICENSE</span>
-                                <p><strong>$79</strong><small>one-time lifetime deal (launch phase $59–$99)</small></p>
+                                <p><strong>{{ $proPrice }}</strong><small>{{ $proPricing['billing_label'] ?? 'one-time lifetime deal' }}</small></p>
                             </div>
                             <div class="synkk-price-commercial-toggle">
-                                <span>Standard commercial: <strong>$8</strong> / user / month or <strong>$79</strong> / year / seat</span>
+                                <span>AppSumo launch offer: <strong>{{ $proPrice }}</strong> once · no subscription</span>
                             </div>
                             <h3>Synkk Pro / Team</h3>
                             <p class="synkk-price-subtitle">Self-hosted commercial server with full governance (up to 10 users).</p>
@@ -1556,7 +1563,7 @@
                         <article class="synkk-pricing-card synkk-pricing-card--cloud">
                             <div class="synkk-price-heading">
                                 <span>ZERO-CONFIG MANAGED SAAS</span>
-                                <p><strong>$12</strong><small>/ user / month</small></p>
+                                <p><strong>{{ $cloudPrice }}</strong><small>{{ $cloudPricing['billing_label'] ?? 'per workspace / month' }}</small></p>
                             </div>
                             <h3>Synkk Cloud</h3>
                             <p class="synkk-price-subtitle">For teams that love Obsidian but do not want to manage Docker or servers.</p>
@@ -1569,10 +1576,26 @@
                                 <li>99.99% uptime SLA &amp; dedicated priority cloud support</li>
                                 <li>Multi-device sync with instant 2-second QR pairing</li>
                             </ul>
-                            @if (Route::has('register'))
-                                <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Start Cloud Workspace <span aria-hidden="true">→</span></a>
+                            @if ($dodoReady && $userTeam)
+                                <form method="POST" action="{{ route('billing.dodo.checkout', ['current_team' => $userTeam->slug]) }}" class="mt-auto grid gap-2">
+                                    @csrf
+                                    <button type="submit" class="synkk-button synkk-button--ink">
+                                        Subscribe with Dodo
+                                        @if ($dodoTestMode)
+                                            <span class="synkk-roadmap-pill">Test mode</span>
+                                        @endif
+                                        <span aria-hidden="true">→</span>
+                                    </button>
+                                    @if ($dodoTestMode)
+                                        <small class="text-center text-xs text-amber-700">Test checkout enabled — no live charge.</small>
+                                    @endif
+                                </form>
+                            @elseif (auth()->check())
+                                <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--ink">Open Cloud billing <span aria-hidden="true">→</span></a>
+                            @elseif (Route::has('register'))
+                                <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Create workspace to subscribe <span aria-hidden="true">→</span></a>
                             @else
-                                <a href="{{ route('login') }}" class="synkk-button synkk-button--ink">Start Cloud Workspace <span aria-hidden="true">→</span></a>
+                                <a href="{{ route('login') }}" class="synkk-button synkk-button--ink">Log in to subscribe <span aria-hidden="true">→</span></a>
                             @endif
                         </article>
                     </div>
@@ -1604,7 +1627,7 @@
                         </div>
                     </div>
 
-                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public open-source plugin and server code. Lemon Squeezy and AppSumo manage commercial licenses. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline hover:text-zinc-900">book-it.ottomate.space</a>.</p>
+                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public open-source plugin and server code. Dodo Payments handles monthly Cloud subscriptions, while AppSumo manages the one-time Pro lifetime license. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline hover:text-zinc-900">book-it.ottomate.space</a>.</p>
                 </div>
             </section>
 
@@ -1781,11 +1804,11 @@
                     </details>
                     <details>
                         <summary>
-                            <span>04</span>When does the $79 commercial license checkout open?
+                            <span>04</span>When does the {{ $proPrice }} commercial license checkout open?
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>After the public server package, Lemon Squeezy and AppSumo checkout flows, and license activation screens are verified end to end. Until then, the page does not accept payment.</p>
+                            <p>The {{ $proPrice }} Pro lifetime license uses the AppSumo launch flow. Synkk Cloud subscriptions use Dodo Payments at {{ $cloudPrice }} {{ $cloudPricing['billing_label'] ?? 'per workspace / month' }}. Each checkout is shown only when its required payment configuration is ready.</p>
                         </div>
                     </details>
                     <details>
