@@ -21,6 +21,42 @@
 
 Synkk is the web server and dashboard for a controlled Obsidian sync workflow. The Foundation release is built for people who want a private team vault, path-aware access, reliable whole-file sync, clear version history, and a safer launch path before the advanced sync roadmap lands.
 
+## ⚡ 1-Click Deployment
+
+Deploy your private Synkk team vault sync server instantly:
+
+<p align="left">
+  <a href="https://railway.app/template?referralCode=synkk">
+    <img src="https://railway.app/button.svg" alt="Deploy on Railway" height="30">
+  </a>
+  <a href="https://render.com/deploy">
+    <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="30">
+  </a>
+  <a href="https://synkk.space/docs">
+    <img src="https://elest.io/images/deploy-on-elestio-btn.svg" alt="Deploy on Elestio" height="30">
+  </a>
+</p>
+
+### 🚀 1-Line Turnkey Installer (Ubuntu, Debian, AlmaLinux, Rocky, Any VPS)
+
+Run this single command on your server to automatically install Docker, provision Let's Encrypt SSL/TLS via Caddy, configure queue workers and WebSockets, and bootstrap your superadmin account in under 3 minutes:
+
+```bash
+curl -sSL https://synkk.space/install.sh | bash
+```
+
+### 🐳 Run With Docker Compose
+
+```bash
+# 1. Download production compose file & Caddy configuration
+curl -sSL https://raw.githubusercontent.com/tawandajosephmutsena/synkk/main/docker-compose.prod.yml -o docker-compose.yml
+curl -sSL https://raw.githubusercontent.com/tawandajosephmutsena/synkk/main/docker/Caddyfile -o Caddyfile
+curl -sSL https://raw.githubusercontent.com/tawandajosephmutsena/synkk/main/.env.production.example -o .env
+
+# 2. Launch production container stack with automated HTTPS
+docker compose up -d
+```
+
 ## Product Screens
 
 | Dashboard | Markdown Editor |
