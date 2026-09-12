@@ -69,17 +69,7 @@ class BatchSyncRequest extends FormRequest
             $envelope = null;
 
             if ($action === 'upload') {
-                try {
-                    $envelope = VaultContentEnvelope::fromValidated($change, $vault);
-                } catch (ValidationException $e) {
-                    $errors = [];
-                    foreach ($e->errors() as $key => $messages) {
-                        $errors["changes.{$index}.{$key}"] = $messages;
-                        $errors[$key] = $messages;
-                    }
-
-                    throw ValidationException::withMessages($errors);
-                }
+                $envelope = VaultContentEnvelope::fromValidated($change, $vault);
             }
 
             $items[] = [
