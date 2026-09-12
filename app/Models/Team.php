@@ -204,6 +204,26 @@ class Team extends Model
     }
 
     /**
+     * Get all notifications for this team.
+     *
+     * @return HasMany<TeamNotification, $this>
+     */
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(TeamNotification::class);
+    }
+
+    /**
+     * Get all messages for this team.
+     *
+     * @return HasMany<TeamMessage, $this>
+     */
+    public function teamMessages(): HasMany
+    {
+        return $this->hasMany(TeamMessage::class);
+    }
+
+    /**
      * Get all device sync tokens for this team.
      *
      * @return HasMany<DeviceToken, $this>

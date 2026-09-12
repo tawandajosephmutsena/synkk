@@ -2,6 +2,8 @@
 
 use App\Models\DeviceToken;
 use App\Models\Team;
+use App\Models\TeamMessage;
+use App\Models\TeamNotification;
 use App\Models\Vault;
 use App\Models\VaultChangeLog;
 use App\Models\VaultFile;
@@ -23,6 +25,7 @@ new #[Title('Dashboard')] class extends Component {
     public string $activityFilter = 'all';
     public string $activitySearch = '';
     public string $upgradeLicenseKey = '';
+    public string $newMessageText = '';
 
     public function redeemLicenseKeyInDashboard(): void
     {
@@ -401,6 +404,252 @@ new #[Title('Dashboard')] class extends Component {
 
         return app(PlanService::class)->getUsageSummary($this->team);
     }
+
+    public function sendTeamMessage(): void
+    {
+        $team = $this->team;
+        if (! $team) {
+            return;
+        }
+
+        $this->validate([
+            'newMessageText' => ['required', 'string', 'min:1', 'max:1000'],
+        ]);
+
+        TeamMessage::create([
+            'team_id' => $team->id,
+            'user_id' => Auth::id(),
+            'body' => trim($this->newMessageText),
+            'type' => 'chat',
+        ]);
+
+        $this->newMessageText = '';
+        Flux::toast(variant: 'success', text: __('Message posted to team.'));
+    }
+
+    public function markAllNotificationsAsRead(): void
+    {
+        $team = $this->team;
+        if (! $team) {
+            return;
+        }
+
+        TeamNotification::forTeam($team->id)->unread()->update(['read_at' => now()]);
+        Flux::toast(variant: 'success', text: __('All notifications marked as read.'));
+    }
+
+    public function markAllMessagesAsRead(): void
+    {
+        $team = $this->team;
+        if (! $team) {
+            return;
+        }
+
+        TeamMessage::forTeam($team->id)->unread()->update(['read_at' => now()]);
+        Flux::toast(variant: 'success', text: __('All messages marked as read.'));
+    }
+
+    public function markAllAsRead(): void
+    {
+        $team = $this->team;
+        if (! $team) {
+            return;
+        }
+
+        TeamNotification::forTeam($team->id)->unread()->update(['read_at' => now()]);
+        TeamMessage::forTeam($team->id)->unread()->update(['read_at' => now()]);
+        Flux::toast(variant: 'success', text: __('All activity alerts and messages marked as read.'));
+    }
+
+    public function dismissNotification(int $id): void
+    {
+        $team = $this->team;
+        if (! $team) {
+            return;
+        }
+
+        $notification = TeamNotification::where('team_id', $team->id)->find($id);
+        if ($notification) {
+            $notification->markAsRead();
+            Flux::toast(variant: 'success', text: __('Notification dismissed.'));
+        }
+    }
+
+    #[Computed]
+    public function notifications(): Collection
+    {
+        if (! $this->team) {
+            return collect();
+        }
+
+        $this->syncRealNotifications();
+
+        return TeamNotification::where('team_id', $this->team->id)
+            ->with('user')
+            ->latest('created_at')
+            ->limit(20)
+            ->get();
+    }
+
+    #[Computed]
+    public function unreadNotificationsCount(): int
+    {
+        if (! $this->team) {
+            return 0;
+        }
+
+        $this->syncRealNotifications();
+
+        return TeamNotification::where('team_id', $this->team->id)
+            ->unread()
+            ->count();
+    }
+
+    #[Computed]
+    public function teamMessages(): Collection
+    {
+        if (! $this->team) {
+            return collect();
+        }
+
+        $this->syncRealMessages();
+
+        return TeamMessage::where('team_id', $this->team->id)
+            ->with('user')
+            ->latest('created_at')
+            ->limit(25)
+            ->get();
+    }
+
+    #[Computed]
+    public function unreadMessagesCount(): int
+    {
+        if (! $this->team) {
+            return 0;
+        }
+
+        $this->syncRealMessages();
+
+        return TeamMessage::where('team_id', $this->team->id)
+            ->unread()
+            ->count();
+    }
+
+    /**
+     * Synchronize real system events into notifications for the active team.
+     */
+    protected function syncRealNotifications(): void
+    {
+        $team = $this->team;
+        if (! $team) {
+            return;
+        }
+
+        $vaultIds = $this->vaults->pluck('id');
+
+        // 1. DLP Secrets detected
+        if ($vaultIds->isNotEmpty()) {
+            $secrets = VaultChangeLog::whereIn('vault_id', $vaultIds)
+                ->where('has_secrets', true)
+                ->latest('created_at')
+                ->limit(5)
+                ->get();
+
+            foreach ($secrets as $secret) {
+                $base = basename($secret->path);
+                $title = "DLP Security Alert: Secrets in {$base}";
+                $exists = TeamNotification::where('team_id', $team->id)
+                    ->where('title', $title)
+                    ->exists();
+
+                if (! $exists) {
+                    TeamNotification::create([
+                        'team_id' => $team->id,
+                        'user_id' => $secret->user_id,
+                        'type' => 'security',
+                        'title' => $title,
+                        'message' => "Potential credential or secret key detected in note {$secret->path}.",
+                        'created_at' => $secret->created_at,
+                    ]);
+                }
+            }
+
+            // 2. Conflicts generated
+            $conflicts = VaultChangeLog::whereIn('vault_id', $vaultIds)
+                ->where('action', 'conflict')
+                ->latest('created_at')
+                ->limit(3)
+                ->get();
+
+            foreach ($conflicts as $conflict) {
+                $base = basename($conflict->path);
+                $title = "Sync Conflict: {$base}";
+                $exists = TeamNotification::where('team_id', $team->id)
+                    ->where('title', $title)
+                    ->exists();
+
+                if (! $exists) {
+                    TeamNotification::create([
+                        'team_id' => $team->id,
+                        'user_id' => $conflict->user_id,
+                        'type' => 'sync',
+                        'title' => $title,
+                        'message' => "A sync conflict copy was created for {$conflict->path} to protect local edits.",
+                        'created_at' => $conflict->created_at,
+                    ]);
+                }
+            }
+        }
+
+        // 3. Paired Devices
+        $devices = DeviceToken::where('team_id', $team->id)
+            ->latest('created_at')
+            ->limit(5)
+            ->get();
+
+        foreach ($devices as $device) {
+            $name = $device->name ?: 'Obsidian Client';
+            $title = "Device Connected: {$name}";
+            $exists = TeamNotification::where('team_id', $team->id)
+                ->where('title', $title)
+                ->exists();
+
+            if (! $exists) {
+                $platform = $device->client_platform ?: 'device';
+                $vaultName = $this->vaults->first()?->name ?? 'Team Vault';
+                TeamNotification::create([
+                    'team_id' => $team->id,
+                    'user_id' => $device->user_id,
+                    'type' => 'device',
+                    'title' => $title,
+                    'message' => "Obsidian {$platform} paired and authenticated with {$vaultName}.",
+                    'created_at' => $device->created_at,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Ensure welcome or initial system message exists for the team.
+     */
+    protected function syncRealMessages(): void
+    {
+        $team = $this->team;
+        if (! $team) {
+            return;
+        }
+
+        if (TeamMessage::where('team_id', $team->id)->doesntExist()) {
+            TeamMessage::create([
+                'team_id' => $team->id,
+                'user_id' => null,
+                'author_name' => 'Synkk Engine',
+                'body' => __('Welcome to your team vault! All sync channels, device tokens, and path permissions are active.'),
+                'type' => 'system',
+                'created_at' => now(),
+            ]);
+        }
+    }
 }; ?>
 
 <div x-data="{ drawerOpen: false, drawerTab: 'notifications' }" class="flex h-full w-full flex-1 flex-col gap-7 font-sans text-slate-900 dark:text-slate-100">
@@ -426,10 +675,15 @@ new #[Title('Dashboard')] class extends Component {
             <button
                 type="button"
                 @click="drawerOpen = true; drawerTab = 'messages'"
-                class="flex size-10 items-center justify-center rounded-full border border-gray-200/90 bg-white text-gray-600 shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-colors hover:bg-gray-50 hover:text-gray-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 cursor-pointer"
+                class="relative flex size-10 items-center justify-center rounded-full border border-gray-200/90 bg-white text-gray-600 shadow-[0_2px_6px_rgba(0,0,0,0.02)] transition-colors hover:bg-gray-50 hover:text-gray-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 cursor-pointer"
                 title="{{ __('Open Messages & Activity') }}"
             >
                 <flux:icon icon="envelope" class="size-4" />
+                @if ($this->unreadMessagesCount > 0)
+                    <span class="absolute -top-1 -right-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[9px] font-bold text-white ring-2 ring-white dark:ring-zinc-900">
+                        {{ $this->unreadMessagesCount > 9 ? '9+' : $this->unreadMessagesCount }}
+                    </span>
+                @endif
             </button>
 
             <!-- Notification Bell -->
@@ -441,9 +695,13 @@ new #[Title('Dashboard')] class extends Component {
             >
                 <flux:icon icon="bell" class="size-4" />
                 @if ($this->secretAlertsCount > 0)
-                    <span class="absolute top-2 right-2 size-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900 animate-pulse"></span>
-                @else
-                    <span class="absolute top-2 right-2 size-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900"></span>
+                    <span class="absolute -top-1 -right-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-white ring-2 ring-white dark:ring-zinc-900 animate-pulse">
+                        {{ $this->unreadNotificationsCount > 0 ? ($this->unreadNotificationsCount > 9 ? '9+' : $this->unreadNotificationsCount) : '!' }}
+                    </span>
+                @elseif ($this->unreadNotificationsCount > 0)
+                    <span class="absolute -top-1 -right-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[9px] font-bold text-white ring-2 ring-white dark:ring-zinc-900">
+                        {{ $this->unreadNotificationsCount > 9 ? '9+' : $this->unreadNotificationsCount }}
+                    </span>
                 @endif
             </button>
 
@@ -1463,7 +1721,9 @@ new #[Title('Dashboard')] class extends Component {
                     >
                         <flux:icon icon="bell" class="size-3.5 text-emerald-500" />
                         <span>{{ __('Notifications') }}</span>
-                        <span class="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 text-[10px] font-bold">3</span>
+                        @if ($this->unreadNotificationsCount > 0)
+                            <span class="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 text-[10px] font-bold">{{ $this->unreadNotificationsCount }}</span>
+                        @endif
                     </button>
                     <button
                         @click="drawerTab = 'messages'"
@@ -1472,7 +1732,9 @@ new #[Title('Dashboard')] class extends Component {
                     >
                         <flux:icon icon="envelope" class="size-3.5 text-emerald-600 dark:text-emerald-400" />
                         <span>{{ __('Messages') }}</span>
-                        <span class="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 text-[10px] font-bold">2</span>
+                        @if ($this->unreadMessagesCount > 0)
+                            <span class="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 text-[10px] font-bold">{{ $this->unreadMessagesCount }}</span>
+                        @endif
                     </button>
                 </div>
 
@@ -1480,73 +1742,129 @@ new #[Title('Dashboard')] class extends Component {
                 <div class="flex-1 overflow-y-auto p-4 space-y-3">
                     <!-- Notifications Tab -->
                     <div x-show="drawerTab === 'notifications'" class="space-y-3">
-                        <div class="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/10 flex items-start gap-3">
-                            <div class="size-8 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0 text-amber-600 dark:text-amber-400">
-                                <flux:icon icon="shield-exclamation" class="size-4" />
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-200">
-                                    <span>DLP Vault Security Alert</span>
-                                    <span class="text-[10px] text-slate-400 font-normal">10m ago</span>
+                        @forelse ($this->notifications as $notif)
+                            @php
+                                $isUnread = ! $notif->isRead();
+                                $borderClass = match($notif->level) {
+                                    'danger' => 'border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/10',
+                                    'warning' => 'border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10',
+                                    'success' => 'border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10',
+                                    default => 'border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50',
+                                };
+                                $iconColor = match($notif->level) {
+                                    'danger' => 'text-amber-600 dark:text-amber-400 bg-amber-500/20',
+                                    'warning' => 'text-amber-600 dark:text-amber-400 bg-amber-500/20',
+                                    default => 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/20',
+                                };
+                                $iconName = match($notif->type) {
+                                    'security_dlp' => 'shield-exclamation',
+                                    'device_paired' => 'device-phone-mobile',
+                                    'conflict' => 'exclamation-triangle',
+                                    'vault_snapshot' => 'arrow-path',
+                                    default => 'bell',
+                                };
+                            @endphp
+                            <div class="p-3.5 rounded-xl border {{ $borderClass }} flex items-start gap-3 relative group transition-all">
+                                <div class="size-8 rounded-lg {{ $iconColor }} flex items-center justify-center shrink-0">
+                                    <flux:icon :icon="$iconName" class="size-4" />
                                 </div>
-                                <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5">Potential AWS Secret Access Key detected in note <code class="font-mono text-[11px] bg-amber-500/20 px-1 rounded">Config/env.md</code>.</p>
-                            </div>
-                        </div>
-
-                        <div class="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 flex items-start gap-3">
-                            <div class="size-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
-                                <flux:icon icon="device-phone-mobile" class="size-4" />
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
-                                    <span>New Device Paired</span>
-                                    <span class="text-[10px] text-slate-400 font-normal">1h ago</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between text-xs font-bold {{ $notif->level === 'danger' ? 'text-amber-900 dark:text-amber-200' : 'text-slate-900 dark:text-white' }}">
+                                        <span class="truncate pr-2">{{ $notif->title }}</span>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            @if ($isUnread)
+                                                <span class="size-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                                            @endif
+                                            <span class="text-[10px] text-slate-400 font-normal">{{ $notif->created_at->diffForHumans(short: true) }}</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5 leading-relaxed">{{ $notif->body }}</p>
+                                    <div class="mt-2 flex items-center justify-between">
+                                        @if ($notif->action_url)
+                                            <a href="{{ $notif->action_url }}" class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1">
+                                                <span>{{ __('View details') }}</span>
+                                                <flux:icon icon="arrow-up-right" class="size-3" />
+                                            </a>
+                                        @else
+                                            <span></span>
+                                        @endif
+                                        @if ($isUnread)
+                                            <button
+                                                wire:click="dismissNotification({{ $notif->id }})"
+                                                class="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
+                                                title="{{ __('Mark as read') }}"
+                                            >
+                                                {{ __('Dismiss') }}
+                                            </button>
+                                        @endif
+                                    </div>
                                 </div>
-                                <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5">Obsidian Desktop (MacBook Pro) established an authenticated sync session with Demo Vault.</p>
                             </div>
-                        </div>
-
-                        <div class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 flex items-start gap-3">
-                            <div class="size-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
-                                <flux:icon icon="arrow-path" class="size-4" />
+                        @empty
+                            <div class="py-12 text-center text-slate-400 dark:text-zinc-500">
+                                <flux:icon icon="bell" class="size-8 mx-auto mb-2 opacity-40 text-slate-400" />
+                                <p class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ __('No notifications') }}</p>
+                                <p class="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">{{ __('You are all caught up with your team vault events.') }}</p>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
-                                    <span>Vault Revision Snapshot</span>
-                                    <span class="text-[10px] text-slate-400 font-normal">3h ago</span>
-                                </div>
-                                <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5">76 markdown notes snapshot v76 backed up to team-managed storage.</p>
-                            </div>
-                        </div>
+                        @endforelse
                     </div>
 
                     <!-- Messages Tab -->
                     <div x-show="drawerTab === 'messages'" class="space-y-3">
-                        <div class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 flex items-start gap-3">
-                            <div class="size-8 rounded-full bg-[#0D3B29] text-emerald-200 font-bold text-xs flex items-center justify-center shrink-0">
-                                {{ auth()->user()->initials() }}
+                        <!-- Message Composer -->
+                        <form wire:submit="sendTeamMessage" class="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/50 space-y-2">
+                            <textarea
+                                wire:model="newMessageText"
+                                rows="2"
+                                placeholder="{{ __('Post a message to team...') }}"
+                                class="w-full text-xs rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
+                                required
+                            ></textarea>
+                            @error('newMessageText')
+                                <p class="text-[11px] text-rose-500">{{ $message }}</p>
+                            @enderror
+                            <div class="flex items-center justify-between pt-0.5">
+                                <span class="text-[10px] text-slate-400 truncate">{{ __('Visible to team members') }}</span>
+                                <button
+                                    type="submit"
+                                    class="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#0D3B29] dark:bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                                >
+                                    <flux:icon icon="paper-airplane" class="size-3" />
+                                    <span>{{ __('Post') }}</span>
+                                </button>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
-                                    <span>{{ auth()->user()->name }}</span>
-                                    <span class="text-[10px] text-slate-400 font-normal">Just now</span>
-                                </div>
-                                <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5">Updated <span class="font-medium text-emerald-600 dark:text-emerald-400">START HERE.md</span> with new architectural guidelines and graph view links.</p>
-                            </div>
-                        </div>
+                        </form>
 
-                        <div class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 flex items-start gap-3">
-                            <div class="size-8 rounded-full bg-emerald-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                                SY
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
-                                    <span>Synkk Engine</span>
-                                    <span class="text-[10px] text-slate-400 font-normal">25m ago</span>
+                        @forelse ($this->teamMessages as $msg)
+                            @php
+                                $isSystem = $msg->type === 'system' || ! $msg->user;
+                                $senderName = $isSystem ? 'Synkk Engine' : $msg->user->name;
+                                $senderInitials = $isSystem ? 'SY' : $msg->user->initials();
+                            @endphp
+                            <div class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 flex items-start gap-3">
+                                <div class="size-8 rounded-full {{ $isSystem ? 'bg-emerald-700 text-white' : 'bg-[#0D3B29] text-emerald-200' }} font-bold text-xs flex items-center justify-center shrink-0">
+                                    {{ $senderInitials }}
                                 </div>
-                                <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5">All 76 vault files in sync across 1 device with 0 active conflicts.</p>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                                        <span class="truncate pr-2">{{ $senderName }}</span>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            @if (! $msg->isRead())
+                                                <span class="size-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                                            @endif
+                                            <span class="text-[10px] text-slate-400 font-normal">{{ $msg->created_at->diffForHumans(short: true) }}</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-slate-600 dark:text-zinc-300 mt-0.5 leading-relaxed break-words">{{ $msg->body }}</p>
+                                </div>
                             </div>
-                        </div>
+                        @empty
+                            <div class="py-12 text-center text-slate-400 dark:text-zinc-500">
+                                <flux:icon icon="envelope" class="size-8 mx-auto mb-2 opacity-40 text-slate-400" />
+                                <p class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ __('No team messages yet') }}</p>
+                                <p class="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">{{ __('Post an update above to start a conversation.') }}</p>
+                            </div>
+                        @endforelse
                     </div>
                 </div>
 
@@ -1555,7 +1873,7 @@ new #[Title('Dashboard')] class extends Component {
                     <button @click="drawerOpen = false" class="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300 cursor-pointer">
                         {{ __('Close') }}
                     </button>
-                    <button @click="drawerOpen = false" class="rounded-lg bg-[#0D3B29] dark:bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors cursor-pointer">
+                    <button wire:click="markAllAsRead" class="rounded-lg bg-[#0D3B29] dark:bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors cursor-pointer">
                         {{ __('Mark All as Read') }}
                     </button>
                 </div>
