@@ -108,8 +108,22 @@ new #[Title('Vault Details')] class extends Component
 
     public string $editDefaultPermission = 'read_write';
 
-    // Search
+    // Search & Explorer
     public string $fileSearch = '';
+
+    public string $fileViewMode = 'list'; // 'list', 'grid'
+
+    public string $fileCategory = 'all'; // 'all', 'markdown', 'canvas', 'attachments', 'conflicts'
+
+    public string $fileSort = 'recent'; // 'recent', 'oldest', 'name_asc', 'name_desc', 'size_desc', 'size_asc'
+
+    public ?int $inspectedFileId = null;
+
+    public ?int $renamingFileId = null;
+
+    public string $renamingNewPath = '';
+
+    public ?int $deletingFileId = null;
 
     public string $editorSearch = '';
 
@@ -767,6 +781,335 @@ new #[Title('Vault Details')] class extends Component
         ])->deleteFileAfterSend(true);
     }
 
+    public function duplicateFile(int $fileId, SyncUploadAction $uploader): void
+    {
+        $file = $this->vault->files()
+            ->where('is_deleted', false)
+            ->findOrFail($fileId);
+
+        $user = Auth::user();
+        $dir = pathinfo($file->path, PATHINFO_DIRNAME);
+        $filename = pathinfo($file->path, PATHINFO_FILENAME);
+        $ext = pathinfo($file->path, PATHINFO_EXTENSION);
+        $dirPrefix = ($dir === '.' || $dir === '') ? '' : $dir.'/';
+
+        $copyIndex = 1;
+        do {
+            $suffix = $copyIndex === 1 ? ' (Copy)' : " (Copy {$copyIndex})";
+            $copyPath = $dirPrefix.$filename.$suffix.($ext ? '.'.$ext : '');
+            $exists = $this->vault->files()
+                ->where('is_deleted', false)
+                ->whereRaw('LOWER(path) = ?', [Str::lower($copyPath)])
+                ->exists();
+            $copyIndex++;
+        } while ($exists);
+
+        if ($this->vault->permissionForPath($user, $copyPath) !== 'read_write') {
+            Flux::toast(variant: 'danger', text: __('You do not have write permission to duplicate files in this folder.'));
+
+            return;
+        }
+
+        $contents = $file->getContents() ?? '';
+
+        $uploader->execute(
+            vault: $this->vault,
+            user: $user,
+            deviceName: 'Web Explorer',
+            path: $copyPath,
+            contents: $contents,
+            baseVersion: 0,
+        );
+
+        $duplicatedFile = $this->vault->files()->where('path', $copyPath)->first();
+        if ($duplicatedFile && $duplicatedFile->isMarkdown()) {
+            $this->selectFile($duplicatedFile->id);
+        }
+
+        Flux::toast(variant: 'success', text: __('Note duplicated as ":path".', ['path' => $copyPath]));
+    }
+
+    public function openRenameModal(int $fileId): void
+    {
+        $file = $this->vault->files()
+            ->where('is_deleted', false)
+            ->findOrFail($fileId);
+
+        $this->renamingFileId = $file->id;
+        $this->renamingNewPath = $file->path;
+        $this->resetValidation('renamingNewPath');
+        $this->dispatch('modal-show', name: 'rename-file-modal');
+    }
+
+    public function executeRename(SyncUploadAction $uploader): void
+    {
+        if (! $this->renamingFileId) {
+            return;
+        }
+
+        $file = $this->vault->files()
+            ->where('is_deleted', false)
+            ->findOrFail($this->renamingFileId);
+
+        $user = Auth::user();
+        if ($this->vault->permissionForPath($user, $file->path) !== 'read_write') {
+            Flux::toast(variant: 'danger', text: __('You do not have permission to rename this note.'));
+
+            return;
+        }
+
+        $this->validate([
+            'renamingNewPath' => ['required', 'string', 'max:500'],
+        ]);
+
+        $cleanNewPath = str_replace('\\', '/', trim($this->renamingNewPath, '/'));
+        if ($file->isMarkdown() && ! str_ends_with(strtolower($cleanNewPath), '.md')) {
+            $cleanNewPath .= '.md';
+        }
+
+        $pathSegments = explode('/', $cleanNewPath);
+        $hasUnsafeSegment = collect($pathSegments)->contains(fn (string $segment): bool => $segment === '' || $segment === '.' || $segment === '..');
+
+        if ($hasUnsafeSegment || preg_match('/[\x00-\x1F\x7F]/u', $cleanNewPath) === 1) {
+            $this->addError('renamingNewPath', __('Use a relative vault path without empty, dot, or parent-directory segments.'));
+
+            return;
+        }
+
+        if ($cleanNewPath === $file->path) {
+            $this->dispatch('modal-close', name: 'rename-file-modal');
+
+            return;
+        }
+
+        $exists = $this->vault->files()
+            ->where('is_deleted', false)
+            ->where('id', '!=', $file->id)
+            ->whereRaw('LOWER(path) = ?', [Str::lower($cleanNewPath)])
+            ->exists();
+
+        if ($exists) {
+            $this->addError('renamingNewPath', __('A note or file already exists at this destination path.'));
+
+            return;
+        }
+
+        if ($this->vault->permissionForPath($user, $cleanNewPath) !== 'read_write') {
+            Flux::toast(variant: 'danger', text: __('You do not have write permission for the destination path.'));
+
+            return;
+        }
+
+        $contents = $file->getContents() ?? '';
+
+        $uploader->execute(
+            vault: $this->vault,
+            user: $user,
+            deviceName: 'Web Explorer',
+            path: $cleanNewPath,
+            contents: $contents,
+            baseVersion: 0,
+        );
+
+        $file->update(['is_deleted' => true]);
+        VaultChangeLog::create([
+            'vault_id' => $this->vault->id,
+            'user_id' => $user->id,
+            'device_name' => 'Web Explorer',
+            'path' => $file->path,
+            'action' => 'deleted',
+            'version' => $this->vault->latestVersion() + 1,
+            'size' => 0,
+        ]);
+
+        if ($this->activeFileId === $file->id) {
+            $newFile = $this->vault->files()->where('path', $cleanNewPath)->first();
+            if ($newFile) {
+                $this->selectFile($newFile->id);
+            }
+        }
+
+        $oldPath = $file->path;
+        $this->reset('renamingFileId', 'renamingNewPath');
+        $this->dispatch('modal-close', name: 'rename-file-modal');
+        Flux::toast(variant: 'success', text: __('Renamed ":old" to ":new".', ['old' => $oldPath, 'new' => $cleanNewPath]));
+    }
+
+    public function confirmDeleteFile(int $fileId): void
+    {
+        $file = $this->vault->files()
+            ->where('is_deleted', false)
+            ->findOrFail($fileId);
+
+        $this->deletingFileId = $file->id;
+        $this->dispatch('modal-show', name: 'delete-file-modal');
+    }
+
+    public function executeDeleteFile(): void
+    {
+        if (! $this->deletingFileId) {
+            return;
+        }
+
+        $file = $this->vault->files()
+            ->where('is_deleted', false)
+            ->findOrFail($this->deletingFileId);
+
+        $user = Auth::user();
+        if ($this->vault->permissionForPath($user, $file->path) !== 'read_write') {
+            Flux::toast(variant: 'danger', text: __('You do not have permission to delete this note.'));
+
+            return;
+        }
+
+        $file->update(['is_deleted' => true]);
+
+        VaultChangeLog::create([
+            'vault_id' => $this->vault->id,
+            'user_id' => $user->id,
+            'device_name' => 'Web Explorer',
+            'path' => $file->path,
+            'action' => 'deleted',
+            'version' => $this->vault->latestVersion() + 1,
+            'size' => 0,
+        ]);
+
+        if ($this->activeFileId === $file->id) {
+            $this->activeFileId = null;
+            $this->activeFile = null;
+            $this->editorContent = '';
+            $this->editorTitle = '';
+        }
+
+        if ($this->inspectedFileId === $file->id) {
+            $this->inspectedFileId = null;
+            $this->dispatch('modal-close', name: 'inspect-file-modal');
+        }
+
+        $deletedPath = $file->path;
+        $this->reset('deletingFileId');
+        $this->dispatch('modal-close', name: 'delete-file-modal');
+        Flux::toast(variant: 'success', text: __('Note ":path" deleted.', ['path' => $deletedPath]));
+    }
+
+    public function downloadFile(int $fileId): BinaryFileResponse|Response
+    {
+        $file = $this->vault->files()
+            ->where('is_deleted', false)
+            ->findOrFail($fileId);
+
+        $user = Auth::user();
+        if ($this->vault->permissionForPath($user, $file->path) === 'hidden') {
+            abort(403);
+        }
+
+        if (! $file->existsOnDisk()) {
+            Flux::toast(variant: 'danger', text: __('File content is not stored on disk.'));
+
+            return response()->noContent();
+        }
+
+        $downloadFilename = basename($file->path);
+
+        return response()->download($file->disk_path, $downloadFilename);
+    }
+
+    public function inspectFile(int $fileId): void
+    {
+        $file = $this->vault->files()
+            ->where('is_deleted', false)
+            ->with(['lastModifier', 'versions'])
+            ->find($fileId);
+
+        if ($file) {
+            $this->inspectedFileId = $file->id;
+            $this->dispatch('modal-show', name: 'inspect-file-modal');
+        }
+    }
+
+    public function copyWikilinkNotice(string $filename): void
+    {
+        Flux::toast(variant: 'success', text: __("Copied [[:filename]] to clipboard.", ['filename' => $filename]));
+    }
+
+    #[Computed]
+    public function inspectedFile(): ?VaultFile
+    {
+        if (! $this->inspectedFileId) {
+            return null;
+        }
+
+        return $this->vault->files()
+            ->where('is_deleted', false)
+            ->with(['lastModifier', 'versions'])
+            ->find($this->inspectedFileId);
+    }
+
+    #[Computed]
+    public function inspectedFileMetadata(): array
+    {
+        $file = $this->inspectedFile;
+        if (! $file) {
+            return [
+                'words' => 0,
+                'lines' => 0,
+                'chars' => 0,
+                'read_time' => '1 min read',
+                'wikilinks' => [],
+                'tags' => [],
+                'excerpt' => '',
+            ];
+        }
+
+        $content = $file->getContents() ?? '';
+        $words = $file->isMarkdown() ? str_word_count(strip_tags($content)) : 0;
+        $lines = $content !== '' ? substr_count($content, "\n") + 1 : 0;
+        $chars = mb_strlen($content);
+        $readMinutes = max(1, (int) ceil($words / 200));
+
+        preg_match_all('/\[\[(.*?)\]\]/', $content, $wikiMatches);
+        $wikilinks = array_slice(array_unique($wikiMatches[1] ?? []), 0, 8);
+
+        preg_match_all('/(?:^|\s)#([a-zA-Z0-9_\-\/]+)/', $content, $tagMatches);
+        $tags = array_slice(array_unique($tagMatches[1] ?? []), 0, 8);
+
+        $excerpt = mb_substr(trim(preg_replace('/\s+/', ' ', strip_tags($content))), 0, 300);
+
+        return [
+            'words' => $words,
+            'lines' => $lines,
+            'chars' => $chars,
+            'read_time' => "{$readMinutes} min read",
+            'wikilinks' => $wikilinks,
+            'tags' => $tags,
+            'excerpt' => $excerpt,
+        ];
+    }
+
+    #[Computed]
+    public function markdownFilesCount(): int
+    {
+        return $this->accessibleFiles->filter(fn (VaultFile $f) => $f->isMarkdown())->count();
+    }
+
+    #[Computed]
+    public function canvasFilesCount(): int
+    {
+        return $this->accessibleFiles->filter(fn (VaultFile $f) => str_ends_with(strtolower($f->path), '.canvas'))->count();
+    }
+
+    #[Computed]
+    public function attachmentFilesCount(): int
+    {
+        return $this->accessibleFiles->filter(fn (VaultFile $f) => ! $f->isMarkdown() && ! str_ends_with(strtolower($f->path), '.canvas'))->count();
+    }
+
+    #[Computed]
+    public function conflictFilesCount(): int
+    {
+        return $this->accessibleFiles->filter(fn (VaultFile $f) => str_contains($f->path, '.conflict-') || str_contains($f->path, '.sync-conflict-'))->count();
+    }
+
     #[Computed]
     public function accessibleFiles(): Collection
     {
@@ -827,12 +1170,31 @@ new #[Title('Vault Details')] class extends Component
     {
         $query = $this->accessibleFiles;
 
+        if ($this->fileCategory === 'markdown') {
+            $query = $query->filter(fn (VaultFile $f) => $f->isMarkdown());
+        } elseif ($this->fileCategory === 'canvas') {
+            $query = $query->filter(fn (VaultFile $f) => str_ends_with(strtolower($f->path), '.canvas'));
+        } elseif ($this->fileCategory === 'attachments') {
+            $query = $query->filter(fn (VaultFile $f) => ! $f->isMarkdown() && ! str_ends_with(strtolower($f->path), '.canvas'));
+        } elseif ($this->fileCategory === 'conflicts') {
+            $query = $query->filter(fn (VaultFile $f) => str_contains($f->path, '.conflict-') || str_contains($f->path, '.sync-conflict-'));
+        }
+
         if (! empty($this->fileSearch)) {
             $search = strtolower($this->fileSearch);
             $query = $query->filter(fn (VaultFile $f) => str_contains(strtolower($f->path), $search));
         }
 
-        return $query->take(100);
+        $query = match ($this->fileSort) {
+            'name_asc' => $query->sortBy(fn (VaultFile $f) => strtolower($f->path)),
+            'name_desc' => $query->sortByDesc(fn (VaultFile $f) => strtolower($f->path)),
+            'size_desc' => $query->sortByDesc('size'),
+            'size_asc' => $query->sortBy('size'),
+            'oldest' => $query->sortBy('updated_at'),
+            default => $query->sortByDesc('updated_at'),
+        };
+
+        return $query->values()->take(150);
     }
 
     #[Computed]
@@ -2102,29 +2464,164 @@ new #[Title('Vault Details')] class extends Component
         </div>
     @endif
 
-    <!-- TAB 2: Files Explorer -->
+    <!-- TAB 2: Files Explorer (Modern Obsidian/macOS Finder-Grade File Browser) -->
     @if ($activeTab === 'files')
         <div class="space-y-4">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div class="w-full max-w-sm">
-                    <flux:input wire:model.live.debounce.250ms="fileSearch" size="sm" icon="magnifying-glass" placeholder="Filter notes and files..." />
+            <!-- File Explorer Header & Action Bar -->
+            <div class="flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-xs backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-900/80 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <flux:icon icon="folder-open" class="size-5 text-emerald-600 dark:text-emerald-400" />
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white tracking-tight">{{ __('Vault File Browser') }}</h3>
+                        <span class="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            {{ $vault->name }} /
+                        </span>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                        {{ __(':count total files stored · :size total consumption', ['count' => $this->accessibleFiles->count(), 'size' => $this->totalSizeFormatted]) }}
+                    </p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <flux:button wire:click="exportVaultZip" variant="subtle" size="sm" icon="arrow-down-tray">
-                        {{ __('Export Entire Vault (.zip)') }}
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <flux:modal.trigger name="new-note-modal">
+                        <flux:button variant="primary" size="sm" icon="plus" class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 font-semibold cursor-pointer">
+                            {{ __('New Note') }}
+                        </flux:button>
+                    </flux:modal.trigger>
+                    <flux:button wire:click="exportVaultZip" variant="subtle" size="sm" icon="arrow-down-tray" class="cursor-pointer">
+                        {{ __('Export (.zip)') }}
                     </flux:button>
-                    <flux:text class="text-xs text-zinc-400">
-                        {{ __('Showing up to 100 recent vault notes') }}
-                    </flux:text>
                 </div>
             </div>
 
-            <flux:card class="p-0 overflow-hidden">
-                @if ($this->files->isEmpty())
-                    <div class="p-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                        {{ __('No files uploaded to this vault yet. Connect Obsidian to start pushing notes.') }}
+            <!-- Controls & Category Filters -->
+            <div class="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-xs dark:border-zinc-800/80 dark:bg-zinc-900">
+                <!-- Category Filter Pills -->
+                <div class="flex flex-wrap items-center gap-1.5 border-b border-slate-100 pb-2.5 dark:border-zinc-800">
+                    <button
+                        type="button"
+                        wire:click="$set('fileCategory', 'all')"
+                        class="px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer {{ $fileCategory === 'all' ? 'bg-[#0D3B29] text-white shadow-xs dark:bg-emerald-600' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800' }}"
+                    >
+                        <flux:icon icon="squares-2x2" class="size-3.5" />
+                        <span>{{ __('All Files') }}</span>
+                        <span class="rounded-full px-1.5 py-0.2 text-[10px] {{ $fileCategory === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300' }}">{{ $this->accessibleFiles->count() }}</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        wire:click="$set('fileCategory', 'markdown')"
+                        class="px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer {{ $fileCategory === 'markdown' ? 'bg-[#0D3B29] text-white shadow-xs dark:bg-emerald-600' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800' }}"
+                    >
+                        <flux:icon icon="document-text" class="size-3.5 text-emerald-500" />
+                        <span>{{ __('Notes (.md)') }}</span>
+                        <span class="rounded-full px-1.5 py-0.2 text-[10px] {{ $fileCategory === 'markdown' ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300' }}">{{ $this->markdownFilesCount }}</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        wire:click="$set('fileCategory', 'canvas')"
+                        class="px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer {{ $fileCategory === 'canvas' ? 'bg-[#0D3B29] text-white shadow-xs dark:bg-emerald-600' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800' }}"
+                    >
+                        <flux:icon icon="paint-brush" class="size-3.5 text-violet-500" />
+                        <span>{{ __('Canvas (.canvas)') }}</span>
+                        <span class="rounded-full px-1.5 py-0.2 text-[10px] {{ $fileCategory === 'canvas' ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300' }}">{{ $this->canvasFilesCount }}</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        wire:click="$set('fileCategory', 'attachments')"
+                        class="px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer {{ $fileCategory === 'attachments' ? 'bg-[#0D3B29] text-white shadow-xs dark:bg-emerald-600' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800' }}"
+                    >
+                        <flux:icon icon="paper-clip" class="size-3.5 text-sky-500" />
+                        <span>{{ __('Attachments') }}</span>
+                        <span class="rounded-full px-1.5 py-0.2 text-[10px] {{ $fileCategory === 'attachments' ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300' }}">{{ $this->attachmentFilesCount }}</span>
+                    </button>
+
+                    @if ($this->conflictFilesCount > 0)
+                        <button
+                            type="button"
+                            wire:click="$set('fileCategory', 'conflicts')"
+                            class="px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer {{ $fileCategory === 'conflicts' ? 'bg-amber-500 text-zinc-950 font-bold shadow-xs' : 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400 hover:bg-amber-100' }}"
+                        >
+                            <flux:icon icon="exclamation-triangle" class="size-3.5 text-amber-600 dark:text-amber-400" />
+                            <span>{{ __('Conflicts') }}</span>
+                            <span class="rounded-full px-1.5 py-0.2 text-[10px] bg-amber-200 text-amber-900 font-bold dark:bg-amber-800 dark:text-amber-100">{{ $this->conflictFilesCount }}</span>
+                        </button>
+                    @endif
+                </div>
+
+                <!-- Search, Sort & View Mode Switcher -->
+                <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="relative w-full sm:max-w-md">
+                        <flux:input
+                            wire:model.live.debounce.250ms="fileSearch"
+                            size="sm"
+                            icon="magnifying-glass"
+                            placeholder="{{ __('Search notes by title, folder path, extension...') }}"
+                            clearable
+                        />
                     </div>
-                @else
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        <!-- Sort Select -->
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-slate-400 dark:text-zinc-500 font-medium">{{ __('Sort:') }}</span>
+                            <select
+                                wire:model.live="fileSort"
+                                class="text-xs rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 font-medium text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                            >
+                                <option value="recent">{{ __('Recently Modified') }}</option>
+                                <option value="oldest">{{ __('Oldest Modified') }}</option>
+                                <option value="name_asc">{{ __('Name (A to Z)') }}</option>
+                                <option value="name_desc">{{ __('Name (Z to A)') }}</option>
+                                <option value="size_desc">{{ __('Size (Largest First)') }}</option>
+                                <option value="size_asc">{{ __('Size (Smallest First)') }}</option>
+                            </select>
+                        </div>
+
+                        <!-- View Mode Switcher -->
+                        <div class="flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-zinc-800 dark:bg-zinc-800">
+                            <button
+                                type="button"
+                                wire:click="$set('fileViewMode', 'list')"
+                                class="p-1.5 rounded-md transition-colors cursor-pointer {{ $fileViewMode === 'list' ? 'bg-white shadow-xs text-slate-900 dark:bg-zinc-700 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:text-zinc-400 dark:hover:text-white' }}"
+                                title="{{ __('List / Table View') }}"
+                            >
+                                <flux:icon icon="bars-3" class="size-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                wire:click="$set('fileViewMode', 'grid')"
+                                class="p-1.5 rounded-md transition-colors cursor-pointer {{ $fileViewMode === 'grid' ? 'bg-white shadow-xs text-slate-900 dark:bg-zinc-700 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:text-zinc-400 dark:hover:text-white' }}"
+                                title="{{ __('Grid Cards View') }}"
+                            >
+                                <flux:icon icon="squares-2x2" class="size-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Presentation (List vs Grid) -->
+            @if ($this->files->isEmpty())
+                <flux:card class="p-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                    <div class="mx-auto max-w-sm space-y-3">
+                        <flux:icon icon="document-magnifying-glass" class="mx-auto size-10 text-zinc-300 dark:text-zinc-600" />
+                        <h4 class="font-bold text-slate-800 dark:text-zinc-200">{{ __('No notes found matching your filters') }}</h4>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400">
+                            {{ __('Try clearing your search query or switching categories. You can also create a new note directly.') }}
+                        </p>
+                        <flux:modal.trigger name="new-note-modal">
+                            <flux:button variant="primary" size="sm" icon="plus" class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 font-semibold cursor-pointer">
+                                {{ __('Create New Note') }}
+                            </flux:button>
+                        </flux:modal.trigger>
+                    </div>
+                </flux:card>
+            @elseif ($fileViewMode === 'list')
+                <!-- LIST / TABLE VIEW -->
+                <flux:card class="p-0 overflow-hidden shadow-xs border-slate-200/80 dark:border-zinc-800">
                     <flux:table>
                         <flux:table.columns>
                             <flux:table.column>{{ __('Note / Path') }}</flux:table.column>
@@ -2137,28 +2634,67 @@ new #[Title('Vault Details')] class extends Component
 
                         <flux:table.rows>
                             @foreach ($this->files as $file)
-                                <flux:table.row :key="$file->id">
+                                @php
+                                    $isMd = $file->isMarkdown();
+                                    $isCanvas = str_ends_with(strtolower($file->path), '.canvas');
+                                    $isConflict = str_contains($file->path, '.conflict-') || str_contains($file->path, '.sync-conflict-');
+                                    $filename = basename($file->path);
+                                    $dirname = dirname($file->path);
+                                @endphp
+                                <flux:table.row :key="$file->id" class="group hover:bg-slate-50/80 dark:hover:bg-zinc-900/50 transition-colors">
                                     <flux:table.cell class="font-mono text-xs font-medium">
-                                        <div class="flex items-center gap-2">
-                                            @if ($file->isMarkdown())
-                                                <flux:icon icon="document-text" class="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                            @else
-                                                <flux:icon icon="paper-clip" class="size-4 text-zinc-400 shrink-0" />
-                                            @endif
-                                            <span class="truncate max-w-sm">{{ $file->path }}</span>
-                                            @if ($file->is_ghost)
-                                                <flux:badge color="purple" size="sm" class="shrink-0" title="{{ __('Ghost file stub: content streamable on demand') }}">
-                                                    👻 {{ __('Ghost') }}
-                                                </flux:badge>
-                                            @endif
-                                            @if ($file->is_encrypted || $vault->is_e2ee)
-                                                <flux:badge color="emerald" size="sm" class="shrink-0" title="{{ __('Zero-Knowledge E2EE encrypted') }}">
-                                                    🔒 {{ __('E2EE') }}
-                                                </flux:badge>
-                                            @endif
-                                            @if (str_contains($file->path, '.conflict-') || str_contains($file->path, '.sync-conflict-'))
-                                                <flux:badge color="amber" size="sm" class="shrink-0">{{ __('Conflict') }}</flux:badge>
-                                            @endif
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="size-8 rounded-lg flex items-center justify-center shrink-0 {{ $isMd ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : ($isCanvas ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400') }}">
+                                                @if ($isMd)
+                                                    <flux:icon icon="document-text" class="size-4" />
+                                                @elseif ($isCanvas)
+                                                    <flux:icon icon="paint-brush" class="size-4" />
+                                                @else
+                                                    <flux:icon icon="paper-clip" class="size-4" />
+                                                @endif
+                                            </div>
+                                            <div class="min-w-0">
+                                                <div class="flex items-center gap-1.5">
+                                                    @if ($isMd)
+                                                        <button
+                                                            type="button"
+                                                            wire:click="openFileInEditor({{ $file->id }})"
+                                                            class="font-sans font-bold text-xs text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate max-w-xs text-left cursor-pointer"
+                                                            title="{{ __('Open in Markdown Editor') }}"
+                                                        >
+                                                            {{ $filename }}
+                                                        </button>
+                                                    @else
+                                                        <button
+                                                            type="button"
+                                                            wire:click="inspectFile({{ $file->id }})"
+                                                            class="font-sans font-bold text-xs text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate max-w-xs text-left cursor-pointer"
+                                                            title="{{ __('Inspect details') }}"
+                                                        >
+                                                            {{ $filename }}
+                                                        </button>
+                                                    @endif
+
+                                                    @if ($file->is_ghost)
+                                                        <flux:badge color="purple" size="sm" class="shrink-0 text-[10px]" title="{{ __('Ghost file stub: content streamable on demand') }}">
+                                                            👻 {{ __('Ghost') }}
+                                                        </flux:badge>
+                                                    @endif
+                                                    @if ($file->is_encrypted || $vault->is_e2ee)
+                                                        <flux:badge color="emerald" size="sm" class="shrink-0 text-[10px]" title="{{ __('Zero-Knowledge E2EE encrypted') }}">
+                                                            🔒 {{ __('E2EE') }}
+                                                        </flux:badge>
+                                                    @endif
+                                                    @if ($isConflict)
+                                                        <flux:badge color="amber" size="sm" class="shrink-0 text-[10px] font-bold">{{ __('Conflict') }}</flux:badge>
+                                                    @endif
+                                                </div>
+                                                @if ($dirname !== '.' && $dirname !== '')
+                                                    <div class="font-mono text-[10px] text-slate-400 dark:text-zinc-500 truncate max-w-xs">
+                                                        {{ $dirname }}/
+                                                    </div>
+                                                @endif
+                                            </div>
                                         </div>
                                     </flux:table.cell>
 
@@ -2176,7 +2712,12 @@ new #[Title('Vault Details')] class extends Component
                                     </flux:table.cell>
 
                                     <flux:table.cell>
-                                        <span class="text-xs text-zinc-700 dark:text-zinc-300">{{ $file->lastModifier?->name ?? __('Sync') }}</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <div class="size-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-[10px] font-bold text-slate-700 dark:text-zinc-200 flex items-center justify-center shrink-0">
+                                                {{ $file->lastModifier ? $file->lastModifier->initials() : 'SY' }}
+                                            </div>
+                                            <span class="text-xs text-zinc-700 dark:text-zinc-300 truncate max-w-[100px]">{{ $file->lastModifier?->name ?? __('Sync Engine') }}</span>
+                                        </div>
                                     </flux:table.cell>
 
                                     <flux:table.cell class="text-xs text-zinc-400">
@@ -2184,55 +2725,257 @@ new #[Title('Vault Details')] class extends Component
                                     </flux:table.cell>
 
                                     <flux:table.cell align="end">
-                                        <div class="flex items-center justify-end gap-1.5">
-                                            @if ($file->is_ghost)
+                                        <div class="flex items-center justify-end gap-1">
+                                            @if ($isMd)
                                                 <flux:button
                                                     variant="subtle"
                                                     size="xs"
-                                                    icon="arrow-down-tray"
-                                                    wire:click="hydrateGhostFile({{ $file->id }})"
-                                                    title="{{ __('Hydrate file content on demand') }}"
-                                                >
-                                                    {{ __('Hydrate') }}
-                                                </flux:button>
-                                            @elseif (! $file->isMarkdown() && $file->size > 1024)
-                                                <flux:button
-                                                    variant="subtle"
-                                                    size="xs"
-                                                    icon="cloud-arrow-up"
-                                                    wire:click="dehydrateGhostFile({{ $file->id }})"
-                                                    title="{{ __('Convert to lightweight ghost file stub') }}"
-                                                >
-                                                    {{ __('Dehydrate') }}
-                                                </flux:button>
+                                                    icon="pencil-square"
+                                                    wire:click="openFileInEditor({{ $file->id }})"
+                                                    title="{{ __('Open in Editor') }}"
+                                                    class="cursor-pointer text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                                />
                                             @endif
-                                            @if (str_contains($file->path, '.conflict-') || str_contains($file->path, '.sync-conflict-'))
-                                                <flux:button
-                                                    variant="primary"
-                                                    size="xs"
-                                                    icon="arrows-right-left"
-                                                    wire:click="openConflictSandbox('{{ $file->path }}')"
-                                                    class="!bg-amber-500 !text-zinc-950 hover:!bg-amber-400 font-bold"
-                                                >
-                                                    {{ __('Reconcile') }}
-                                                </flux:button>
-                                            @endif
+
                                             <flux:button
                                                 variant="subtle"
                                                 size="xs"
-                                                icon="clock"
-                                                wire:click="showFileHistory({{ $file->id }})"
-                                            >
-                                                {{ __('History') }}
-                                            </flux:button>
+                                                icon="information-circle"
+                                                wire:click="inspectFile({{ $file->id }})"
+                                                title="{{ __('File Details & Inspector') }}"
+                                                class="cursor-pointer text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                                            />
+
+                                            <!-- Dropdown Actions Menu -->
+                                            <flux:dropdown position="bottom" align="end">
+                                                <flux:button
+                                                    variant="subtle"
+                                                    size="xs"
+                                                    icon="ellipsis-vertical"
+                                                    class="cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                                                />
+
+                                                <flux:menu class="min-w-48">
+                                                    @if ($isMd)
+                                                        <flux:menu.item icon="pencil-square" wire:click="openFileInEditor({{ $file->id }})">
+                                                            {{ __('Edit in Editor') }}
+                                                        </flux:menu.item>
+                                                    @endif
+
+                                                    <flux:menu.item icon="information-circle" wire:click="inspectFile({{ $file->id }})">
+                                                        {{ __('View File Info') }}
+                                                    </flux:menu.item>
+
+                                                    <flux:menu.item icon="document-duplicate" wire:click="duplicateFile({{ $file->id }})">
+                                                        {{ __('Duplicate Note') }}
+                                                    </flux:menu.item>
+
+                                                    <flux:menu.item icon="pencil" wire:click="openRenameModal({{ $file->id }})">
+                                                        {{ __('Rename Path') }}
+                                                    </flux:menu.item>
+
+                                                    <flux:menu.item icon="arrow-down-tray" wire:click="downloadFile({{ $file->id }})">
+                                                        {{ __('Download File') }}
+                                                    </flux:menu.item>
+
+                                                    <flux:menu.item
+                                                        icon="link"
+                                                        x-on:click="navigator.clipboard.writeText('[[' + '{{ addslashes(pathinfo($file->path, PATHINFO_FILENAME)) }}' + ']]'); $wire.copyWikilinkNotice('{{ addslashes(pathinfo($file->path, PATHINFO_FILENAME)) }}')"
+                                                    >
+                                                        {{ __('Copy Wikilink [[...]]') }}
+                                                    </flux:menu.item>
+
+                                                    <flux:menu.item icon="clock" wire:click="showFileHistory({{ $file->id }})">
+                                                        {{ __('Revision History') }}
+                                                    </flux:menu.item>
+
+                                                    @if ($isConflict)
+                                                        <flux:menu.item icon="arrows-right-left" wire:click="openConflictSandbox('{{ $file->path }}')" class="text-amber-600 font-bold">
+                                                            {{ __('Reconcile Conflict') }}
+                                                        </flux:menu.item>
+                                                    @endif
+
+                                                    @if ($file->is_ghost)
+                                                        <flux:menu.item icon="arrow-down-tray" wire:click="hydrateGhostFile({{ $file->id }})">
+                                                            {{ __('Hydrate Full Content') }}
+                                                        </flux:menu.item>
+                                                    @elseif (! $file->isMarkdown() && $file->size > 1024)
+                                                        <flux:menu.item icon="cloud-arrow-up" wire:click="dehydrateGhostFile({{ $file->id }})">
+                                                            {{ __('Convert to Ghost Stub') }}
+                                                        </flux:menu.item>
+                                                    @endif
+
+                                                    <flux:menu.separator />
+
+                                                    <flux:menu.item icon="trash" wire:click="confirmDeleteFile({{ $file->id }})" variant="danger">
+                                                        {{ __('Delete Note') }}
+                                                    </flux:menu.item>
+                                                </flux:menu>
+                                            </flux:dropdown>
                                         </div>
                                     </flux:table.cell>
                                 </flux:table.row>
                             @endforeach
                         </flux:table.rows>
                     </flux:table>
-                @endif
-            </flux:card>
+                </flux:card>
+            @else
+                <!-- GRID / CARD VIEW -->
+                <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach ($this->files as $file)
+                        @php
+                            $isMd = $file->isMarkdown();
+                            $isCanvas = str_ends_with(strtolower($file->path), '.canvas');
+                            $isConflict = str_contains($file->path, '.conflict-') || str_contains($file->path, '.sync-conflict-');
+                            $filename = basename($file->path);
+                            $dirname = dirname($file->path);
+                            $excerpt = $isMd ? mb_substr(trim(preg_replace('/\s+/', ' ', strip_tags($file->getContents() ?? ''))), 0, 140) : null;
+                        @endphp
+                        <div class="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs hover:shadow-md hover:border-emerald-500/40 transition-all dark:border-zinc-800/80 dark:bg-zinc-900">
+                            <div>
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <div class="size-8 rounded-lg flex items-center justify-center shrink-0 {{ $isMd ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : ($isCanvas ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400') }}">
+                                            @if ($isMd)
+                                                <flux:icon icon="document-text" class="size-4" />
+                                            @elseif ($isCanvas)
+                                                <flux:icon icon="paint-brush" class="size-4" />
+                                            @else
+                                                <flux:icon icon="paper-clip" class="size-4" />
+                                            @endif
+                                        </div>
+                                        <div class="min-w-0">
+                                            @if ($isMd)
+                                                <button
+                                                    type="button"
+                                                    wire:click="openFileInEditor({{ $file->id }})"
+                                                    class="font-sans font-bold text-xs text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate block text-left cursor-pointer"
+                                                    title="{{ $filename }}"
+                                                >
+                                                    {{ $filename }}
+                                                </button>
+                                            @else
+                                                <button
+                                                    type="button"
+                                                    wire:click="inspectFile({{ $file->id }})"
+                                                    class="font-sans font-bold text-xs text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate block text-left cursor-pointer"
+                                                    title="{{ $filename }}"
+                                                >
+                                                    {{ $filename }}
+                                                </button>
+                                            @endif
+                                            @if ($dirname !== '.' && $dirname !== '')
+                                                <span class="font-mono text-[10px] text-slate-400 dark:text-zinc-500 truncate block">
+                                                    {{ $dirname }}/
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    <!-- 3-dots Menu -->
+                                    <flux:dropdown position="bottom" align="end">
+                                        <flux:button
+                                            variant="subtle"
+                                            size="xs"
+                                            icon="ellipsis-vertical"
+                                            class="cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                                        />
+
+                                        <flux:menu class="min-w-48">
+                                            @if ($isMd)
+                                                <flux:menu.item icon="pencil-square" wire:click="openFileInEditor({{ $file->id }})">
+                                                    {{ __('Edit in Editor') }}
+                                                </flux:menu.item>
+                                            @endif
+
+                                            <flux:menu.item icon="information-circle" wire:click="inspectFile({{ $file->id }})">
+                                                {{ __('View File Info') }}
+                                            </flux:menu.item>
+
+                                            <flux:menu.item icon="document-duplicate" wire:click="duplicateFile({{ $file->id }})">
+                                                {{ __('Duplicate Note') }}
+                                            </flux:menu.item>
+
+                                            <flux:menu.item icon="pencil" wire:click="openRenameModal({{ $file->id }})">
+                                                {{ __('Rename Path') }}
+                                            </flux:menu.item>
+
+                                            <flux:menu.item icon="arrow-down-tray" wire:click="downloadFile({{ $file->id }})">
+                                                {{ __('Download File') }}
+                                            </flux:menu.item>
+
+                                            <flux:menu.item
+                                                icon="link"
+                                                x-on:click="navigator.clipboard.writeText('[[' + '{{ addslashes(pathinfo($file->path, PATHINFO_FILENAME)) }}' + ']]'); $wire.copyWikilinkNotice('{{ addslashes(pathinfo($file->path, PATHINFO_FILENAME)) }}')"
+                                            >
+                                                {{ __('Copy Wikilink [[...]]') }}
+                                            </flux:menu.item>
+
+                                            <flux:menu.item icon="clock" wire:click="showFileHistory({{ $file->id }})">
+                                                {{ __('Revision History') }}
+                                            </flux:menu.item>
+
+                                            @if ($isConflict)
+                                                <flux:menu.item icon="arrows-right-left" wire:click="openConflictSandbox('{{ $file->path }}')" class="text-amber-600 font-bold">
+                                                    {{ __('Reconcile Conflict') }}
+                                                </flux:menu.item>
+                                            @endif
+
+                                            <flux:menu.separator />
+
+                                            <flux:menu.item icon="trash" wire:click="confirmDeleteFile({{ $file->id }})" variant="danger">
+                                                {{ __('Delete Note') }}
+                                            </flux:menu.item>
+                                        </flux:menu>
+                                    </flux:dropdown>
+                                </div>
+
+                                <!-- Note Excerpt Preview -->
+                                @if ($isMd && $excerpt)
+                                    <div class="mt-3 rounded-xl bg-slate-50/80 p-2.5 dark:bg-zinc-800/40">
+                                        <p class="line-clamp-3 text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
+                                            {{ $excerpt }}
+                                        </p>
+                                    </div>
+                                @elseif ($isCanvas)
+                                    <div class="mt-3 rounded-xl bg-violet-50/50 p-2.5 dark:bg-violet-950/20 text-[11px] text-violet-700 dark:text-violet-300">
+                                        {{ __('Obsidian visual infinite canvas diagram') }}
+                                    </div>
+                                @else
+                                    <div class="mt-3 rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-800/40 text-[11px] text-slate-500 dark:text-zinc-400">
+                                        {{ __('Binary asset / attachment') }}
+                                    </div>
+                                @endif
+
+                                <!-- Status Badges -->
+                                <div class="mt-3 flex flex-wrap items-center gap-1">
+                                    <flux:badge color="zinc" size="sm" class="text-[10px]">v{{ $file->version }}</flux:badge>
+                                    @if ($file->is_ghost)
+                                        <flux:badge color="purple" size="sm" class="text-[10px]">👻 {{ __('Ghost') }}</flux:badge>
+                                    @endif
+                                    @if ($file->is_encrypted || $vault->is_e2ee)
+                                        <flux:badge color="emerald" size="sm" class="text-[10px]">🔒 {{ __('E2EE') }}</flux:badge>
+                                    @endif
+                                    @if ($isConflict)
+                                        <flux:badge color="amber" size="sm" class="text-[10px] font-bold">{{ __('Conflict') }}</flux:badge>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <!-- Card Footer -->
+                            <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-zinc-800/80 text-[11px] text-slate-400 dark:text-zinc-500">
+                                <div class="flex items-center gap-1.5">
+                                    <div class="size-4.5 rounded-full bg-slate-200 dark:bg-zinc-700 text-[9px] font-bold text-slate-700 dark:text-zinc-200 flex items-center justify-center shrink-0">
+                                        {{ $file->lastModifier ? $file->lastModifier->initials() : 'SY' }}
+                                    </div>
+                                    <span>{{ $file->updated_at->diffForHumans(short: true) }}</span>
+                                </div>
+                                <span class="font-mono">{{ Number::fileSize($file->size, precision: 1) }}</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
     @endif
 
@@ -3289,6 +4032,236 @@ new #[Title('Vault Details')] class extends Component
                 <flux:button variant="primary" type="submit" class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90">{{ __('Create Note') }}</flux:button>
             </div>
         </form>
+    </flux:modal>
+
+    <!-- Rename Note / File Modal -->
+    <flux:modal name="rename-file-modal" focusable class="max-w-md">
+        <form wire:submit="executeRename" class="space-y-5">
+            <div>
+                <flux:heading size="lg">{{ __('Rename Note / Path') }}</flux:heading>
+                <flux:subheading class="text-xs">{{ __('Change the filename or move this note into another folder. Edits will synchronize across all paired Obsidian clients.') }}</flux:subheading>
+            </div>
+
+            <div class="space-y-4">
+                <flux:input
+                    wire:model="renamingNewPath"
+                    :label="__('Target Vault Path')"
+                    placeholder="e.g. Archives/OldNotes.md"
+                    description="Include the full relative path from vault root."
+                    required
+                />
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button variant="primary" type="submit" class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 font-semibold">{{ __('Rename') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <!-- Delete Note Confirmation Modal -->
+    <flux:modal name="delete-file-modal" focusable class="max-w-md">
+        <form wire:submit="executeDeleteFile" class="space-y-5">
+            <div class="flex items-start gap-3">
+                <div class="size-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                    <flux:icon icon="trash" class="size-5" />
+                </div>
+                <div>
+                    <flux:heading size="lg" class="text-rose-600 dark:text-rose-400">{{ __('Delete Note / File') }}</flux:heading>
+                    <flux:subheading class="text-xs mt-1">
+                        {{ __('Are you sure you want to delete this file? It will be marked as deleted and removed across connected devices upon next sync.') }}
+                    </flux:subheading>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button variant="danger" type="submit">{{ __('Confirm Delete') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <!-- File Inspector / Info Modal -->
+    <flux:modal name="inspect-file-modal" focusable class="max-w-2xl">
+        @if ($this->inspectedFile)
+            @php
+                $meta = $this->inspectedFileMetadata;
+                $f = $this->inspectedFile;
+                $isMd = $f->isMarkdown();
+            @endphp
+            <div class="space-y-5">
+                <!-- Inspector Header -->
+                <div class="flex items-start justify-between gap-3 border-b border-slate-200/80 pb-4 dark:border-zinc-800">
+                    <div class="flex items-center gap-3">
+                        <div class="size-10 rounded-xl flex items-center justify-center shrink-0 {{ $isMd ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400' }}">
+                            @if ($isMd)
+                                <flux:icon icon="document-text" class="size-6" />
+                            @else
+                                <flux:icon icon="paper-clip" class="size-6" />
+                            @endif
+                        </div>
+                        <div>
+                            <flux:heading size="lg" class="truncate max-w-sm">{{ basename($f->path) }}</flux:heading>
+                            <flux:subheading class="font-mono text-xs text-slate-400 dark:text-zinc-500 truncate max-w-sm mt-0.5">
+                                {{ $f->path }}
+                            </flux:subheading>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        @if ($isMd)
+                            <flux:button
+                                variant="primary"
+                                size="sm"
+                                icon="pencil-square"
+                                wire:click="openFileInEditor({{ $f->id }})"
+                                class="!bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 font-semibold cursor-pointer"
+                            >
+                                {{ __('Open Editor') }}
+                            </flux:button>
+                        @endif
+                        <flux:button
+                            variant="subtle"
+                            size="sm"
+                            icon="arrow-down-tray"
+                            wire:click="downloadFile({{ $f->id }})"
+                            class="cursor-pointer"
+                            title="{{ __('Download') }}"
+                        />
+                    </div>
+                </div>
+
+                @if ($isMd)
+                    <!-- Text Metrics Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div class="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/50 text-center">
+                            <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-zinc-500">{{ __('Words') }}</span>
+                            <p class="text-lg font-extrabold text-slate-900 dark:text-white mt-0.5">{{ number_format($meta['words']) }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/50 text-center">
+                            <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-zinc-500">{{ __('Lines') }}</span>
+                            <p class="text-lg font-extrabold text-slate-900 dark:text-white mt-0.5">{{ number_format($meta['lines']) }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/50 text-center">
+                            <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-zinc-500">{{ __('Characters') }}</span>
+                            <p class="text-lg font-extrabold text-slate-900 dark:text-white mt-0.5">{{ number_format($meta['chars']) }}</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/50 text-center">
+                            <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-zinc-500">{{ __('Read Time') }}</span>
+                            <p class="text-lg font-extrabold text-slate-900 dark:text-white mt-0.5">{{ $meta['read_time'] }}</p>
+                        </div>
+                    </div>
+                @endif
+
+                <!-- File Specs & Integrity Details -->
+                <div class="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50 space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('File Properties & Sync Integrity') }}</h4>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <span class="text-slate-400 dark:text-zinc-500">{{ __('File Size:') }}</span>
+                            <span class="font-semibold text-slate-800 dark:text-zinc-200 ml-1.5">{{ Number::fileSize($f->size, precision: 2) }} ({{ number_format($f->size) }} bytes)</span>
+                        </div>
+
+                        <div>
+                            <span class="text-slate-400 dark:text-zinc-500">{{ __('Active Version:') }}</span>
+                            <span class="font-semibold text-slate-800 dark:text-zinc-200 ml-1.5">v{{ $f->version }} ({{ $f->versions->count() }} snapshot revisions)</span>
+                        </div>
+
+                        <div>
+                            <span class="text-slate-400 dark:text-zinc-500">{{ __('Last Modified:') }}</span>
+                            <span class="font-semibold text-slate-800 dark:text-zinc-200 ml-1.5">{{ $f->updated_at?->format('M j, Y g:i A') }} ({{ $f->updated_at?->diffForHumans() }})</span>
+                        </div>
+
+                        <div>
+                            <span class="text-slate-400 dark:text-zinc-500">{{ __('Modifier:') }}</span>
+                            <span class="font-semibold text-slate-800 dark:text-zinc-200 ml-1.5">{{ $f->lastModifier?->name ?? 'Sync Engine' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- SHA-256 Hash -->
+                    <div class="pt-2 border-t border-slate-200/60 dark:border-zinc-800">
+                        <span class="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">{{ __('SHA-256 Checksum:') }}</span>
+                        <div class="mt-1 flex items-center gap-2">
+                            <code class="font-mono text-[11px] bg-slate-200/60 dark:bg-zinc-800 px-2 py-1 rounded-md text-slate-800 dark:text-zinc-200 truncate flex-1 select-all">
+                                {{ $f->sha256 }}
+                            </code>
+                            <button
+                                type="button"
+                                x-on:click="navigator.clipboard.writeText('{{ $f->sha256 }}'); $wire.copyWikilinkNotice('SHA-256 Hash')"
+                                class="px-2 py-1 text-xs rounded-md bg-slate-200/80 hover:bg-slate-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 font-semibold cursor-pointer shrink-0"
+                            >
+                                {{ __('Copy') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                @if (! empty($meta['wikilinks']) || ! empty($meta['tags']))
+                    <!-- Wikilinks & Tags detected -->
+                    <div class="space-y-2.5">
+                        @if (! empty($meta['wikilinks']))
+                            <div>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{{ __('Outbound Wikilinks:') }}</span>
+                                <div class="flex flex-wrap gap-1.5 mt-1.5">
+                                    @foreach ($meta['wikilinks'] as $link)
+                                        <span class="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                            [[{{ $link }}]]
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if (! empty($meta['tags']))
+                            <div>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{{ __('Tags:') }}</span>
+                                <div class="flex flex-wrap gap-1.5 mt-1.5">
+                                    @foreach ($meta['tags'] as $tag)
+                                        <span class="rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                                            #{{ $tag }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+
+                @if ($meta['excerpt'])
+                    <!-- Excerpt Preview -->
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{{ __('Content Preview:') }}</span>
+                        <div class="mt-1.5 rounded-xl border border-slate-200/80 bg-white p-3 font-mono text-xs text-slate-700 leading-relaxed dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 max-h-36 overflow-y-auto">
+                            {{ $meta['excerpt'] }}...
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Inspector Footer Actions -->
+                <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 pt-4 dark:border-zinc-800">
+                    <div class="flex items-center gap-1.5">
+                        <flux:button size="sm" variant="subtle" icon="document-duplicate" wire:click="duplicateFile({{ $f->id }})" class="cursor-pointer">
+                            {{ __('Duplicate') }}
+                        </flux:button>
+                        <flux:button size="sm" variant="subtle" icon="pencil" wire:click="openRenameModal({{ $f->id }})" class="cursor-pointer">
+                            {{ __('Rename') }}
+                        </flux:button>
+                        <flux:button size="sm" variant="subtle" icon="clock" wire:click="showFileHistory({{ $f->id }})" class="cursor-pointer">
+                            {{ __('History') }}
+                        </flux:button>
+                    </div>
+
+                    <flux:modal.close>
+                        <flux:button variant="filled">{{ __('Close') }}</flux:button>
+                    </flux:modal.close>
+                </div>
+            </div>
+        @endif
     </flux:modal>
 
     <!-- 3-Way Visual Conflict Sandbox Modal -->
