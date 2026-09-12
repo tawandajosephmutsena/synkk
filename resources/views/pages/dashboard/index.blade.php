@@ -227,6 +227,21 @@ new #[Title('Dashboard')] class extends Component {
     }
 
     #[Computed]
+    public function secretThreats(): Collection
+    {
+        if (! $this->team || $this->vaults->isEmpty()) {
+            return collect();
+        }
+
+        return VaultChangeLog::whereIn('vault_id', $this->vaults->pluck('id'))
+            ->where('has_secrets', true)
+            ->with(['vault', 'user'])
+            ->latest('created_at')
+            ->limit(30)
+            ->get();
+    }
+
+    #[Computed]
     public function recentActivities(): Collection
     {
         if (! $this->team) {
@@ -563,9 +578,11 @@ new #[Title('Dashboard')] class extends Component {
                     <p class="text-xs text-amber-800 dark:text-amber-300">{{ $this->secretAlertsCount }} {{ __('sensitive API credentials detected in synced notes.') }}</p>
                 </div>
             </div>
-            <button wire:click="$set('activityFilter', 'secrets')" class="rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-amber-500">
-                {{ __('Audit Threats') }}
-            </button>
+            <flux:modal.trigger name="audit-threats-modal">
+                <button wire:click="$set('activityFilter', 'secrets')" class="rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 cursor-pointer">
+                    {{ __('Audit Threats') }}
+                </button>
+            </flux:modal.trigger>
         </div>
     @endif
 
@@ -735,14 +752,16 @@ new #[Title('Dashboard')] class extends Component {
             </div>
 
             @if ($this->secretAlertsCount > 0)
-                <button
-                    type="button"
-                    wire:click="$set('activityFilter', 'secrets')"
-                    class="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-amber-600 py-3.5 px-4 text-xs font-bold text-white shadow-xs transition-colors hover:bg-amber-500 active:scale-98"
-                >
-                    <flux:icon icon="shield-exclamation" class="size-4" />
-                    <span>{{ __('Audit Threats') }}</span>
-                </button>
+                <flux:modal.trigger name="audit-threats-modal">
+                    <button
+                        type="button"
+                        wire:click="$set('activityFilter', 'secrets')"
+                        class="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-amber-600 py-3.5 px-4 text-xs font-bold text-white shadow-xs transition-colors hover:bg-amber-500 active:scale-98 cursor-pointer"
+                    >
+                        <flux:icon icon="shield-exclamation" class="size-4" />
+                        <span>{{ __('Audit Threats') }}</span>
+                    </button>
+                </flux:modal.trigger>
             @else
                 <a
                     href="{{ route('vaults.index') }}"
@@ -996,7 +1015,7 @@ new #[Title('Dashboard')] class extends Component {
     </div>
 
     <!-- SECTION 4: ACRU-STYLE REVISION & SYNC ACTIVITY STREAM DATA TABLE -->
-    <div class="rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <div id="transaction-history" class="rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4 dark:border-zinc-800 dark:bg-zinc-900">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h3 class="text-base font-extrabold text-gray-900 dark:text-white">{{ __('Transaction History') }}</h3>
@@ -1279,6 +1298,103 @@ new #[Title('Dashboard')] class extends Component {
 
                 <flux:modal.close>
                     <flux:button variant="ghost" size="sm">{{ __('Close') }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- DLP Threats Audit Modal -->
+    <flux:modal name="audit-threats-modal" focusable class="max-w-3xl">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="flex size-10 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                        <flux:icon icon="shield-exclamation" class="size-6" />
+                    </div>
+                    <div>
+                        <flux:heading size="lg">{{ __('DLP Security Threats Audit') }}</flux:heading>
+                        <flux:subheading>{{ __('Real-time detection of high-entropy credentials and sensitive keys in notes.') }}</flux:subheading>
+                    </div>
+                </div>
+                <flux:badge color="amber" size="sm" class="font-bold">
+                    {{ $this->secretThreats->count() }} {{ __('Flagged') }}
+                </flux:badge>
+            </div>
+
+            @if ($this->secretThreats->isEmpty())
+                <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-8 text-center dark:border-emerald-500/20 dark:bg-emerald-950/20">
+                    <flux:icon icon="check-circle" class="mx-auto size-10 text-emerald-600 dark:text-emerald-400" />
+                    <h4 class="mt-3 text-sm font-bold text-emerald-900 dark:text-emerald-200">{{ __('No Security Threats Detected') }}</h4>
+                    <p class="mt-1 text-xs text-emerald-700 dark:text-emerald-400">{{ __('All synced notes in this team are clean and compliant with DLP scanning policies.') }}</p>
+                </div>
+            @else
+                <div class="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
+                    @foreach ($this->secretThreats as $threat)
+                        <div class="rounded-2xl border border-amber-200/80 bg-amber-50/40 p-4 dark:border-amber-500/20 dark:bg-amber-950/20 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="space-y-1.5 min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-mono text-xs font-bold text-zinc-900 dark:text-white truncate">
+                                        {{ $threat->path }}
+                                    </span>
+                                    @if ($threat->vault)
+                                        <flux:badge size="sm" color="zinc" class="font-sans text-[10px]">
+                                            {{ $threat->vault->name }}
+                                        </flux:badge>
+                                    @endif
+                                </div>
+
+                                @if (! empty($threat->detected_secrets))
+                                    <div class="flex flex-wrap gap-1.5">
+                                        @foreach ($threat->detected_secrets as $secretType)
+                                            <span class="inline-flex items-center gap-1 rounded-md bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-700 dark:text-red-400 border border-red-500/20">
+                                                <flux:icon icon="exclamation-triangle" class="size-3" />
+                                                {{ $secretType }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                <div class="flex flex-wrap items-center gap-3 text-[11px] text-zinc-500 dark:text-zinc-400">
+                                    <span class="flex items-center gap-1">
+                                        <flux:icon icon="device-phone-mobile" class="size-3 text-zinc-400" />
+                                        {{ $threat->device_name ?? __('Unknown device') }}
+                                    </span>
+                                    <span>•</span>
+                                    <span>{{ $threat->user?->name ?? __('System') }}</span>
+                                    <span>•</span>
+                                    <span>{{ $threat->created_at?->diffForHumans() ?? __('Recently') }}</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
+                                @if ($threat->vault && $this->team)
+                                    <a
+                                        href="{{ route('vaults.show', ['current_team' => $this->team->slug, 'vault' => $threat->vault->slug, 'tab' => 'editor', 'path' => $threat->path]) }}"
+                                        class="inline-flex items-center gap-1.5 rounded-full bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-amber-500 transition-colors"
+                                    >
+                                        <span>{{ __('Inspect Note') }}</span>
+                                        <flux:icon icon="arrow-top-right-on-square" class="size-3" />
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-zinc-800">
+                <button
+                    type="button"
+                    x-on:click="$el.closest('dialog')?.close(); document.getElementById('transaction-history')?.scrollIntoView({ behavior: 'smooth' })"
+                    wire:click="$set('activityFilter', 'secrets')"
+                    class="text-xs font-semibold text-amber-700 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 flex items-center gap-1.5 cursor-pointer"
+                >
+                    <flux:icon icon="bars-3-bottom-left" class="size-3.5" />
+                    <span>{{ __('View in Transaction Stream') }}</span>
+                </button>
+
+                <flux:modal.close>
+                    <flux:button variant="ghost" size="sm">{{ __('Dismiss') }}</flux:button>
                 </flux:modal.close>
             </div>
         </div>

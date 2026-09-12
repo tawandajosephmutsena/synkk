@@ -135,3 +135,36 @@ test('authenticated user can redeem license key directly from dashboard', functi
         ->and($team->fresh()->license_status)->toBe('active')
         ->and($team->fresh()->license_key)->toBe('SYNK-PRO-DASH-TEST-1234');
 });
+
+test('dashboard provides interactive audit threats modal when DLP security alerts are detected', function () {
+    $user = User::factory()->create();
+    $team = $user->personalTeam();
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Security Audit Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    VaultChangeLog::create([
+        'vault_id' => $vault->id,
+        'user_id' => $user->id,
+        'device_name' => 'MacBook Pro M3',
+        'path' => 'Secrets/API_Keys.md',
+        'action' => 'updated',
+        'version' => 1,
+        'size' => 512,
+        'has_secrets' => true,
+        'detected_secrets' => ['AWS Access Key', 'OpenAI API Key'],
+    ]);
+
+    Livewire::actingAs($user)
+        ->test('pages::dashboard.index', ['current_team' => $team->slug])
+        ->assertSee('Audit Threats')
+        ->assertSee('DLP Security Threats Audit')
+        ->assertSee('Secrets/API_Keys.md')
+        ->assertSee('AWS Access Key')
+        ->assertSee('OpenAI API Key')
+        ->assertSee('MacBook Pro M3');
+});

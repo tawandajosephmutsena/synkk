@@ -202,6 +202,151 @@ class VaultRagService
      *     wikilinks: array<int, string>
      * }>
      */
+    public const STOPWORDS = [
+        'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'aren\'t', 'as', 'at',
+        'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by',
+        'can', 'can\'t', 'cannot', 'could', 'couldn\'t',
+        'did', 'didn\'t', 'do', 'does', 'doesn\'t', 'doing', 'don\'t', 'down', 'during',
+        'each',
+        'few', 'for', 'from', 'further',
+        'had', 'hadn\'t', 'has', 'hasn\'t', 'have', 'haven\'t', 'having', 'he', 'he\'d', 'he\'ll', 'he\'s', 'her', 'here', 'here\'s', 'hers', 'herself', 'him', 'himself', 'his', 'how', 'how\'s',
+        'i', 'i\'d', 'i\'ll', 'i\'m', 'i\'ve', 'if', 'in', 'into', 'is', 'isn\'t', 'it', 'it\'s', 'its', 'itself',
+        'let\'s',
+        'me', 'more', 'most', 'mustn\'t', 'my', 'myself',
+        'no', 'nor', 'not',
+        'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves', 'out', 'over', 'own',
+        'same', 'shan\'t', 'she', 'she\'d', 'she\'ll', 'she\'s', 'should', 'shouldn\'t', 'so', 'some', 'such',
+        'than', 'that', 'that\'s', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', 'there\'s', 'these', 'they', 'they\'d', 'they\'ll', 'they\'re', 'they\'ve', 'this', 'those', 'through', 'to', 'too',
+        'under', 'until', 'up',
+        'very',
+        'was', 'wasn\'t', 'we', 'we\'d', 'we\'ll', 'we\'re', 'we\'ve', 'were', 'weren\'t', 'what', 'what\'s', 'when', 'when\'s', 'where', 'where\'s', 'which', 'while', 'who', 'who\'s', 'whom', 'why', 'why\'s', 'with', 'won\'t', 'would', 'wouldn\'t',
+        'you', 'you\'d', 'you\'ll', 'you\'re', 'you\'ve', 'your', 'yours', 'yourself', 'yourselves',
+        'tell', 'give', 'show', 'explain', 'find', 'summarize', 'notes', 'note', 'vault',
+    ];
+
+    /**
+     * Extract meaningful search keywords from user query, filtering out common stopwords.
+     *
+     * @return array<int, string>
+     */
+    public function extractQueryKeywords(string $query): array
+    {
+        $tokens = preg_split('/[^a-z0-9_\-\']/i', strtolower($query)) ?: [];
+        $substantive = array_values(array_filter($tokens, function ($token) {
+            return strlen($token) >= 3 && ! in_array($token, self::STOPWORDS, true);
+        }));
+
+        if (! empty($substantive)) {
+            return $substantive;
+        }
+
+        // Fallback to all tokens with length >= 3 if all were filtered
+        return array_values(array_filter($tokens, fn ($t) => strlen($t) >= 3));
+    }
+
+    /**
+     * Extract a clean, highly relevant excerpt from chunk content based on query keywords.
+     * Strips leading markdown headings, bullet markers, and false sentence breaks like '5.'.
+     *
+     * @param  array<int, string>  $keywords
+     */
+    public function extractBestExcerpt(string $content, array $keywords = [], ?string $heading = null): string
+    {
+        $lines = preg_split('/\r\n|\r|\n/', $content) ?: [];
+        $cleanedLines = [];
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            // Strip leading heading markdown
+            if (preg_match('/^#{1,6}\s+(.*)$/', $trimmed, $m)) {
+                $headingText = trim($m[1]);
+                if ($heading && strcasecmp($headingText, $heading) === 0) {
+                    continue;
+                }
+                $trimmed = $headingText;
+            }
+
+            // Strip list markers and checkboxes (e.g. "5. ", "- [ ] ", "* ")
+            $trimmed = preg_replace('/^(\*|-|\+|\d+\.)\s+(\[[ xX]\]\s+)?/', '', $trimmed);
+            // Strip blockquotes
+            $trimmed = preg_replace('/^>\s*/', '', $trimmed);
+
+            if ($trimmed !== '') {
+                $cleanedLines[] = $trimmed;
+            }
+        }
+
+        $cleanText = implode(' ', $cleanedLines);
+        $cleanText = trim(preg_replace('/\s+/', ' ', $cleanText));
+
+        if ($cleanText === '') {
+            return $heading ? "Section: {$heading}" : 'Note content';
+        }
+
+        // Split into candidate sentences avoiding splitting on numbers like "5."
+        $candidates = preg_split('/(?<!\b\d)(?<=[.!?])\s+(?=[A-Z0-9"\'`])/', $cleanText) ?: [];
+
+        $validCandidates = array_values(array_filter($candidates, function ($c) {
+            $words = str_word_count($c);
+
+            return strlen(trim($c)) >= 15 && $words >= 3;
+        }));
+
+        if (empty($validCandidates)) {
+            $validCandidates = [$cleanText];
+        }
+
+        $bestCandidate = $validCandidates[0];
+        $bestScore = -1;
+
+        foreach ($validCandidates as $candidate) {
+            $candLower = strtolower($candidate);
+            $score = 0;
+
+            foreach ($keywords as $kw) {
+                if (str_contains($candLower, $kw)) {
+                    $score += 3;
+                }
+            }
+
+            $len = strlen($candidate);
+            if ($len >= 40 && $len <= 220) {
+                $score += 1;
+            }
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestCandidate = $candidate;
+            }
+        }
+
+        $bestCandidate = trim($bestCandidate, " \t\n\r\0\x0B-*>#");
+
+        if (mb_strlen($bestCandidate) > 230) {
+            $bestCandidate = mb_substr($bestCandidate, 0, 227).'...';
+        }
+
+        return $bestCandidate;
+    }
+
+    /**
+     * Perform hybrid semantic search across vault chunk embeddings.
+     *
+     * @return array<int, array{
+     *     file_id: int,
+     *     path: string,
+     *     heading: string|null,
+     *     start_line: int,
+     *     similarity: float,
+     *     score_pct: int,
+     *     content: string,
+     *     wikilinks: array<int, string>
+     * }>
+     */
     public function search(Vault $vault, string $query, int $limit = 5): array
     {
         if ($vault->is_e2ee) {
@@ -214,10 +359,7 @@ class VaultRagService
         }
 
         $queryVector = $this->embeddingService->generate($cleanQuery);
-        $queryKeywords = array_filter(
-            preg_split('/[^a-z0-9_\-\']/i', strtolower($cleanQuery)) ?: [],
-            fn ($k) => strlen($k) >= 3
-        );
+        $queryKeywords = $this->extractQueryKeywords($cleanQuery);
 
         $embeddings = VaultFileEmbedding::with('file')
             ->where('vault_id', $vault->id)
@@ -238,23 +380,47 @@ class VaultRagService
             $headingLower = strtolower($record->heading ?? '');
             $pathLower = strtolower($record->file->path);
 
-            $lexicalScore = 0.0;
+            $rawHits = 0.0;
+            $matchedKeywords = 0;
             if (! empty($queryKeywords)) {
-                $hits = 0;
                 foreach ($queryKeywords as $kw) {
+                    $matched = false;
                     if (str_contains($headingLower, $kw)) {
-                        $hits += 2.0;
-                    } elseif (str_contains($pathLower, $kw)) {
-                        $hits += 1.5;
-                    } elseif (str_contains($chunkLower, $kw)) {
-                        $hits += 1.0;
+                        $rawHits += 2.5;
+                        $matched = true;
+                    }
+                    if (str_contains($pathLower, $kw)) {
+                        $rawHits += 2.0;
+                        $matched = true;
+                    }
+                    if (str_contains($chunkLower, $kw)) {
+                        $rawHits += 1.2;
+                        $matched = true;
+                    }
+                    if ($matched) {
+                        $matchedKeywords++;
                     }
                 }
-                $lexicalScore = min(1.0, $hits / (count($queryKeywords) * 1.5));
             }
 
-            // Composite Score: 70% Dense Vector, 30% Lexical
-            $composite = max(0.0, ($vectorSimilarity * 0.70) + ($lexicalScore * 0.30));
+            $coverage = ! empty($queryKeywords) ? ($matchedKeywords / count($queryKeywords)) : 0.0;
+            $lexicalScore = ! empty($queryKeywords) ? min(1.0, $rawHits / (count($queryKeywords) * 2.0)) : 0.0;
+
+            if (! empty($queryKeywords)) {
+                if ($matchedKeywords > 0) {
+                    $composite = ($vectorSimilarity * 0.40) + ($lexicalScore * 0.35) + ($coverage * 0.25);
+                    if (str_contains($chunkLower, strtolower($cleanQuery))) {
+                        $composite = min(1.0, $composite + 0.15);
+                    }
+                } else {
+                    // Suppress dense vector baseline noise for documents with 0 keyword matches
+                    $composite = $vectorSimilarity * 0.40;
+                }
+            } else {
+                $composite = $vectorSimilarity;
+            }
+
+            $composite = max(0.0, min(1.0, $composite));
 
             $scored[] = [
                 'file_id' => $record->vault_file_id,
@@ -320,6 +486,7 @@ class VaultRagService
         $startTime = microtime(true);
         $maxCitations = $options['max_citations'] ?? 4;
         $expandGraph = $options['expand_graph'] ?? true;
+        $keywords = $this->extractQueryKeywords($query);
 
         // 1. Hybrid Retrieval
         $topChunks = $this->search($vault, $query, $maxCitations);
@@ -328,10 +495,10 @@ class VaultRagService
         $seedPaths = array_values(array_unique(array_column($topChunks, 'path')));
         $graphNodes = $expandGraph ? $this->graphService->expandContext($vault, $seedPaths, depth: 1) : [];
 
-        // 3. Compile Citations
+        // 3. Compile Citations with clean excerpts
         $citations = [];
         foreach ($topChunks as $chunk) {
-            $excerpt = mb_substr(trim(preg_replace('/\s+/', ' ', strip_tags($chunk['content']))), 0, 180).'...';
+            $excerpt = $this->extractBestExcerpt($chunk['content'], $keywords, $chunk['heading']);
             $citations[] = [
                 'note' => $chunk['path'],
                 'heading' => $chunk['heading'],
@@ -342,12 +509,14 @@ class VaultRagService
             ];
         }
 
-        // 4. Synthesize Answer
-        $llmAnswer = $this->synthesizeWithLlm($query, $topChunks, $graphNodes);
-        $model = 'ollama/local';
+        // 4. Synthesize Answer (Local LLM / Cloud LLM / Refined Deterministic Reasoning)
+        $llmResult = $this->synthesizeWithLlm($query, $topChunks, $graphNodes);
 
-        if ($llmAnswer === null) {
-            $llmAnswer = $this->synthesizeDeterministic($query, $topChunks, $graphNodes);
+        if ($llmResult !== null) {
+            $answer = $llmResult['answer'];
+            $model = $llmResult['model'];
+        } else {
+            $answer = $this->synthesizeDeterministic($query, $topChunks, $graphNodes);
             $model = 'synkk/deterministic-reasoning';
         }
 
@@ -355,7 +524,7 @@ class VaultRagService
 
         return [
             'query' => $query,
-            'answer' => $llmAnswer,
+            'answer' => $answer,
             'citations' => $citations,
             'graph_nodes' => array_slice($graphNodes, 0, 5),
             'model' => $model,
@@ -364,16 +533,14 @@ class VaultRagService
     }
 
     /**
-     * Synthesize answer using local Ollama instance if available.
+     * Synthesize answer using local Ollama instance or OpenAI if available.
      *
      * @param  array<int, mixed>  $chunks
      * @param  array<int, mixed>  $graphNodes
+     * @return array{answer: string, model: string}|null
      */
-    protected function synthesizeWithLlm(string $query, array $chunks, array $graphNodes): ?string
+    protected function synthesizeWithLlm(string $query, array $chunks, array $graphNodes): ?array
     {
-        $ollamaUrl = rtrim((string) config('synkk.rag.ollama_url', 'http://localhost:11434'), '/');
-        $model = (string) config('synkk.rag.llm_model', 'llama3.2');
-
         if (empty($chunks)) {
             return null;
         }
@@ -396,8 +563,12 @@ class VaultRagService
             "Question: {$query}\n\n".
             'Instructions: Provide a concise, accurate answer based strictly on the provided vault context. Cite relevant notes using [[NoteName]] syntax.';
 
+        // 1. Try Local Ollama first
+        $ollamaUrl = rtrim((string) config('synkk.rag.ollama_url', 'http://localhost:11434'), '/');
+        $model = (string) config('synkk.rag.llm_model', 'llama3.2');
+
         try {
-            $response = Http::timeout(4.0)->post("{$ollamaUrl}/api/generate", [
+            $response = Http::timeout(3.0)->post("{$ollamaUrl}/api/generate", [
                 'model' => $model,
                 'prompt' => $prompt,
                 'stream' => false,
@@ -406,11 +577,50 @@ class VaultRagService
             if ($response->successful()) {
                 $text = $response->json('response');
                 if (! empty($text)) {
-                    return trim($text);
+                    return [
+                        'answer' => trim($text),
+                        'model' => "ollama/{$model}",
+                    ];
                 }
             }
         } catch (\Throwable $e) {
             Log::debug('Ollama RAG synthesis skipped: '.$e->getMessage());
+        }
+
+        // 2. Try OpenAI if configured
+        $openaiKey = config('synkk.rag.openai_api_key') ?: env('OPENAI_API_KEY');
+        if (! empty($openaiKey)) {
+            $openaiModel = (string) config('synkk.rag.openai_model', 'gpt-4o-mini');
+            try {
+                $response = Http::withToken($openaiKey)
+                    ->timeout(8.0)
+                    ->post('https://api.openai.com/v1/chat/completions', [
+                        'model' => $openaiModel,
+                        'messages' => [
+                            [
+                                'role' => 'system',
+                                'content' => "You are Synkk Vault Copilot, an AI assistant answering questions about the user's private Obsidian vault. Synthesize answers strictly based on the provided vault context. Cite relevant notes using [[NoteName]] syntax.",
+                            ],
+                            [
+                                'role' => 'user',
+                                'content' => "Context retrieved from vault:\n".implode("\n\n", $contextParts)."\n\nQuestion: {$query}",
+                            ],
+                        ],
+                        'temperature' => 0.2,
+                    ]);
+
+                if ($response->successful()) {
+                    $text = $response->json('choices.0.message.content');
+                    if (! empty($text)) {
+                        return [
+                            'answer' => trim($text),
+                            'model' => "openai/{$openaiModel}",
+                        ];
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::debug('OpenAI RAG synthesis skipped: '.$e->getMessage());
+            }
         }
 
         return null;
@@ -418,6 +628,7 @@ class VaultRagService
 
     /**
      * Deterministic extractive reasoning synthesizer.
+     * Produces clean, structured markdown with direct findings, note references, and graph context.
      *
      * @param  array<int, mixed>  $chunks
      * @param  array<int, mixed>  $graphNodes
@@ -425,42 +636,68 @@ class VaultRagService
     protected function synthesizeDeterministic(string $query, array $chunks, array $graphNodes): string
     {
         if (empty($chunks)) {
-            return "No matching notes or concepts were found in this vault for \"{$query}\". Try adjusting your search query or re-indexing your vault.";
+            return "### No Direct Matches Found\n\nNo matching notes or concepts were found in this vault for \"**{$query}**\". Try adjusting your search keywords or re-indexing your vault.";
         }
 
+        $keywords = $this->extractQueryKeywords($query);
         $topChunk = $chunks[0];
-        $topPath = $topChunk['path'];
-        $topHeading = $topChunk['heading'] ? '#'.$topChunk['heading'] : '';
+        $isHighConfidence = $topChunk['score_pct'] >= 45;
 
         $lines = [];
-        $lines[] = "Based on your vault's knowledge base and **[[{$topPath}{$topHeading}]]** ({$topChunk['score_pct']}% match):";
+
+        if (! $isHighConfidence) {
+            $lines[] = "> ⚠️ **Low confidence match:** No direct high-confidence answers were found for \"**{$query}**\" in your vault. Below are the closest matching notes and concepts:";
+            $lines[] = '';
+        } else {
+            $lines[] = '### Summary & Findings';
+            $lines[] = '';
+
+            $topExcerpt = $this->extractBestExcerpt($topChunk['content'], $keywords, $topChunk['heading']);
+            $topHeadingStr = $topChunk['heading'] ? " (*{$topChunk['heading']}*)" : '';
+
+            $lines[] = "Based on your vault's notes, the most relevant information is found in **[[{$topChunk['path']}]]**{$topHeadingStr} ({$topChunk['score_pct']}% match):";
+            $lines[] = '';
+            $lines[] = "> \"{$topExcerpt}\"";
+            $lines[] = '';
+        }
+
+        // Relevant Notes & References
+        $lines[] = '### Relevant Notes & References';
         $lines[] = '';
 
-        // Extract key informative lines from top chunks
-        foreach (array_slice($chunks, 0, 3) as $chunk) {
-            $noteRef = "[[{$chunk['path']}]]";
-            $cleanContent = trim(preg_replace('/\s+/', ' ', $chunk['content']));
-            $sentences = preg_split('/(?<=[.!?])\s+/', $cleanContent);
-
-            $bestSentence = $sentences[0] ?? $cleanContent;
-            if (strlen($bestSentence) > 220) {
-                $bestSentence = mb_substr($bestSentence, 0, 217).'...';
+        $displayedCount = 0;
+        foreach ($chunks as $chunk) {
+            if ($displayedCount >= 3) {
+                break;
             }
 
-            $headingLabel = $chunk['heading'] ? " (*{$chunk['heading']}*)" : '';
-            $lines[] = "- **{$noteRef}**{$headingLabel}: {$bestSentence}";
+            $excerpt = $this->extractBestExcerpt($chunk['content'], $keywords, $chunk['heading']);
+            $headingLabel = $chunk['heading'] ? " &rsaquo; *{$chunk['heading']}*" : '';
+            $noteRef = "[[{$chunk['path']}]]";
+
+            $lines[] = "- **{$noteRef}**{$headingLabel} — `{$chunk['score_pct']}% match`";
+            $lines[] = "  {$excerpt}";
+            $lines[] = '';
+
+            $displayedCount++;
         }
 
         // Backlink connections
         if (! empty($graphNodes)) {
+            $lines[] = '### Connected Concepts (Knowledge Graph)';
             $lines[] = '';
-            $lines[] = '**Graph-Connected Context:**';
-            foreach (array_slice($graphNodes, 0, 2) as $node) {
-                $lines[] = "- Note **[[{$node['path']}]]** connects back via *{$node['via']}* with relevant context.";
+            foreach (array_slice($graphNodes, 0, 3) as $node) {
+                $lines[] = "- Note **[[{$node['path']}]]** connects via *{$node['via']}* with related context.";
             }
+            $lines[] = '';
         }
 
-        return implode("\n", $lines);
+        if (! $isHighConfidence) {
+            $lines[] = '---';
+            $lines[] = '💡 **Tip:** Try refining your query with specific note titles, tags, or domain terms, or re-index your vault embeddings from the top-right menu.';
+        }
+
+        return trim(implode("\n", $lines));
     }
 
     /**

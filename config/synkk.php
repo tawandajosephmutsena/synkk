@@ -135,6 +135,8 @@ return [
         'embedding_model' => env('SYNKK_RAG_EMBEDDING_MODEL', 'nomic-embed-text'),
         'llm_model' => env('SYNKK_RAG_LLM_MODEL', 'llama3.2'),
         'llm_provider' => env('SYNKK_RAG_LLM_PROVIDER', 'local-first'),
+        'openai_api_key' => env('SYNKK_RAG_OPENAI_API_KEY', env('OPENAI_API_KEY')),
+        'openai_model' => env('SYNKK_RAG_OPENAI_MODEL', 'gpt-4o-mini'),
         'dimensions' => 128,
     ],
 ];

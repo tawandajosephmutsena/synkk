@@ -52,7 +52,7 @@ class EmbeddingService
                 // If we already have accumulated content, flush existing chunk
                 if (! empty($currentLines)) {
                     $chunkText = trim(implode("\n", $currentLines));
-                    if (! empty($chunkText)) {
+                    if (! empty($chunkText) && $this->isSubstantiveChunk($chunkText)) {
                         $chunks[] = $this->buildChunkDescriptor($chunkIndex++, $currentHeading, $currentStartLine, $chunkText);
                     }
                     $currentLines = [];
@@ -68,7 +68,7 @@ class EmbeddingService
                 $currentWordCount = str_word_count(implode(' ', $currentLines));
                 if ($currentWordCount >= 350 && trim($line) === '') {
                     $chunkText = trim(implode("\n", $currentLines));
-                    if (! empty($chunkText)) {
+                    if (! empty($chunkText) && $this->isSubstantiveChunk($chunkText)) {
                         $chunks[] = $this->buildChunkDescriptor($chunkIndex++, $currentHeading, $currentStartLine, $chunkText);
                     }
                     $currentLines = [];
@@ -79,12 +79,22 @@ class EmbeddingService
 
         if (! empty($currentLines)) {
             $chunkText = trim(implode("\n", $currentLines));
-            if (! empty($chunkText)) {
+            if (! empty($chunkText) && $this->isSubstantiveChunk($chunkText)) {
                 $chunks[] = $this->buildChunkDescriptor($chunkIndex++, $currentHeading, $currentStartLine, $chunkText);
             }
         }
 
         return $chunks;
+    }
+
+    /**
+     * Determine if a chunk contains substantive body text beyond standalone markdown headers.
+     */
+    protected function isSubstantiveChunk(string $chunkText): bool
+    {
+        $stripped = trim(preg_replace('/^#{1,6}\s+.*$/m', '', $chunkText));
+
+        return mb_strlen($stripped) >= 3 || str_contains($chunkText, '[[');
     }
 
     /**

@@ -112,7 +112,57 @@ MD;
     ]);
 
     expect($response['answer'])->toContain('Protocol/Sync.md')
+        ->and($response['answer'])->toContain('Summary & Findings')
+        ->and($response['answer'])->toContain('Relevant Notes & References')
         ->and($response['citations'])->not->toBeEmpty()
         ->and($response['citations'][0]['note'])->toBe('Protocol/Sync.md')
         ->and($response['model'])->toContain('deterministic-reasoning');
+});
+
+test('extractBestExcerpt cleans markdown artifacts and prevents single digits like 5. from becoming excerpts', function () {
+    $ragService = app(VaultRagService::class);
+
+    $rawContent = <<<'MD'
+### 5.1 Exact Phase 2 SMS concepts
+5. Concept 1 — “She didn’t choose this” (the girl forced out of school) - Exact wording: Every day, a 14-year-old girl leaves school pregnant, unable to return.
+MD;
+
+    $excerpt = $ragService->extractBestExcerpt($rawContent, ['sms', 'concept']);
+
+    expect($excerpt)->not->toBe('5.')
+        ->and($excerpt)->not->toStartWith('###')
+        ->and($excerpt)->toContain('Concept 1')
+        ->and($excerpt)->toContain('Every day');
+});
+
+test('VaultRagService query marks low confidence searches with a helpful guidance alert', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create(['plan' => 'cloud']);
+    $team->members()->attach($user, ['role' => 'owner']);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Empty Specs',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $content = "# Project Notes\nGeneral meetings schedule for Tuesday mornings.";
+    Storage::disk('local')->put("vaults/{$vault->id}/notes.md", $content);
+    $vault->files()->create([
+        'path' => 'Notes.md',
+        'storage_path' => "vaults/{$vault->id}/notes.md",
+        'sha256' => hash('sha256', $content),
+        'size' => strlen($content),
+        'version' => 1,
+        'is_deleted' => false,
+    ]);
+
+    $ragService = app(VaultRagService::class);
+    $ragService->indexVault($vault);
+
+    $response = $ragService->query($vault, 'quantum cryptography entanglement keys');
+
+    expect($response['answer'])->toContain('Low confidence match')
+        ->and($response['answer'])->toContain('quantum cryptography entanglement keys');
 });
