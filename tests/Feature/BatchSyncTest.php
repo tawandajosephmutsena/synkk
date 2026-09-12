@@ -121,3 +121,46 @@ test('allows filenames with double dots but blocks directory traversal', functio
         ]);
     $resTraversal->assertStatus(422);
 });
+
+test('can batch upload empty notes with empty base64 string or null content without 422 error', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => 'owner']);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Empty Notes Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $tokenResult = DeviceToken::createToken($user, $team, 'MacBook Pro', 'mac');
+    $token = $tokenResult['plain_token'];
+
+    // Test with content_base64 as empty string (Obsidian 0-byte note)
+    $res = $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson("/api/v1/vaults/{$vault->slug}/batch-sync", [
+            'items' => [
+                [
+                    'action' => 'upload',
+                    'path' => 'EmptyNote.md',
+                    'content_base64' => '',
+                    'base_version' => 0,
+                ],
+                [
+                    'action' => 'upload',
+                    'path' => 'NullPayloadNote.md',
+                    'content' => '',
+                    'base_version' => 0,
+                ],
+            ],
+        ]);
+
+    $res->assertOk()
+        ->assertJsonPath('status', 'ok')
+        ->assertJsonPath('summary.pushed', 2)
+        ->assertJsonPath('summary.errors', 0);
+
+    $this->assertDatabaseHas('vault_files', ['vault_id' => $vault->id, 'path' => 'EmptyNote.md', 'size' => 0]);
+    $this->assertDatabaseHas('vault_files', ['vault_id' => $vault->id, 'path' => 'NullPayloadNote.md', 'size' => 0]);
+});

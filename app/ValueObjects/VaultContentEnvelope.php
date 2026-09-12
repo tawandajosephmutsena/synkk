@@ -31,25 +31,19 @@ final readonly class VaultContentEnvelope
         $payload = $rawPayload;
 
         if ($payload === null) {
-            if (isset($data['content_base64'])) {
+            if (array_key_exists('content_base64', $data) && $data['content_base64'] !== null && $data['content_base64'] !== '') {
                 $rawBase64 = (string) $data['content_base64'];
-                if ($rawBase64 === '') {
-                    $payload = '';
-                } else {
-                    $decoded = base64_decode($rawBase64, true);
-                    if ($decoded === false) {
-                        throw ValidationException::withMessages([
-                            'content_base64' => ['The provided Base64 content is malformed.'],
-                        ]);
-                    }
-                    $payload = $decoded;
+                $decoded = base64_decode($rawBase64, true);
+                if ($decoded === false) {
+                    throw ValidationException::withMessages([
+                        'content_base64' => ['The provided Base64 content is malformed.'],
+                    ]);
                 }
-            } elseif (array_key_exists('content', $data)) {
+                $payload = $decoded;
+            } elseif (array_key_exists('content', $data) && $data['content'] !== null) {
                 $payload = (string) $data['content'];
             } else {
-                throw ValidationException::withMessages([
-                    'content' => ['No content or payload provided.'],
-                ]);
+                $payload = '';
             }
         }
 
