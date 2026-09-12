@@ -1,0 +1,47 @@
+{
+    # Global options
+    email {$CADDY_EMAIL:admin@synkk.space}
+    admin off
+}
+
+{$SYNKK_DOMAIN:localhost} {
+    # WebSocket proxy for Laravel Reverb (real-time broadcasting)
+    handle /app/* {
+        reverse_proxy synkk:8080 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Main HTTP & Web API proxy to Synkk application container
+    handle {
+        reverse_proxy synkk:80 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Encode responses with gzip and zstandard compression
+    encode zstd gzip
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Logging
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+}

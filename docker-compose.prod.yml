@@ -1,0 +1,68 @@
+services:
+  synkk:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/tawandajosephmutsena/synkk:latest
+    container_name: synkk-app
+    restart: unless-stopped
+    expose:
+      - "80"
+      - "8080"
+    env_file:
+      - .env
+    environment:
+      APP_NAME: "${APP_NAME:-Synkk Vault Sync}"
+      APP_ENV: "${APP_ENV:-production}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_URL: "${APP_URL:-https://localhost}"
+      DB_CONNECTION: "sqlite"
+      DB_DATABASE: "/var/www/html/database/database.sqlite"
+      SYNKK_STORAGE_DISK: "local"
+      REVERB_SERVER_HOST: "0.0.0.0"
+      REVERB_SERVER_PORT: "8080"
+      REVERB_HOST: "${SYNKK_DOMAIN:-localhost}"
+      REVERB_PORT: "443"
+      REVERB_SCHEME: "https"
+    volumes:
+      - synkk_database:/var/www/html/database
+      - synkk_storage:/var/www/html/storage/app/private
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/up"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - synkk_net
+
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: synkk-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3 (QUIC) support
+    environment:
+      SYNKK_DOMAIN: "${SYNKK_DOMAIN:-localhost}"
+      CADDY_EMAIL: "${CADDY_EMAIL:-admin@synkk.space}"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      synkk:
+        condition: service_healthy
+    networks:
+      - synkk_net
+
+networks:
+  synkk_net:
+    driver: bridge
+
+volumes:
+  synkk_database:
+  synkk_storage:
+  caddy_data:
+  caddy_config:
