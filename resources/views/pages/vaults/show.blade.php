@@ -2624,12 +2624,12 @@ new #[Title('Vault Details')] class extends Component
                 <flux:card class="p-0 overflow-hidden shadow-xs border-slate-200/80 dark:border-zinc-800">
                     <flux:table>
                         <flux:table.columns>
-                            <flux:table.column>{{ __('Note / Path') }}</flux:table.column>
-                            <flux:table.column>{{ __('Size') }}</flux:table.column>
-                            <flux:table.column>{{ __('Revision') }}</flux:table.column>
-                            <flux:table.column>{{ __('Modified By') }}</flux:table.column>
-                            <flux:table.column>{{ __('Last Synced') }}</flux:table.column>
-                            <flux:table.column align="end">{{ __('Actions') }}</flux:table.column>
+                            <flux:table.column class="ps-6 pe-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Note / Path') }}</flux:table.column>
+                            <flux:table.column class="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Size') }}</flux:table.column>
+                            <flux:table.column class="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Revision') }}</flux:table.column>
+                            <flux:table.column class="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Modified By') }}</flux:table.column>
+                            <flux:table.column class="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Last Synced') }}</flux:table.column>
+                            <flux:table.column align="end" class="ps-4 pe-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">{{ __('Actions') }}</flux:table.column>
                         </flux:table.columns>
 
                         <flux:table.rows>
@@ -2642,7 +2642,7 @@ new #[Title('Vault Details')] class extends Component
                                     $dirname = dirname($file->path);
                                 @endphp
                                 <flux:table.row :key="$file->id" class="group hover:bg-slate-50/80 dark:hover:bg-zinc-900/50 transition-colors">
-                                    <flux:table.cell class="font-mono text-xs font-medium">
+                                    <flux:table.cell class="ps-6 pe-4 py-3.5 font-mono text-xs font-medium">
                                         <div class="flex items-center gap-2.5">
                                             <div class="size-8 rounded-lg flex items-center justify-center shrink-0 {{ $isMd ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : ($isCanvas ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400') }}">
                                                 @if ($isMd)
@@ -2677,7 +2677,7 @@ new #[Title('Vault Details')] class extends Component
 
                                                     @if ($file->is_ghost)
                                                         <flux:badge color="purple" size="sm" class="shrink-0 text-[10px]" title="{{ __('Ghost file stub: content streamable on demand') }}">
-                                                            👻 {{ __('Ghost') }}
+                                                             👻 {{ __('Ghost') }}
                                                         </flux:badge>
                                                     @endif
                                                     @if ($file->is_encrypted || $vault->is_e2ee)
@@ -2698,7 +2698,7 @@ new #[Title('Vault Details')] class extends Component
                                         </div>
                                     </flux:table.cell>
 
-                                    <flux:table.cell class="text-xs text-zinc-500">
+                                    <flux:table.cell class="px-4 py-3.5 text-xs text-zinc-500">
                                         @if ($file->is_ghost && $file->original_size > 0)
                                             <span title="{{ __('Original size before ghost stubbing') }}">{{ Number::fileSize($file->original_size, precision: 1) }}</span>
                                             <span class="text-[10px] text-zinc-400">({{ __('stub') }})</span>
@@ -2707,11 +2707,11 @@ new #[Title('Vault Details')] class extends Component
                                         @endif
                                     </flux:table.cell>
 
-                                    <flux:table.cell>
+                                    <flux:table.cell class="px-4 py-3.5">
                                         <flux:badge color="zinc" size="sm">v{{ $file->version }}</flux:badge>
                                     </flux:table.cell>
 
-                                    <flux:table.cell>
+                                    <flux:table.cell class="px-4 py-3.5">
                                         <div class="flex items-center gap-1.5">
                                             <div class="size-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-[10px] font-bold text-slate-700 dark:text-zinc-200 flex items-center justify-center shrink-0">
                                                 {{ $file->lastModifier ? $file->lastModifier->initials() : 'SY' }}
@@ -2720,11 +2720,11 @@ new #[Title('Vault Details')] class extends Component
                                         </div>
                                     </flux:table.cell>
 
-                                    <flux:table.cell class="text-xs text-zinc-400">
+                                    <flux:table.cell class="px-4 py-3.5 text-xs text-zinc-400">
                                         {{ $file->updated_at->diffForHumans() }}
                                     </flux:table.cell>
 
-                                    <flux:table.cell align="end">
+                                    <flux:table.cell align="end" class="ps-4 pe-6 py-3.5">
                                         <div class="flex items-center justify-end gap-1">
                                             @if ($isMd)
                                                 <flux:button

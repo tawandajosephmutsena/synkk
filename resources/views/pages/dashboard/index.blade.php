@@ -663,9 +663,11 @@ new #[Title('Dashboard')] class extends Component {
                     wire:model.live.debounce.250ms="activitySearch"
                     type="text"
                     placeholder="Search task or note..."
-                    class="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none dark:text-white dark:placeholder:text-zinc-500"
+                    class="min-w-0 flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none dark:text-white dark:placeholder:text-zinc-500"
                 />
-                <kbd class="pointer-events-none hidden sm:inline-flex items-center rounded border border-gray-200 bg-gray-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">⌘ F</kbd>
+                <kbd class="pointer-events-none hidden shrink-0 whitespace-nowrap sm:inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                    <span class="text-xs leading-none">⌘</span><span class="leading-none">F</span>
+                </kbd>
             </div>
         </div>
 
@@ -1036,7 +1038,7 @@ new #[Title('Dashboard')] class extends Component {
         <div class="lg:col-span-4 flex flex-col justify-between rounded-3xl border border-gray-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:border-zinc-800 dark:bg-zinc-900">
             <div>
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-extrabold text-gray-900 dark:text-white">{{ __('Project') }}</h3>
+                    <h3 class="text-base font-extrabold text-gray-900 dark:text-white">{{ __('Vaults') }}</h3>
                     <flux:modal.trigger name="create-vault">
                         <button type="button" class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                             + New
