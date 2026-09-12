@@ -66,6 +66,8 @@ new #[Title('Vault Details')] class extends Component
 
     public ?string $conflictPath = null;
 
+    public ?int $conflictCanonicalVersion = null;
+
     public array $conflictHunks = [];
 
     public bool $conflictHasConflicts = false;
@@ -504,16 +506,27 @@ new #[Title('Vault Details')] class extends Component
     public function openConflictSandbox(string $conflictPath, ?string $canonicalPath = null, ?ThreeWayDiffService $diffService = null): void
     {
         $diffService ??= app(ThreeWayDiffService::class);
-        $this->conflictPath = $conflictPath;
+        $this->conflictPath = ltrim(str_replace('\\', '/', $conflictPath), '/');
 
-        $canonical = $canonicalPath ?? preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $conflictPath);
-        if ($canonical === $conflictPath) {
-            $canonical = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $conflictPath);
+        $derived = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $this->conflictPath);
+        if ($derived === $this->conflictPath) {
+            $derived = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $this->conflictPath);
         }
+
+        $canonical = $canonicalPath && ! str_contains($canonicalPath, '.conflict-') && ! str_contains($canonicalPath, '.sync-conflict-')
+            ? ltrim(str_replace('\\', '/', $canonicalPath), '/')
+            : $derived;
+
+        if ($canonical !== $derived) {
+            $canonical = $derived;
+        }
+
         $this->conflictCanonicalPath = $canonical;
 
-        $conflictFile = $this->vault->files()->where('path', $conflictPath)->where('is_deleted', false)->firstOrFail();
+        $conflictFile = $this->vault->files()->where('path', $this->conflictPath)->where('is_deleted', false)->firstOrFail();
         $canonicalFile = $this->vault->files()->where('path', $canonical)->where('is_deleted', false)->first();
+
+        $this->conflictCanonicalVersion = $canonicalFile?->version;
 
         $disk = config('synkk.storage_disk', 'local');
         $this->conflictTheirsContent = Storage::disk($disk)->exists($conflictFile->storage_path)
@@ -556,19 +569,34 @@ new #[Title('Vault Details')] class extends Component
             return;
         }
 
-        $result = $resolver->execute(
-            vault: $this->vault,
-            user: Auth::user(),
-            canonicalPath: $this->conflictCanonicalPath,
-            conflictPath: $this->conflictPath,
-            resolvedContent: $this->conflictReconciledContent,
-            deviceName: 'Web Visual Sandbox'
-        );
+        try {
+            $result = $resolver->execute(
+                vault: $this->vault,
+                user: Auth::user(),
+                canonicalPath: $this->conflictCanonicalPath,
+                conflictPath: $this->conflictPath,
+                resolvedContent: $this->conflictReconciledContent,
+                deviceName: 'Web Visual Sandbox'
+            );
 
-        $this->dispatch('modal-close', name: 'conflict-sandbox-modal');
-        $this->selectFile($result['file']->id);
+            $this->dispatch('modal-close', name: 'conflict-sandbox-modal');
+            $this->selectFile($result['file']->id);
 
-        Flux::toast(variant: 'success', text: __('Conflict reconciled and note updated to revision v:version.', ['version' => $result['version']]));
+            $this->conflictCanonicalPath = null;
+            $this->conflictPath = null;
+            $this->conflictCanonicalVersion = null;
+            $this->conflictHunks = [];
+            $this->conflictHasConflicts = false;
+            $this->conflictCount = 0;
+            $this->conflictReconciledContent = '';
+            $this->conflictCanonicalContent = '';
+            $this->conflictTheirsContent = '';
+
+            Flux::toast(variant: 'success', text: __('Conflict reconciled and note updated to revision v:version.', ['version' => $result['version']]));
+        } catch (\Throwable $e) {
+            report($e);
+            Flux::toast(variant: 'danger', text: __('Failed to reconcile conflict: :message', ['message' => $e->getMessage()]));
+        }
     }
 
     public function collabSyncPulse(?CrdtCollabService $collabService = null): void
@@ -1406,7 +1434,7 @@ new #[Title('Vault Details')] class extends Component
                     <div class="flex items-center gap-2">
                         <button
                             type="button"
-                            wire:click="openConflictSandbox('{{ $activeConflict->path }}', '{{ $this->activeFile->path }}')"
+                            wire:click="openConflictSandbox('{{ $activeConflict->path }}')"
                             class="flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1 text-xs font-bold text-zinc-950 hover:bg-amber-400 transition-colors shadow-xs cursor-pointer"
                         >
                             <flux:icon icon="arrows-right-left" class="size-3.5 text-zinc-950" />
@@ -3298,7 +3326,7 @@ new #[Title('Vault Details')] class extends Component
                             <span class="size-2 rounded-full bg-emerald-400"></span>
                             {{ __('Current Note (Ours)') }}
                         </span>
-                        <span class="text-[10px] font-mono text-zinc-500">v{{ $activeFile?->version }}</span>
+                        <span class="text-[10px] font-mono text-zinc-500">v{{ $conflictCanonicalVersion ?? $activeFile?->version ?? 1 }}</span>
                     </div>
                     <pre class="text-xs font-mono text-zinc-300 max-h-48 overflow-y-auto bg-black/40 p-3 rounded-lg border border-zinc-800/80 whitespace-pre-wrap">{{ $conflictCanonicalContent ?: __('(Empty note)') }}</pre>
                 </div>

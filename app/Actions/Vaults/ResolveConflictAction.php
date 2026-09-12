@@ -36,6 +36,19 @@ class ResolveConflictAction
         $canonicalPath = ltrim(str_replace('\\', '/', $canonicalPath), '/');
         $conflictPath = ltrim(str_replace('\\', '/', $conflictPath), '/');
 
+        $derived = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $conflictPath);
+        if ($derived === $conflictPath) {
+            $derived = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $conflictPath);
+        }
+
+        if ($canonicalPath === '' || $canonicalPath === $conflictPath || str_contains($canonicalPath, '.conflict-') || str_contains($canonicalPath, '.sync-conflict-')) {
+            $canonicalPath = $derived;
+        }
+
+        if ($derived !== $canonicalPath) {
+            throw new RuntimeException("Conflict path '{$conflictPath}' does not correspond to canonical path '{$canonicalPath}'.");
+        }
+
         $permission = $vault->permissionForPath($user, $canonicalPath);
         if ($permission !== 'read_write') {
             throw new RuntimeException("You do not have write permissions for '{$canonicalPath}'.");
@@ -44,14 +57,6 @@ class ResolveConflictAction
         $conflictPermission = $vault->permissionForPath($user, $conflictPath);
         if ($conflictPermission !== 'read_write') {
             throw new RuntimeException("You do not have write permissions for '{$conflictPath}'.");
-        }
-
-        $derived = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $conflictPath);
-        if ($derived === $conflictPath) {
-            $derived = preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $conflictPath);
-        }
-        if ($derived !== $canonicalPath) {
-            throw new RuntimeException("Conflict path '{$conflictPath}' does not correspond to canonical path '{$canonicalPath}'.");
         }
 
         return DB::transaction(function () use ($vault, $user, $canonicalPath, $conflictPath, $resolvedContent, $deviceName) {
@@ -77,6 +82,14 @@ class ResolveConflictAction
                 ->where('path', $canonicalPath)
                 ->where('is_deleted', false)
                 ->firstOrFail();
+
+            if ($uploadResult['status'] === 'identical') {
+                $nextVersion = $vault->latestVersion() + 1;
+                $canonicalFile->update([
+                    'version' => $nextVersion,
+                    'last_modified_by' => $user->id,
+                ]);
+            }
 
             // 2. Mark the conflict file as deleted and record tombstone in changelog
             $conflictFile = $vault->files()

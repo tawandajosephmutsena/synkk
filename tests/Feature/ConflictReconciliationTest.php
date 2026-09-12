@@ -205,3 +205,65 @@ test('ThreeWayDiffService handles large files efficiently via prefix and suffix 
         ->and($res['merged_content'])->toContain('Line number 501 modified by Us')
         ->and($res['merged_content'])->toContain('Line number 501 modified by Them');
 });
+
+test('Livewire vault show opens conflict sandbox and executes conflict resolution without 500', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => 'owner']);
+    $user->update(['current_team_id' => $team->id]);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Collab Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $canonical = $vault->files()->create([
+        'path' => 'Notes/Arch.md',
+        'storage_path' => 'vaults/'.$vault->id.'/arch.md',
+        'sha256' => hash('sha256', "Line 1\nLine 2 Ours\nLine 3"),
+        'size' => 25,
+        'version' => 1,
+        'is_deleted' => false,
+        'last_modified_by' => $user->id,
+    ]);
+    Storage::disk('local')->put($canonical->storage_path, "Line 1\nLine 2 Ours\nLine 3");
+
+    $conflictPath = 'Notes/Arch.conflict-alex-2026.md';
+    $conflict = $vault->files()->create([
+        'path' => $conflictPath,
+        'storage_path' => 'vaults/'.$vault->id.'/arch_conflict.md',
+        'sha256' => hash('sha256', "Line 1\nLine 2 Theirs\nLine 3"),
+        'size' => 27,
+        'version' => 2,
+        'is_deleted' => false,
+        'last_modified_by' => $user->id,
+    ]);
+    Storage::disk('local')->put($conflict->storage_path, "Line 1\nLine 2 Theirs\nLine 3");
+
+    $this->actingAs($user);
+
+    $component = Livewire::test('pages::vaults.show', ['vault' => $vault]);
+
+    // Even if $conflictPath was passed as both arguments (e.g. from editor banner with active conflict file)
+    $component->call('selectFile', $conflict->id);
+    $component->call('openConflictSandbox', $conflictPath, $conflictPath);
+    expect($component->get('conflictCanonicalPath'))->toBe('Notes/Arch.md')
+        ->and($component->get('conflictPath'))->toBe($conflictPath)
+        ->and($component->get('conflictHasConflicts'))->toBeTrue();
+
+    // Verify hunk resolution interaction
+    $component->call('setHunkResolution', 0, 'theirs');
+    expect($component->get('conflictReconciledContent'))->toContain('Theirs');
+
+    // Execute merge/resolution
+    $component->call('executeConflictResolution');
+    $component->assertHasNoErrors();
+    $component->assertDispatched('modal-close', name: 'conflict-sandbox-modal');
+
+    // Assert canonical note was updated and conflict note was soft deleted
+    expect($conflict->fresh()->is_deleted)->toBeTrue()
+        ->and($canonical->fresh()->getContents())->toContain('Theirs')
+        ->and($component->get('activeFileId'))->toBe($canonical->id);
+});
