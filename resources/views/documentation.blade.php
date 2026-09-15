@@ -683,9 +683,9 @@
                         <div class="synkk-code-box">
                             <div class="synkk-code-box__header">
                                 <span>1-Line Quick Deploy</span>
-                                <button class="synkk-code-box__copy" onclick="navigator.clipboard.writeText('curl -fsSL https://synkk.it/install.sh | bash')">Copy</button>
+                                <button class="synkk-code-box__copy" onclick="navigator.clipboard.writeText('curl -fsSL https://synkk.space/install.sh | bash')">Copy</button>
                             </div>
-                            <pre><code>curl -fsSL https://synkk.it/install.sh | bash</code></pre>
+                            <pre><code>curl -fsSL https://synkk.space/install.sh | bash</code></pre>
                         </div>
 
                         <h3>Docker Compose Architecture</h3>

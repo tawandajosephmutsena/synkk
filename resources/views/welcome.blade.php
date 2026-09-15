@@ -34,7 +34,7 @@
     <body class="synkk-site font-sans antialiased" data-motion="on">
         @php
             $pluginUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin';
-            $pluginReleaseUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/tag/1.0.0';
+            $pluginReleaseUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/latest';
             $storeUrl = config('synkk.lemon_squeezy.store_url');
             $storeReady = filled($storeUrl)
                 && filled(config('synkk.lemon_squeezy.store_id'))
@@ -1862,7 +1862,7 @@
                         <h2 id="final-heading">Install the Obsidian plugin.</h2>
                         <p>Download v1.0.0 from GitHub, then follow the setup guide to connect it to Synkk.</p>
                         <div class="synkk-final-cta__actions">
-                            <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Download v1.0.0 <span aria-hidden="true">↗</span></a>
+                            <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Download Latest Release <span aria-hidden="true">↗</span></a>
                             <a href="{{ route('public.docs') }}" class="synkk-button synkk-button--paper">Read the docs <span aria-hidden="true">→</span></a>
                         </div>
                         <div class="synkk-cta-guarantees">

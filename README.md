@@ -11,8 +11,8 @@
 
 <p align="center">
   <a href="https://synkk.space">Website</a> ·
-  <a href="https://synkk.space/docs">Docs</a> ·
-  <a href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/tag/1.0.0">Plugin v1.0.0</a> ·
+  <a href="https://synkk.space/documentation">Docs</a> ·
+  <a href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/latest">Plugin latest release</a> ·
   <a href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin">Obsidian plugin repo</a> ·
   <a href="https://ottomate.space">Ottomate</a>
 </p>
@@ -32,7 +32,7 @@ Deploy your private Synkk team vault sync server instantly:
   <a href="https://railway.app/new/template?template=https://github.com/tawandajosephmutsena/synkk">
     <img src="https://railway.app/button.svg" alt="Deploy on Railway" height="30">
   </a>
-  <a href="https://synkk.space/docs">
+  <a href="https://synkk.space/documentation">
     <img src="https://elest.io/images/deploy-on-elestio-btn.svg" alt="Deploy on Elestio" height="30">
   </a>
 </p>
@@ -80,10 +80,10 @@ docker compose up -d
 ## Launch Links
 
 - Public app: [synkk.space](https://synkk.space)
-- Documentation: [synkk.space/docs](https://synkk.space/docs)
+- Documentation: [synkk.space/documentation](https://synkk.space/documentation)
 - Web/server repo: [github.com/tawandajosephmutsena/synkk](https://github.com/tawandajosephmutsena/synkk)
 - Obsidian plugin repo: [github.com/tawandajosephmutsena/synk-obsidian-plugin](https://github.com/tawandajosephmutsena/synk-obsidian-plugin)
-- Plugin release: [v1.0.0](https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/tag/1.0.0)
+- Plugin release: [Latest release](https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/latest)
 - Creator studio: [Ottomate](https://ottomate.space)
 - Commercial license: Lemon Squeezy checkout is enabled only after the live product, checkout, and activation flow are verified end to end.
 - AppSumo: planned after the GitHub public release and production checkout are stable.
