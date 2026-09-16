@@ -39,6 +39,7 @@ new #[Title('Synkk Portals')] class extends Component {
         if ($this->vaults->isNotEmpty()) {
             $this->vault_id = $this->vaults->first()->id;
         }
+        $this->modal('portal-modal')->show();
         $this->dispatch('modal-show', name: 'portal-modal');
     }
 
@@ -62,6 +63,7 @@ new #[Title('Synkk Portals')] class extends Component {
         $this->enable_backlinks = (bool) $portal->getSetting('enable_backlinks', true);
         $this->enable_popover = (bool) $portal->getSetting('enable_popover', true);
 
+        $this->modal('portal-modal')->show();
         $this->dispatch('modal-show', name: 'portal-modal');
     }
 
@@ -133,6 +135,7 @@ new #[Title('Synkk Portals')] class extends Component {
         }
 
         $this->resetForm();
+        $this->modal('portal-modal')->close();
         $this->dispatch('modal-close', name: 'portal-modal');
     }
 
@@ -227,9 +230,11 @@ new #[Title('Synkk Portals')] class extends Component {
         </div>
 
         <div class="flex items-center gap-2">
-            <flux:button wire:click="openCreateModal" variant="primary" size="sm" icon="plus">
-                {{ __('New Portal') }}
-            </flux:button>
+            <flux:modal.trigger name="portal-modal">
+                <flux:button wire:click="openCreateModal" variant="primary" size="sm" icon="plus">
+                    {{ __('New Portal') }}
+                </flux:button>
+            </flux:modal.trigger>
         </div>
     </div>
 
@@ -297,9 +302,11 @@ new #[Title('Synkk Portals')] class extends Component {
             <flux:subheading class="max-w-md mt-1 text-xs text-zinc-400">
                 {{ __('Transform any Obsidian vault into a public or password-protected documentation hub, interactive bento showcase, or client portal with live sync.') }}
             </flux:subheading>
-            <flux:button wire:click="openCreateModal" variant="primary" size="sm" icon="plus" class="mt-5">
-                {{ __('Create First Portal') }}
-            </flux:button>
+            <flux:modal.trigger name="portal-modal">
+                <flux:button wire:click="openCreateModal" variant="primary" size="sm" icon="plus" class="mt-5">
+                    {{ __('Create First Portal') }}
+                </flux:button>
+            </flux:modal.trigger>
         </flux:card>
     @else
         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -386,14 +393,16 @@ new #[Title('Synkk Portals')] class extends Component {
                             </button>
 
                             <!-- Edit Settings -->
-                            <button
-                                type="button"
-                                wire:click="editPortal({{ $portal->id }})"
-                                class="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-white cursor-pointer"
-                                title="{{ __('Edit Settings') }}"
-                            >
-                                <flux:icon icon="cog-6-tooth" class="size-4" />
-                            </button>
+                            <flux:modal.trigger name="portal-modal">
+                                <button
+                                    type="button"
+                                    wire:click="editPortal({{ $portal->id }})"
+                                    class="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-white cursor-pointer"
+                                    title="{{ __('Edit Settings') }}"
+                                >
+                                    <flux:icon icon="cog-6-tooth" class="size-4" />
+                                </button>
+                            </flux:modal.trigger>
 
                             <!-- Delete Portal -->
                             <button
