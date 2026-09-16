@@ -366,5 +366,29 @@ test('portal show component supports switching themes and layouts dynamically', 
         ->call('switchTheme', 'midnight-emerald')
         ->assertSet('currentTheme', 'midnight-emerald')
         ->call('switchLayout', 'dashboard')
-        ->assertSet('currentLayout', 'dashboard');
+        ->assertSet('currentLayout', 'dashboard')
+        ->call('switchLayout', 'graph')
+        ->assertSet('currentLayout', 'graph');
+});
+
+test('portal renderer service callout blocks never produce broken html or code-escaped div tags', function () {
+    $service = app(PortalRendererService::class);
+    $markdown = <<<'MD'
+# Deep Architecture
+
+> [!NOTE] Sovereign Sync Protocol
+> This is a multiline note.
+> It has multiple lines of explanation.
+> Check out [[Welcome to Synkk]] inside the note.
+
+Regular paragraph following callout.
+MD;
+
+    $rendered = $service->renderNoteHtml($markdown, new VaultPortal, collect([$this->file1]));
+
+    expect($rendered['html'])->toContain('synkk-callout--note')
+        ->and($rendered['html'])->toContain('Sovereign Sync Protocol')
+        ->and($rendered['html'])->toContain('This is a multiline note.')
+        ->and($rendered['html'])->not->toContain('&lt;/div&gt;')
+        ->and($rendered['html'])->not->toContain('<pre><code class="language-code">&lt;/div&gt;');
 });

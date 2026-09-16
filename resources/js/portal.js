@@ -3,6 +3,8 @@
  * High-craftsmanship client interactions for published Obsidian vaults.
  */
 
+import './vault-graph.js';
+
 // 1. One-Click Code Copying with Visual Feedback
 window.copyCode = function (button) {
     if (!button) return;

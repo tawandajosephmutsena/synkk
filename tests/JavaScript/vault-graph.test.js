@@ -54,6 +54,29 @@ test('opens a graph node in the editor through one server action', async () => {
     assert.equal(openedFileId, 17);
 });
 
+test('opens a graph node in a portal using selectNote', async () => {
+    const graph = createVaultGraph({
+        nodes: [{ id: 18, name: 'Guide.md', path: 'docs/Guide.md' }],
+    });
+    let selectedPath = null;
+    let switchedLayout = null;
+
+    graph.$wire = {
+        graphModalOpen: true,
+        async selectNote(path) {
+            selectedPath = path;
+        },
+        async switchLayout(layout) {
+            switchedLayout = layout;
+        },
+    };
+
+    assert.equal(await graph.selectNode(18), true);
+    assert.equal(selectedPath, 'docs/Guide.md');
+    assert.equal(switchedLayout, 'docs');
+    assert.equal(graph.$wire.graphModalOpen, false);
+});
+
 test('cleans up animation and listeners on destroy', () => {
     const graph = createVaultGraph();
     let cancelledId = null;

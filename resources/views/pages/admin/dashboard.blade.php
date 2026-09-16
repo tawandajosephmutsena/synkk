@@ -209,12 +209,40 @@ new #[Title('Platform Super Admin')] class extends Component {
 
     public function updateTenantPlan(int $teamId, string $newPlan): void
     {
+        $validPlans = ['free', 'pro_ltd', 'cloud'];
+        if (! in_array($newPlan, $validPlans, true)) {
+            Flux::toast(variant: 'danger', text: __('Invalid plan selected.'));
+            return;
+        }
+
         $team = Team::findOrFail($teamId);
         $team->update(['plan' => $newPlan]);
 
         Flux::toast(variant: 'success', text: __("Tenant ':name' plan updated to :plan.", [
             'name' => $team->name,
             'plan' => $team->planName(),
+        ]));
+    }
+
+    public function upgradeUserWorkspaces(int $userId, string $newPlan = 'pro_ltd'): void
+    {
+        $validPlans = ['free', 'pro_ltd', 'cloud'];
+        if (! in_array($newPlan, $validPlans, true)) {
+            Flux::toast(variant: 'danger', text: __('Invalid plan selected.'));
+            return;
+        }
+
+        $user = User::findOrFail($userId);
+        $count = 0;
+        foreach ($user->teams as $team) {
+            $team->update(['plan' => $newPlan]);
+            $count++;
+        }
+
+        Flux::toast(variant: 'success', text: __(":count workspace(s) for ':name' upgraded to :plan.", [
+            'count' => $count,
+            'name' => $user->name,
+            'plan' => ucfirst(str_replace('_', ' ', $newPlan)),
         ]));
     }
 
@@ -293,7 +321,16 @@ new #[Title('Platform Super Admin')] class extends Component {
             return;
         }
 
-        $user->update(['is_super_admin' => ! $user->is_super_admin]);
+        $newStatus = ! $user->is_super_admin;
+        $user->update(['is_super_admin' => $newStatus]);
+
+        if ($newStatus) {
+            foreach ($user->teams as $team) {
+                if ($team->plan === 'free') {
+                    $team->update(['plan' => 'pro_ltd']);
+                }
+            }
+        }
 
         Flux::toast(variant: 'success', text: __("User ':name' Super Admin status toggled.", ['name' => $user->name]));
     }
@@ -1136,7 +1173,7 @@ new #[Title('Platform Super Admin')] class extends Component {
                                     </td>
                                     <td class="py-3.5 px-4">
                                         <select
-                                            wire:change="updateTenantPlan({{ $tenant->id }}, $event.target.value)"
+                                            x-on:change="$wire.updateTenantPlan({{ $tenant->id }}, $event.target.value)"
                                             class="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
                                         >
                                             <option value="free" @selected($tenant->plan === 'free')>Community Free</option>
@@ -1264,6 +1301,15 @@ new #[Title('Platform Super Admin')] class extends Component {
                                     <td class="py-3.5 px-4 text-right">
                                         <div class="flex items-center justify-end gap-2">
                                             @if ($user->id !== auth()->id())
+                                                <button
+                                                    type="button"
+                                                    wire:click="upgradeUserWorkspaces({{ $user->id }}, 'pro_ltd')"
+                                                    title="{{ __('Upgrade all user workspaces to Pro LTD') }}"
+                                                    class="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-900/60 cursor-pointer"
+                                                >
+                                                    {{ __('Upgrade Workspaces') }}
+                                                </button>
+
                                                 <button
                                                     type="button"
                                                     wire:click="toggleSuperAdmin({{ $user->id }})"

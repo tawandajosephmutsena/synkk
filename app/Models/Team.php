@@ -161,6 +161,18 @@ class Team extends Model
     }
 
     /**
+     * Check if this team has any superadmin member.
+     */
+    public function hasSuperAdminMember(): bool
+    {
+        if ($this->relationLoaded('members')) {
+            return $this->members->contains('is_super_admin', true);
+        }
+
+        return $this->members()->where('is_super_admin', true)->exists();
+    }
+
+    /**
      * Get all members of this team.
      *
      * @return BelongsToMany<User, $this, Membership, 'pivot'>

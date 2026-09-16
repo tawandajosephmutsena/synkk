@@ -5,6 +5,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultChangeLog;
+use App\Services\PlanService;
 use Livewire\Livewire;
 
 test('guests are redirected to login when attempting to access super admin dashboard', function () {
@@ -206,4 +207,37 @@ test('super admin can trigger cache clear and snapshot pruning operations', func
         ->call('clearApplicationCache')
         ->call('pruneOldSnapshots')
         ->assertOk();
+});
+
+test('super admin teams receive unlimited quotas and bypass all plan limits in PlanService', function () {
+    $admin = User::factory()->asSuperAdmin()->create();
+    $team = $admin->personalTeam();
+    $planService = app(PlanService::class);
+
+    expect($planService->isSuperAdminTeam($team))->toBeTrue()
+        ->and($planService->canAddDevice($team))->toBeTrue()
+        ->and($planService->canCreateVault($team))->toBeTrue()
+        ->and($planService->canInviteMember($team))->toBeTrue()
+        ->and($planService->canUploadStorage($team, 999999999))->toBeTrue()
+        ->and($planService->hasFeature($team, 'cloud_relay'))->toBeTrue()
+        ->and($planService->getPlanConfig($team)['name'])->toBe('Super Admin Unlimited');
+
+    $usage = $planService->getUsageSummary($team);
+    expect($usage['is_superadmin'])->toBeTrue();
+});
+
+test('super admin can upgrade all user workspaces at once from user management', function () {
+    $admin = User::factory()->asSuperAdmin()->create();
+    $user = User::factory()->create();
+    $team1 = $user->personalTeam();
+    $team1->update(['plan' => 'free']);
+
+    expect($team1->fresh()->plan)->toBe('free');
+
+    Livewire::actingAs($admin)
+        ->test('pages::admin.dashboard')
+        ->set('activeTab', 'users')
+        ->call('upgradeUserWorkspaces', $user->id, 'pro_ltd');
+
+    expect($team1->fresh()->plan)->toBe('pro_ltd');
 });

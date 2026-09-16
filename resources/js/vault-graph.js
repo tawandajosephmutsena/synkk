@@ -94,6 +94,8 @@ export function createVaultGraph(data = {}) {
                 ctx.translate(this.panX, this.panY);
                 ctx.scale(this.zoom, this.zoom);
 
+                const scaleFactor = Math.pow(this.zoom, 0.45);
+
                 for (const edge of this.edges) {
                     const source = this.nodes[edge.source];
                     const target = this.nodes[edge.target];
@@ -108,9 +110,9 @@ export function createVaultGraph(data = {}) {
                     ctx.moveTo(source.x, source.y);
                     ctx.lineTo(target.x, target.y);
                     ctx.strokeStyle = isConnectedToHover
-                        ? 'rgba(16, 185, 129, 0.7)'
-                        : 'rgba(255, 255, 255, 0.08)';
-                    ctx.lineWidth = isConnectedToHover ? 2 : 1;
+                        ? 'rgba(16, 185, 129, 0.8)'
+                        : 'rgba(255, 255, 255, 0.1)';
+                    ctx.lineWidth = (isConnectedToHover ? 2 : 1) / Math.pow(this.zoom, 0.4);
                     ctx.stroke();
                 }
 
@@ -118,14 +120,15 @@ export function createVaultGraph(data = {}) {
                     const isMatch = !this.search
                         || (node.name && node.name.toLowerCase().includes(this.search.toLowerCase()));
                     const isHovered = this.hoveredNode === node;
+                    const visualRadius = (node.radius * (isHovered ? 1.3 : 1)) / scaleFactor;
 
                     ctx.beginPath();
-                    ctx.arc(node.x, node.y, node.radius * (isHovered ? 1.3 : 1), 0, Math.PI * 2);
+                    ctx.arc(node.x, node.y, visualRadius, 0, Math.PI * 2);
 
                     if (isHovered) {
                         ctx.fillStyle = '#10B981';
                         ctx.shadowColor = '#10B981';
-                        ctx.shadowBlur = 12;
+                        ctx.shadowBlur = 10 / scaleFactor;
                     } else if (isMatch) {
                         ctx.fillStyle = (node.linksCount || 0) > 2 ? '#059669' : '#4B5563';
                         ctx.shadowBlur = 0;
@@ -136,10 +139,11 @@ export function createVaultGraph(data = {}) {
                     ctx.fill();
 
                     if (isMatch || isHovered) {
-                        ctx.font = isHovered ? 'bold 11px sans-serif' : '10px sans-serif';
-                        ctx.fillStyle = isHovered ? '#FFFFFF' : 'rgba(209, 213, 219, 0.75)';
+                        const fontSize = Math.max(7, Math.min(13, (isHovered ? 11 : 9.5) / Math.pow(this.zoom, 0.5)));
+                        ctx.font = isHovered ? `bold ${fontSize}px sans-serif` : `${fontSize}px sans-serif`;
+                        ctx.fillStyle = isHovered ? '#FFFFFF' : 'rgba(209, 213, 219, 0.8)';
                         ctx.textAlign = 'center';
-                        ctx.fillText(node.name || '', node.x, node.y + node.radius + 12);
+                        ctx.fillText(node.name || '', node.x, node.y + visualRadius + (10 / scaleFactor));
                     }
                 }
 
@@ -324,10 +328,12 @@ export function createVaultGraph(data = {}) {
             const nodeAtPoint = (x, y) => {
                 const worldX = (x - this.panX) / this.zoom;
                 const worldY = (y - this.panY) / this.zoom;
+                const scaleFactor = Math.pow(this.zoom, 0.45);
 
-                return this.nodes.find((node) => (
-                    Math.hypot(node.x - worldX, node.y - worldY) < node.radius + 6
-                )) ?? null;
+                return this.nodes.find((node) => {
+                    const visualRadius = node.radius / scaleFactor;
+                    return Math.hypot(node.x - worldX, node.y - worldY) < visualRadius + (6 / this.zoom);
+                }) ?? null;
             };
 
             const releasePointer = (event) => {
@@ -447,9 +453,15 @@ export function createVaultGraph(data = {}) {
                 },
                 wheel: (event) => {
                     event.preventDefault();
+                    const point = canvasPoint(event);
                     const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
-                    this.zoom = Math.max(0.3, Math.min(3, this.zoom * zoomFactor));
-                    this.requestRender();
+                    const newZoom = Math.max(0.3, Math.min(3, this.zoom * zoomFactor));
+                    if (newZoom !== this.zoom) {
+                        this.panX = point.x - (point.x - this.panX) * (newZoom / this.zoom);
+                        this.panY = point.y - (point.y - this.panY) * (newZoom / this.zoom);
+                        this.zoom = newZoom;
+                        this.requestRender();
+                    }
                 },
             };
 
@@ -600,6 +612,14 @@ export function createVaultGraph(data = {}) {
             try {
                 if (typeof this.$wire?.openFileInEditor === 'function') {
                     await this.$wire.openFileInEditor(node.id);
+                } else if (typeof this.$wire?.selectNote === 'function') {
+                    await this.$wire.selectNote(node.path || node.name);
+                    if (typeof this.$wire?.switchLayout === 'function') {
+                        this.$wire.switchLayout('docs');
+                    }
+                    if (this.$wire && 'graphModalOpen' in this.$wire) {
+                        this.$wire.graphModalOpen = false;
+                    }
                 } else if (typeof this.$wire?.selectFile === 'function') {
                     await this.$wire.selectFile(node.id);
                     this.$wire.activeTab = 'editor';
@@ -633,13 +653,27 @@ export function createVaultGraph(data = {}) {
         },
 
         zoomIn() {
-            this.zoom = Math.min(3, this.zoom * 1.2);
-            this.requestRender();
+            const centerX = this.viewportWidth > 0 ? this.viewportWidth / 2 : this.panX;
+            const centerY = this.viewportHeight > 0 ? this.viewportHeight / 2 : this.panY;
+            const newZoom = Math.min(3, this.zoom * 1.2);
+            if (newZoom !== this.zoom) {
+                this.panX = centerX - (centerX - this.panX) * (newZoom / this.zoom);
+                this.panY = centerY - (centerY - this.panY) * (newZoom / this.zoom);
+                this.zoom = newZoom;
+                this.requestRender();
+            }
         },
 
         zoomOut() {
-            this.zoom = Math.max(0.3, this.zoom * 0.8);
-            this.requestRender();
+            const centerX = this.viewportWidth > 0 ? this.viewportWidth / 2 : this.panX;
+            const centerY = this.viewportHeight > 0 ? this.viewportHeight / 2 : this.panY;
+            const newZoom = Math.max(0.3, this.zoom * 0.8);
+            if (newZoom !== this.zoom) {
+                this.panX = centerX - (centerX - this.panX) * (newZoom / this.zoom);
+                this.panY = centerY - (centerY - this.panY) * (newZoom / this.zoom);
+                this.zoom = newZoom;
+                this.requestRender();
+            }
         },
 
         resetView() {

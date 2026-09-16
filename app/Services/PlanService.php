@@ -9,12 +9,52 @@ use App\Models\VaultFileVersion;
 class PlanService
 {
     /**
+     * Determine if a team has Super Admin privileges.
+     */
+    public function isSuperAdminTeam(Team $team): bool
+    {
+        if (auth()->check() && auth()->user()?->isSuperAdmin()) {
+            return true;
+        }
+
+        return $team->hasSuperAdminMember();
+    }
+
+    /**
      * Get plan configuration array for a team.
      *
      * @return array{name: string, badge: string, max_devices: int, max_vaults: int, max_members: int, storage_limit_mb: int, features: array<int, string>}
      */
     public function getPlanConfig(Team $team): array
     {
+        if ($this->isSuperAdminTeam($team)) {
+            return [
+                'name' => 'Super Admin Unlimited',
+                'badge' => 'Super Admin',
+                'max_devices' => 9999,
+                'max_vaults' => 9999,
+                'max_members' => 9999,
+                'storage_limit_mb' => 5000000,
+                'features' => [
+                    'basic_sync',
+                    'web_editor',
+                    'interactive_graph',
+                    'atomic_abort_guard',
+                    'path_acls',
+                    'dlp_scan',
+                    'remote_wipe',
+                    'ip_whitelisting',
+                    'read_only_tokens',
+                    'plugin_suite_sync',
+                    'crdt_multiplayer',
+                    'e2ee_team',
+                    'rag_vector_search',
+                    'cloud_backup',
+                    'priority_support',
+                ],
+            ];
+        }
+
         $plans = config('synkk.plans', []);
         $planKey = $team->plan ?? 'free';
 
@@ -34,6 +74,10 @@ class PlanService
      */
     public function getDeviceLimit(Team $team): int
     {
+        if ($this->isSuperAdminTeam($team)) {
+            return 9999;
+        }
+
         return $team->max_devices ?? (int) $this->getPlanConfig($team)['max_devices'];
     }
 
@@ -42,6 +86,10 @@ class PlanService
      */
     public function getVaultLimit(Team $team): int
     {
+        if ($this->isSuperAdminTeam($team)) {
+            return 9999;
+        }
+
         return $team->max_vaults ?? (int) $this->getPlanConfig($team)['max_vaults'];
     }
 
@@ -50,6 +98,10 @@ class PlanService
      */
     public function getMemberLimit(Team $team): int
     {
+        if ($this->isSuperAdminTeam($team)) {
+            return 9999;
+        }
+
         return $team->max_members ?? (int) $this->getPlanConfig($team)['max_members'];
     }
 
@@ -58,6 +110,10 @@ class PlanService
      */
     public function getStorageLimitMb(Team $team): int
     {
+        if ($this->isSuperAdminTeam($team)) {
+            return 5000000;
+        }
+
         return $team->storage_limit_mb ?? (int) $this->getPlanConfig($team)['storage_limit_mb'];
     }
 
@@ -68,6 +124,10 @@ class PlanService
     {
         if ($team->isSuspended()) {
             return false;
+        }
+
+        if ($this->isSuperAdminTeam($team)) {
+            return true;
         }
 
         return $team->deviceTokens()->count() < $this->getDeviceLimit($team);
@@ -82,6 +142,10 @@ class PlanService
             return false;
         }
 
+        if ($this->isSuperAdminTeam($team)) {
+            return true;
+        }
+
         return $team->vaults()->count() < $this->getVaultLimit($team);
     }
 
@@ -92,6 +156,10 @@ class PlanService
     {
         if ($team->isSuspended()) {
             return false;
+        }
+
+        if ($this->isSuperAdminTeam($team)) {
+            return true;
         }
 
         $currentCount = $team->members()->count() + $team->invitations()->count();
@@ -128,6 +196,10 @@ class PlanService
             return false;
         }
 
+        if ($this->isSuperAdminTeam($team)) {
+            return true;
+        }
+
         $limitBytes = $this->getStorageLimitMb($team) * 1024 * 1024;
         $currentBytes = $this->getTotalStorageBytes($team);
 
@@ -141,6 +213,10 @@ class PlanService
     {
         if ($team->isSuspended()) {
             return false;
+        }
+
+        if ($this->isSuperAdminTeam($team)) {
+            return true;
         }
 
         $config = $this->getPlanConfig($team);
@@ -175,6 +251,7 @@ class PlanService
             'plan_name' => $config['name'],
             'plan_badge' => $config['badge'],
             'is_suspended' => $team->isSuspended(),
+            'is_superadmin' => $this->isSuperAdminTeam($team),
             'devices' => [
                 'used' => $devicesUsed,
                 'limit' => $deviceLimit,

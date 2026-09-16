@@ -106,25 +106,29 @@ class PortalRendererService
 
         $processedBody = $processedBody ?? $body;
 
-        // 3. Transform Obsidian Callouts (> [!NOTE])
-        $processedBody = $this->renderCallouts($processedBody);
+        // 3. Extract Obsidian Callouts (> [!NOTE]) into placeholder tokens to prevent CommonMark indentation bugs
+        $callouts = [];
+        $processedBody = $this->extractCallouts($processedBody, $callouts);
 
-        // 4. Resolve [[Wikilinks]] with interactive previews
-        $processedBody = $this->renderWikilinks($processedBody, $portal, $allFiles);
-
-        // 5. Convert Markdown to HTML via Laravel CommonMark engine
+        // 4. Convert Markdown to HTML via Laravel CommonMark engine
         $html = Str::markdown($processedBody, [
             'html_input' => 'allow',
             'allow_unsafe_links' => false,
         ]);
 
-        // 6. Post-process code blocks into macOS styled windows
+        // 5. Post-process code blocks into macOS styled windows
         $html = $this->renderCodeWindows($html);
 
-        // 7. Post-process tables into responsive styled wrappers
+        // 6. Post-process tables into responsive styled wrappers
         $html = $this->renderTableWrappers($html);
 
-        // 8. Compute Backlinks for current note
+        // 7. Restore Callouts with unindented, clean HTML
+        $html = $this->restoreCallouts($html, $callouts);
+
+        // 8. Resolve [[Wikilinks]] with interactive previews (runs on HTML, skipping <pre> and <code> blocks)
+        $html = $this->renderWikilinks($html, $portal, $allFiles);
+
+        // 9. Compute Backlinks for current note
         $backlinks = [];
         if ($currentFile) {
             $currentBasename = pathinfo($currentFile->path, PATHINFO_FILENAME);
@@ -197,13 +201,15 @@ HTML;
     }
 
     /**
-     * Render Obsidian Callouts (> [!NOTE]) into styled HTML blocks.
+     * Extract Obsidian Callouts (> [!NOTE]) into placeholder tokens to prevent CommonMark indentation bugs.
+     *
+     * @param  array<string, string>  $callouts
      */
-    protected function renderCallouts(string $text): string
+    protected function extractCallouts(string $text, array &$callouts): string
     {
         $pattern = '/^>\s*\[!([A-Za-z]+)\]([+-]?)(?:[ \t]+([^\n]*))?\n((?:>[ \t]*[^\n]*\n?)*)/m';
 
-        return preg_replace_callback($pattern, function ($matches) {
+        return preg_replace_callback($pattern, function ($matches) use (&$callouts) {
             $type = strtoupper(trim($matches[1]));
             $title = ! empty(trim($matches[3] ?? '')) ? trim($matches[3]) : ucfirst(strtolower($type));
             $rawBodyLines = explode("\n", $matches[4]);
@@ -231,31 +237,63 @@ HTML;
             };
 
             $safeTitle = e($title);
-            $parsedInner = Str::markdown($innerContent);
+            $parsedInner = Str::markdown($innerContent, [
+                'html_input' => 'allow',
+                'allow_unsafe_links' => false,
+            ]);
 
-            return <<<HTML
-<div class="synkk-callout synkk-callout--{$classType}">
-    <div class="synkk-callout-header">
-        {$iconSvg}
-        <span>{$safeTitle}</span>
-    </div>
-    <div class="synkk-callout-body">
-        {$parsedInner}
-    </div>
-</div>
-HTML;
+            $token = 'SYNKK_CALLOUT_'.md5($matches[0].count($callouts));
+            $callouts[$token] = '<div class="synkk-callout synkk-callout--'.$classType.'">'
+                .'<div class="synkk-callout-header">'.$iconSvg.'<span>'.$safeTitle.'</span></div>'
+                .'<div class="synkk-callout-body">'.$parsedInner.'</div>'
+                .'</div>';
+
+            return "\n\n%%%".$token."%%%\n\n";
         }, $text) ?? $text;
     }
 
     /**
+     * Restore callout placeholder tokens into final clean HTML blocks.
+     *
+     * @param  array<string, string>  $callouts
+     */
+    protected function restoreCallouts(string $html, array $callouts): string
+    {
+        foreach ($callouts as $token => $calloutHtml) {
+            $pattern = '/(?:<p>\s*)?%%%'.preg_quote($token, '/').'%%%(?:\s*<\/p>)?/';
+            $html = preg_replace($pattern, $calloutHtml, $html) ?? $html;
+        }
+
+        return $html;
+    }
+
+    /**
+     * Render Obsidian Callouts (> [!NOTE]) into styled HTML blocks (backward compatibility helper).
+     */
+    public function renderCallouts(string $text): string
+    {
+        $callouts = [];
+        $tokenized = $this->extractCallouts($text, $callouts);
+
+        return $this->restoreCallouts($tokenized, $callouts);
+    }
+
+    /**
      * Resolve Obsidian [[Wikilinks]] into interactive hover preview anchors.
+     * Skips text inside <pre> and <code> blocks.
      *
      * @param  Collection<int, VaultFile>  $allFiles
      */
     protected function renderWikilinks(string $text, VaultPortal $portal, Collection $allFiles): string
     {
-        return preg_replace_callback('/\[\[(.*?)\]\]/', function ($matches) use ($allFiles) {
-            $parts = explode('|', $matches[1]);
+        $pattern = '/(<(?:pre|code)[^>]*>.*?<\/(?:pre|code)>)|\[\[(.*?)\]\]/s';
+
+        return preg_replace_callback($pattern, function ($matches) use ($allFiles) {
+            if (! empty($matches[1])) {
+                return $matches[1];
+            }
+
+            $parts = explode('|', $matches[2]);
             $target = trim($parts[0]);
             $label = isset($parts[1]) ? trim($parts[1]) : $target;
             $safeLabel = e($label);
@@ -282,25 +320,13 @@ HTML;
                     $excerpt = e($this->extractExcerpt($c, 140));
                 }
 
-                return <<<HTML
-<a href="?note={$targetPath}"
-   wire:navigate
-   class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors"
-   data-preview-title="{$previewTitle}"
-   data-preview-excerpt="{$excerpt}"
-   data-preview-path="{$targetPath}"
-   x-on:mouseenter="showPreview(\$event, '{$previewTitle}', '{$excerpt}')"
-   x-on:mouseleave="hidePreview()"
->
-    <span>{$safeLabel}</span>
-    <svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-    </svg>
-</a>
-HTML;
+                $jsTitle = addslashes($previewTitle);
+                $jsExcerpt = addslashes($excerpt);
+
+                return '<a href="?note='.$targetPath.'" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="'.$previewTitle.'" data-preview-excerpt="'.$excerpt.'" data-preview-path="'.$targetPath.'" x-on:mouseenter="showPreview($event, \''.$jsTitle.'\', \''.$jsExcerpt.'\')" x-on:mouseleave="hidePreview()"><span>'.$safeLabel.'</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>';
             }
 
-            return "<span class=\"inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60\">[[{$safeLabel}]]</span>";
+            return '<span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[['.$safeLabel.']]</span>';
         }, $text) ?? $text;
     }
 

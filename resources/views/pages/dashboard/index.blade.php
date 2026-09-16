@@ -786,19 +786,26 @@ new #[Title('Dashboard')] class extends Component {
                 {{ __('Plan, prioritize, and accomplish your vault sync with ease.') }}
             </p>
             <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold {{ $this->team?->plan === 'cloud' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-200' : ($this->team?->plan === 'pro_ltd' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300') }}">
-                    <span class="size-1.5 rounded-full {{ in_array($this->team?->plan, ['cloud', 'pro_ltd']) ? 'bg-emerald-500' : 'bg-slate-500' }}"></span>
+                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold {{ ! empty($this->teamPlanSummary['is_superadmin']) ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-200 ring-1 ring-amber-500/30' : ($this->team?->plan === 'cloud' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-200' : ($this->team?->plan === 'pro_ltd' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300')) }}">
+                    <span class="size-1.5 rounded-full {{ ! empty($this->teamPlanSummary['is_superadmin']) ? 'bg-amber-500' : (in_array($this->team?->plan, ['cloud', 'pro_ltd']) ? 'bg-emerald-500' : 'bg-slate-500') }}"></span>
                     {{ $this->teamPlanSummary['plan_badge'] }}
                 </span>
-                <span class="text-xs text-slate-500 dark:text-zinc-400">
-                    {{ $this->teamPlanSummary['storage']['used_mb'] }} MB / {{ $this->teamPlanSummary['storage']['limit_mb'] }} MB Storage • {{ $this->teamPlanSummary['devices']['used'] }}/{{ $this->teamPlanSummary['devices']['limit'] }} Devices • {{ $this->teamPlanSummary['vaults']['used'] }}/{{ $this->teamPlanSummary['vaults']['limit'] }} Vaults
-                </span>
-                @if ($this->team?->plan === 'free')
-                    <flux:modal.trigger name="upgrade-plan-modal">
-                        <button type="button" class="text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-400 ml-1 cursor-pointer">
-                            {{ __('Upgrade Plan →') }}
-                        </button>
-                    </flux:modal.trigger>
+                @if (! empty($this->teamPlanSummary['is_superadmin']))
+                    <span class="text-xs text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                        <flux:icon icon="shield-check" class="size-3.5 text-amber-500" />
+                        <span>{{ __('Platform Super Admin · Full System Capabilities & Unlimited Quotas') }}</span>
+                    </span>
+                @else
+                    <span class="text-xs text-slate-500 dark:text-zinc-400">
+                        {{ $this->teamPlanSummary['storage']['used_mb'] }} MB / {{ $this->teamPlanSummary['storage']['limit_mb'] }} MB Storage • {{ $this->teamPlanSummary['devices']['used'] }}/{{ $this->teamPlanSummary['devices']['limit'] }} Devices • {{ $this->teamPlanSummary['vaults']['used'] }}/{{ $this->teamPlanSummary['vaults']['limit'] }} Vaults
+                    </span>
+                    @if ($this->team?->plan === 'free')
+                        <flux:modal.trigger name="upgrade-plan-modal">
+                            <button type="button" class="text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-400 ml-1 cursor-pointer">
+                                {{ __('Upgrade Plan →') }}
+                            </button>
+                        </flux:modal.trigger>
+                    @endif
                 @endif
             </div>
         </div>

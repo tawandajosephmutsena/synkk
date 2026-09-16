@@ -87,6 +87,9 @@ class extends Component {
         $this->mobileDrawerOpen = false;
         $this->commandPaletteOpen = false;
         $this->graphModalOpen = false;
+        if ($this->currentLayout === 'graph') {
+            $this->layoutOverride = 'docs';
+        }
     }
 
     public function filterTag(string $tag): void
@@ -96,7 +99,7 @@ class extends Component {
 
     public function switchLayout(string $layout): void
     {
-        $this->layoutOverride = in_array($layout, ['docs', 'bento', 'dashboard', 'minimal'], true)
+        $this->layoutOverride = in_array($layout, ['docs', 'bento', 'dashboard', 'graph', 'minimal'], true)
             ? $layout
             : null;
     }
@@ -317,16 +320,6 @@ class extends Component {
         },
         openGraphModal() {
             $wire.graphModalOpen = true;
-            this.$nextTick(() => {
-                const canvas = document.getElementById('synkk-knowledge-graph-canvas');
-                if (canvas && window.SynkkGraph) {
-                    window.SynkkGraph.init(canvas, @js($this->interactiveGraph), (node) => {
-                        $wire.selectNote(node.path);
-                        $wire.switchLayout('docs');
-                        $wire.graphModalOpen = false;
-                    });
-                }
-            });
         }
     }"
     x-init="initScrollTracker()"
@@ -384,7 +377,7 @@ class extends Component {
     @else
         <!-- Global Portal Navigation Header -->
         <header class="synkk-portal-header sticky top-0 z-40">
-            <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+            <div class="mx-auto flex h-16 max-w-[1600px] w-full items-center justify-between px-4 sm:px-6 lg:px-8">
                 <!-- Left: Logo & Portal Identity -->
                 <div class="flex items-center gap-3.5">
                     <a href="{{ $portal->getUrl() }}" wire:navigate class="group flex items-center gap-2.5 font-bold tracking-tight">
@@ -450,6 +443,15 @@ class extends Component {
                         >
                             <flux:icon icon="chart-bar-square" class="size-3.5" />
                             <span class="hidden md:inline">{{ __('Hub') }}</span>
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="switchLayout('graph')"
+                            class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition-all {{ $this->currentLayout === 'graph' ? 'bg-amber-500 text-zinc-950 font-bold shadow-xs' : 'text-zinc-400 hover:text-white' }}"
+                            title="Interactive Knowledge Graph layout"
+                        >
+                            <flux:icon icon="share" class="size-3.5" />
+                            <span class="hidden md:inline">{{ __('Graph') }}</span>
                         </button>
                     </div>
 
@@ -536,10 +538,10 @@ class extends Component {
              LAYOUT 1: DOCS HUB & SOVEREIGN KNOWLEDGE ENGINE
              ====================================================================== -->
         @if ($this->currentLayout === 'docs')
-            <div class="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="relative z-10 mx-auto max-w-[1600px] w-full px-4 sm:px-6 lg:px-8">
                 <div class="flex gap-8 py-8">
                     <!-- Left Sidebar: Obsidian Vault Tree Explorer -->
-                    <aside class="hidden w-64 shrink-0 md:block">
+                    <aside class="hidden w-72 shrink-0 md:block">
                         <div class="sticky top-24 space-y-4">
                             <!-- Sidebar Header with Filter -->
                             <div class="space-y-2">
@@ -613,7 +615,7 @@ class extends Component {
                     </aside>
 
                     <!-- Center Content: Rendered Article & Backlinks -->
-                    <main class="min-w-0 flex-1 max-w-3xl">
+                    <main class="min-w-0 flex-1 max-w-5xl">
                         @if ($this->activeFile)
                             <article class="space-y-6">
                                 <!-- Top Breadcrumb Trail -->
@@ -735,7 +737,7 @@ class extends Component {
              LAYOUT 2: BENTO SHOWCASE GRID
              ====================================================================== -->
         @elseif ($this->currentLayout === 'bento')
-            <div class="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+            <div class="relative z-10 mx-auto max-w-[1600px] w-full px-4 py-8 sm:px-6 lg:px-8 space-y-8">
                 <!-- Bento Hero Header -->
                 <div class="max-w-3xl space-y-3">
                     <div class="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-400">
@@ -894,7 +896,7 @@ class extends Component {
              LAYOUT 3: CLIENT HUB / EXECUTIVE DASHBOARD
              ====================================================================== -->
         @elseif ($this->currentLayout === 'dashboard')
-            <div class="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+            <div class="relative z-10 mx-auto max-w-[1600px] w-full px-4 py-8 sm:px-6 lg:px-8 space-y-8">
                 <!-- Welcome Executive Banner -->
                 <div class="synkk-glass-card relative overflow-hidden p-8 sm:p-10">
                     <div class="max-w-2xl space-y-3">
@@ -1000,6 +1002,37 @@ class extends Component {
                     </div>
                 </div>
             </div>
+        <!-- ======================================================================
+             LAYOUT 4: INTERACTIVE KNOWLEDGE GRAPH FULL VIEW
+             ====================================================================== -->
+        @elseif ($this->currentLayout === 'graph')
+            <div class="relative z-10 mx-auto max-w-[1600px] w-full px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <div class="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-400 mb-2">
+                            <flux:icon icon="share" class="size-3.5" />
+                            <span>{{ __('Knowledge Graph Canvas') }}</span>
+                        </div>
+                        <h1 class="text-3xl font-black tracking-tight text-white sm:text-4xl">
+                            {{ $portal->name }}
+                        </h1>
+                        <p class="text-xs text-zinc-400 leading-relaxed mt-1">
+                            {{ __('Explore how your notes connect. Drag nodes, scroll to zoom, or select any note from the index to read.') }}
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        wire:click="switchLayout('docs')"
+                        class="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-2 text-xs font-semibold text-zinc-300 hover:text-white hover:border-amber-500/40 transition-colors self-start sm:self-auto cursor-pointer"
+                    >
+                        <flux:icon icon="arrow-left" class="size-3.5" />
+                        <span>{{ __('Back to Document Reader') }}</span>
+                    </button>
+                </div>
+
+                @include('pages.portals.partials.vault-graph-view')
+            </div>
         @endif
 
         <!-- ======================================================================
@@ -1088,51 +1121,26 @@ class extends Component {
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-lg"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-xl"
             style="display: none;"
             x-on:keydown.escape.window="$wire.graphModalOpen = false"
         >
             <div
                 x-on:click.outside="$wire.graphModalOpen = false"
-                class="synkk-glass-card relative h-[85vh] w-full max-w-5xl p-6 flex flex-col justify-between shadow-2xl border border-zinc-700/60"
+                class="relative w-full max-w-6xl shadow-2xl overflow-hidden rounded-[1.75rem] border border-zinc-700/60 bg-[#0c0f12]"
             >
-                <!-- Modal Top Bar -->
-                <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
-                            <flux:icon icon="share" class="size-5" />
-                        </div>
-                        <div>
-                            <h3 class="text-base font-black text-white">{{ __('Interactive Vault Knowledge Graph') }}</h3>
-                            <p class="text-xs text-zinc-400">{{ __('Physics-based bidirectional links between notes.') }}</p>
-                        </div>
-                    </div>
+                <div class="absolute top-4 right-4 z-30">
                     <button
                         type="button"
                         x-on:click="$wire.graphModalOpen = false"
-                        class="rounded-xl border border-zinc-800 p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                        class="rounded-xl border border-zinc-700/80 bg-zinc-900/90 p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer shadow-lg"
+                        title="{{ __('Close Graph') }}"
                     >
                         <flux:icon icon="x-mark" class="size-5" />
                     </button>
                 </div>
 
-                <!-- Real HTML5 Canvas Simulation -->
-                <div class="synkk-graph-canvas-container flex-1 my-4">
-                    <canvas id="synkk-knowledge-graph-canvas"></canvas>
-                </div>
-
-                <!-- Modal Bottom Info Strip -->
-                <div class="flex items-center justify-between border-t border-zinc-800 pt-3 text-xs text-zinc-400">
-                    <div class="flex items-center gap-4 text-[11px]">
-                        <span>• <strong>Drag nodes</strong> to play with forces</span>
-                        <span>• <strong>Drag background</strong> to pan</span>
-                        <span>• <strong>Scroll wheel</strong> to zoom</span>
-                        <span>• <strong>Click note</strong> to navigate</span>
-                    </div>
-                    <span class="text-[11px] text-amber-400 font-semibold">
-                        {{ count($this->interactiveGraph['nodes']) }} notes · {{ count($this->interactiveGraph['edges']) }} links
-                    </span>
-                </div>
+                @include('pages.portals.partials.vault-graph-view')
             </div>
         </div>
 
