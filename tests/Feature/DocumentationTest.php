@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\Team;
+use App\Models\User;
+
 test('the public documentation page renders with full step by step sections and landing branding', function () {
     $response = $this->get(route('public.docs'));
 
@@ -36,4 +39,18 @@ test('the landing page documentation links point to the public documentation pag
         ->assertSee('href="'.route('public.docs').'#permissions"', escape: false)
         ->assertSee('href="'.route('public.docs').'#safety-shield"', escape: false)
         ->assertSee('href="'.route('public.docs').'#docker"', escape: false);
+});
+
+test('the authenticated in-app documentation page renders with migration and portal sections', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => 'owner']);
+
+    $response = $this->actingAs($user)->get(route('docs', ['current_team' => $team->slug]));
+
+    $response
+        ->assertOk()
+        ->assertSee('Synkk Documentation')
+        ->assertSee('Pre-Flight')
+        ->assertSee('Livewire Vault Portals');
 });

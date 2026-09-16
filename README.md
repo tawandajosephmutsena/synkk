@@ -69,17 +69,22 @@ docker compose up -d
 
 ## What Ships Now
 
-- Laravel server for team membership, vault ownership, device tokens, and scoped vault access.
-- Whole-file sync API with SHA-256 verification, file versions, conflict copies, audit logs, and soft-delete tombstones.
-- Obsidian plugin v1.0.0 with startup, scheduled, and manual sync.
-- Device-level include/exclude rules for selective folder sync.
-- Granular `.obsidian` controls for plugin list, snippets, and plugin data while keeping layout, hotkeys, cache, and Synkk state local.
-- Atomic Safety Shield with deletion thresholds, one-time override, and local snapshots before remote overwrite/delete operations.
-- Web dashboard, Markdown editor, Graph View, permissions matrix, version restore, and public docs.
+- **Instant 3-Second QR Mobile Pairing:** Pair any iOS or Android device in seconds using camera scanning or `obsidian://synkk-pair` deep link protocols without manual key entry.
+- **Interactive Livewire Vault Portals:** Publish any team vault as a live, interactive web portal at `/p/{slug}` in real time without static site builders or node scripts. Includes 4 design presets (Obsidian Clean, Enterprise Documentation, Digital Garden, Minimalist Blog), instant Livewire fuzzy search, interactive backlinks, and dark mode. [Explore the live Synkk Docs Portal](https://synkk.space/p/synkk-docs).
+- **First-Sync Pre-Flight & Migration Engine:** Deterministic 4-phase local diagnostic scan (category rollup across Markdown, Canvases, Images, Media, PDFs), friction trap detection, 1-click cross-platform path sanitizer, dry-run simulation API (`POST /api/v1/vaults/{slug}/preflight`), and Atomic Safety Shield (20% deletion circuit breaker).
+- **Laravel Backend Server:** High-performance local-first sync server with SQLite WAL, team tenancy, device tokens, and scoped vault access.
+- **Whole-File Sync & Conflict Engine:** SHA-256 manifest verification, immutable file versions, conflict copies (`.sync-conflict-[timestamp].md`), audit logs, and soft-delete tombstones.
+- **Obsidian Plugin v1.0.0:** Native desktop and mobile plugin with startup, scheduled, and manual sync pulses.
+- **Device-Level Selective Sync:** Granular include/exclude glob patterns and path-based team access controls (Admin, Editor, Reader, Hidden).
+- **In-App DLP Secret Scanning:** Intercepts accidental commits of AWS, OpenAI, Anthropic, SSH keys, or JWT tokens before storage.
+- **Granular `.obsidian` Controls:** Synchronizes plugin lists, snippets, and plugin data while preserving local workspace layout and hotkeys.
+- **Enterprise Remote Device Wipe:** 1-click revocation and remote token invalidation (HTTP 410 auto-purge).
+- **Web Workspace & Visual Graph:** In-browser Markdown editor with split preview and 2D physics-based force graph canvas.
 
 ## Launch Links
 
 - Public app: [synkk.space](https://synkk.space)
+- Live Docs Portal: [synkk.space/p/synkk-docs](https://synkk.space/p/synkk-docs)
 - Documentation: [synkk.space/documentation](https://synkk.space/documentation)
 - Web/server repo: [github.com/tawandajosephmutsena/synkk](https://github.com/tawandajosephmutsena/synkk)
 - Obsidian plugin repo: [github.com/tawandajosephmutsena/synk-obsidian-plugin](https://github.com/tawandajosephmutsena/synk-obsidian-plugin)
@@ -88,11 +93,14 @@ docker compose up -d
 - Commercial license: Lemon Squeezy checkout is enabled only after the live product, checkout, and activation flow are verified end to end.
 - AppSumo: planned after the GitHub public release and production checkout are stable.
 
-## Current Limits
+## Current Limits & Planned Milestones
 
-Synkk Foundation is not a CRDT engine yet. It does not currently ship character-level merge, peer-to-peer transport, QR pairing, zero-knowledge client-side encryption, content-defined delta attachment sync, virtual/ghost files, native mobile background sync, or an official Obsidian Community Plugins listing.
+Synkk Foundation ships reliable whole-file sync, pre-flight migration safety, instant QR pairing, and livewire vault portals. Next milestones on our active development horizon:
 
-Those features belong on the public roadmap so users can see the direction without confusing planned work for shipped behavior.
+- **Zero-Knowledge E2EE:** Client-side XChaCha20-Poly1305 encryption before network transport for compliance-regulated teams.
+- **Mobile Ghost Files:** Metadata-only stubs for large multimedia archives with sub-second on-demand binary streaming.
+- **Live Multiplayer CRDT:** Character-level real-time multiplayer editing via Yjs (`y-codemirror.next`) with active collaborator carets.
+- **Vault Copilot & Local RAG:** Self-hosted vector embeddings and private Ollama/vLLM LLM querying over your vault graph.
 
 ## Install The Plugin
 
@@ -104,7 +112,7 @@ npm ci
 npm run build
 ```
 
-Install `main.js`, `manifest.json`, and `styles.css` in `<vault>/.obsidian/plugins/synkk-sync/`, then configure an HTTPS Synkk API endpoint ending in `/api/v1` and a device token from the dashboard.
+Install `main.js`, `manifest.json`, and `styles.css` in `<vault>/.obsidian/plugins/synkk-sync/`, then configure an HTTPS Synkk API endpoint ending in `/api/v1` and a device token from the dashboard (or scan the Instant QR Code).
 
 ## Run The Server Locally
 
@@ -118,9 +126,10 @@ For production, provide a unique `APP_KEY`, set `APP_ENV=production`, turn `APP_
 ## Roadmap
 
 - **Foundation live:** GitHub plugin release, self-hosted Laravel server, dashboard, Markdown editor, Graph View, path permissions, version restore, selective sync rules, `.obsidian` controls, deletion safety, and snapshots.
-- **Launch hardening:** clean self-host install package, verified Lemon Squeezy checkout, license activation UI, AppSumo-ready onboarding, and public release notes.
-- **Next:** QR pairing, stronger encrypted transport design, CRDT collaboration, visual conflict sandbox, virtual files, and smarter attachment sync.
-- **Later:** peer-assisted relay transport, native mobile background sync, and advanced team/folder federation.
+- **Milestone A (Shipped):** Instant 3-Second QR Mobile Pairing and deep linking protocol (`obsidian://synkk-pair`).
+- **Milestone B (Shipped):** Interactive Livewire Vault Portals at `/p/{slug}` with 4 themes, live search, and wikilink navigation.
+- **Milestone C (Shipped):** First-Sync Pre-Flight & Migration Engine, 4-phase local diagnostic rollup, 1-click path sanitizer, dry-run simulation API, and 20% mass deletion atomic safety shield.
+- **Next:** Client-side zero-knowledge E2EE, mobile ghost files with on-demand streaming, and live multiplayer CRDT.
 
 ## Creators
 

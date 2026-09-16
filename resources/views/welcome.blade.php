@@ -462,6 +462,101 @@
                                 </div>
                             </div>
                         </article>
+
+                        <!-- Card 7: Interactive Livewire Vault Portals (Instant Web Publishing) -->
+                        <article class="synkk-feature-card">
+                            <div class="synkk-feature-card__copy">
+                                <div class="synkk-feature-card__badge">
+                                    <span class="synkk-status-dot" aria-hidden="true"></span> Available now · Zero-Config Publishing
+                                </div>
+                                <h3>Turn any vault into an interactive web portal.</h3>
+                                <p>Publish your team Obsidian vaults as interactive, beautifully rendered web portals with zero build pipelines, no Node scripts, and real-time synchronization. Choose from 4 curated theme presets with instant reactive fuzzy search, wikilink navigation, and dark mode.</p>
+                                <ul class="synkk-feature-card__list">
+                                    <li><strong>Zero build pipelines:</strong> Notes published instantaneously upon sync with zero static site build delays.</li>
+                                    <li><strong>4 Curated design presets:</strong> Obsidian Clean, Enterprise Documentation, Digital Garden, and Minimalist Blog.</li>
+                                    <li><strong>Reactive Livewire search:</strong> Instant full-text fuzzy search, tag filtering, and interactive wikilink navigation.</li>
+                                </ul>
+                                <div class="synkk-feature-card__actions">
+                                    <a href="{{ url('/p/synkk-docs') }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Explore Live Docs Portal <span aria-hidden="true">↗</span></a>
+                                    <a href="{{ route('public.docs') }}#portals" class="synkk-button synkk-button--quiet">Portals guide <span aria-hidden="true">→</span></a>
+                                </div>
+                            </div>
+                            <div class="synkk-feature-card__media">
+                                <div class="synkk-window-frame">
+                                    <div class="synkk-window-bar" aria-hidden="true">
+                                        <span><i></i><i></i><i></i></span>
+                                        <small>synkk / portal / synkk-docs</small>
+                                        <span>↗</span>
+                                    </div>
+                                    <div class="p-6 bg-zinc-950 text-white font-sans space-y-4 rounded-b-xl border-t border-zinc-800">
+                                        <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                                            <div class="flex items-center gap-2">
+                                                <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold">Enterprise Docs</span>
+                                                <span class="text-xs font-bold text-zinc-300">Synkk Documentation</span>
+                                            </div>
+                                            <span class="text-[10px] font-mono text-zinc-500">13 notes · 300ms sync</span>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center gap-2 text-xs text-zinc-400">
+                                            <svg class="size-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                            <span>Search notes, tags, backlinks...</span>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2 text-xs">
+                                            <div class="p-2.5 rounded-lg bg-zinc-900/80 border border-zinc-800">
+                                                <div class="text-[10px] text-emerald-400 font-mono">01-Quickstart</div>
+                                                <div class="font-bold text-zinc-200 mt-0.5">Instant 3-Second QR Pairing</div>
+                                            </div>
+                                            <div class="p-2.5 rounded-lg bg-zinc-900/80 border border-zinc-800">
+                                                <div class="text-[10px] text-emerald-400 font-mono">02-Core-Sync</div>
+                                                <div class="font-bold text-zinc-200 mt-0.5">First-Sync Pre-Flight Engine</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Card 8: First-Sync Pre-Flight & Migration Engine (Reversed) -->
+                        <article class="synkk-feature-card synkk-feature-card--reverse">
+                            <div class="synkk-feature-card__copy">
+                                <div class="synkk-feature-card__badge">
+                                    <span class="synkk-status-dot" aria-hidden="true"></span> Available now · Trust &amp; Safety
+                                </div>
+                                <h3>Migrate 5,000+ notes without fear.</h3>
+                                <p>Migrating an established Obsidian vault is the highest-anxiety step in adopting a sync tool. Synkk eliminates uncertainty with a 4-phase local diagnostic scan, cross-platform path sanitizer, deterministic quota simulation, and the Atomic Safety Shield.</p>
+                                <ul class="synkk-feature-card__list">
+                                    <li><strong>Local category rollup:</strong> Instant breakdown across Markdown, Canvases, Images, Media, and PDFs.</li>
+                                    <li><strong>1-Click path sanitizer:</strong> Fixes illegal characters (<code>: * ? " &lt; &gt; | \</code>) for cross-platform safety.</li>
+                                    <li><strong>Atomic safety shield:</strong> 20% mass deletion circuit breaker prevents accidental bulk wipes.</li>
+                                </ul>
+                                <div class="synkk-feature-card__actions">
+                                    <a href="{{ route('public.docs') }}#safety-shield" class="synkk-button synkk-button--ink">Migration engine docs <span aria-hidden="true">→</span></a>
+                                    <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--quiet">Get the Plugin <span aria-hidden="true">↗</span></a>
+                                </div>
+                            </div>
+                            <div class="synkk-feature-card__media">
+                                <div class="synkk-feature-graphic synkk-feature-graphic--shield">
+                                    <div class="synkk-graphic-shield-badge">
+                                        <span class="synkk-graphic-shield-icon">🛫</span>
+                                        <strong>Pre-Flight Dry-Run</strong>
+                                        <small>4-phase deterministic migration diagnostic</small>
+                                    </div>
+                                    <div class="synkk-graphic-shield-items">
+                                        <div class="synkk-shield-item">
+                                            <span class="synkk-shield-item__badge">ROLLUP</span>
+                                            <div><strong>Category Inspector</strong><p>1,420 Notes, 48 Canvases, 320 Images categorized</p></div>
+                                        </div>
+                                        <div class="synkk-shield-item">
+                                            <span class="synkk-shield-item__badge">SANITIZER</span>
+                                            <div><strong>Cross-Platform Clean</strong><p>Zero illegal characters across iOS, macOS &amp; Windows</p></div>
+                                        </div>
+                                        <div class="synkk-shield-item">
+                                            <span class="synkk-shield-item__badge">20% GUARD</span>
+                                            <div><strong>Atomic Safety Shield</strong><p>Automatic circuit breaker halts destructive bulk wipes</p></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
                     </div>
                 </div>
             </section>
@@ -1718,6 +1813,34 @@
                                     <span>Semantic Search</span>
                                     <span>Local RAG</span>
                                     <span>Private AI</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="is-live">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
+                            <div>
+                                <strong>Interactive Livewire Vault Portals</strong>
+                                <p>Publish your team Obsidian vaults as interactive, beautifully rendered web portals at <code>/p/{slug}</code> with zero build steps, real-time sync, 4 design presets, Livewire fuzzy search, and interactive backlinks.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>Vault Portals</span>
+                                    <span>Livewire 3</span>
+                                    <span>4 Theme Presets</span>
+                                    <span>Instant Search</span>
+                                    <span>Wikilinks &amp; Backlinks</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="is-live">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
+                            <div>
+                                <strong>First-Sync Pre-Flight &amp; Migration Engine</strong>
+                                <p>Deterministic 4-phase local diagnostic scan, friction trap detection, 1-click cross-platform path sanitizer, dry-run simulation API, and 20% mass deletion atomic safety shield.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>Pre-Flight Wizard</span>
+                                    <span>Category Rollup</span>
+                                    <span>Path Sanitizer</span>
+                                    <span>Quota Simulation</span>
+                                    <span>20% Safety Shield</span>
                                 </div>
                             </div>
                         </li>

@@ -168,6 +168,7 @@
                             <span>04 / DATA PROTECTION</span>
                         </div>
                         <div class="synkk-docs-sidebar__nav">
+                            <a href="#preflight-engine" class="synkk-docs-sidebar__link">Pre-Flight Migration Engine</a>
                             <a href="#safety-shield" class="synkk-docs-sidebar__link">Safety Shield Guard</a>
                             <a href="#snapshots" class="synkk-docs-sidebar__link">Snapshots &amp; Rollbacks</a>
                         </div>
@@ -175,7 +176,18 @@
 
                     <div class="synkk-docs-sidebar__group">
                         <div class="synkk-docs-sidebar__title">
-                            <span>05 / DEVELOPER &amp; OPS</span>
+                            <span>05 / PUBLISHING &amp; PORTALS</span>
+                        </div>
+                        <div class="synkk-docs-sidebar__nav">
+                            <a href="#portals" class="synkk-docs-sidebar__link">Livewire Vault Portals</a>
+                            <a href="#portal-themes" class="synkk-docs-sidebar__link">Theme Presets &amp; Search</a>
+                            <a href="{{ url('/p/synkk-docs') }}" target="_blank" class="synkk-docs-sidebar__link font-bold text-emerald-600 dark:text-emerald-400">Live Docs Portal ↗</a>
+                        </div>
+                    </div>
+
+                    <div class="synkk-docs-sidebar__group">
+                        <div class="synkk-docs-sidebar__title">
+                            <span>06 / DEVELOPER &amp; OPS</span>
                         </div>
                         <div class="synkk-docs-sidebar__nav">
                             <a href="#rest-api" class="synkk-docs-sidebar__link">REST API Reference</a>
@@ -186,7 +198,7 @@
 
                     <div class="synkk-docs-sidebar__group">
                         <div class="synkk-docs-sidebar__title">
-                            <span>06 / ECOSYSTEM</span>
+                            <span>07 / ECOSYSTEM</span>
                         </div>
                         <div class="synkk-docs-sidebar__nav">
                             <a href="#roadmap" class="synkk-docs-sidebar__link">Roadmap &amp; E2EE Specs</a>
@@ -450,36 +462,100 @@
                         </div>
                     </section>
 
-                    <!-- SECTION 5: SAFETY SHIELD & RECOVERY -->
+                    <!-- SECTION 5: PRE-FLIGHT MIGRATION & SAFETY SHIELD -->
                     <section id="safety-shield" class="synkk-docs-section">
-                        <h2><span>05 /</span> Safety Shield &amp; Data Loss Protection</h2>
+                        <h2><span>05 /</span> Pre-Flight Migration Engine, Safety Shield &amp; Data Loss Protection</h2>
                         <p>
-                            Catastrophic data loss during sync usually happens when a script or device accidentally deletes hundreds of files and syncs that mass deletion across all devices.
+                            Migrating an established vault with thousands of notes is the single most delicate moment in a knowledge worker's workflow. Synkk eliminates migration anxiety with deterministic dry-run simulations and active atomic protection.
                         </p>
 
-                        <h3>The 10% Mass-Deletion Guard</h3>
+                        <div id="preflight-engine">
+                            <h3>First-Sync Pre-Flight Migration Wizard</h3>
+                            <p>
+                                Rather than immediately blasting thousands of uninspected files across the network, Synkk's Obsidian plugin runs a local pre-flight diagnostic scan:
+                            </p>
+                            <ul>
+                                <li><strong>Category Rollup:</strong> Breaks down vault composition across Markdown, Canvases, Images, Media, and PDFs.</li>
+                                <li><strong>Friction Trap Detection:</strong> Detects and warns about files in <code>.trash/</code>, <code>.git/</code> repositories, or oversized media files (>25 MB).</li>
+                                <li><strong>Cross-Platform Sanitization:</strong> Automatically detects characters illegal on Windows or mobile file systems (<code>: * ? " &lt; &gt; | \</code>) with a 1-click <strong>Auto-Sanitize</strong> action.</li>
+                                <li><strong>Server Simulation Dry-Run:</strong> Calls <code>POST /api/v1/vaults/{slug}/preflight</code> to verify team storage quotas and preview exact upload, download, and identical-skip counts without transmitting file content.</li>
+                            </ul>
+                        </div>
+
+                        <h3>The Atomic Safety Shield &amp; Deletion Threshold</h3>
                         <p>
-                            Synkk introduces <strong>Safety Shield</strong>. If an incoming sync transaction attempts to delete more than <strong>10% of the total notes</strong> in a vault, the server automatically halts the operation and places the transaction on hold.
+                            Synkk introduces an automated circuit breaker. If an incoming sync pulse attempts to delete more than <strong>20% of your vault notes</strong> (or more than 10 files in bulk), the sync halts immediately.
                         </p>
                         <div class="synkk-callout synkk-callout--warning">
-                            <span class="synkk-callout__icon">⚠️</span>
+                            <span class="synkk-callout__icon">🛡️</span>
                             <div class="synkk-callout__body">
-                                <h4>Action Required on Deletion Guard Trigger</h4>
-                                <p>An administrator receives an immediate notification in the Synkk dashboard. The deletion remains blocked until manually authorized with a one-time override or rejected.</p>
+                                <h4>Atomic Safety Shield Active</h4>
+                                <p>Mass deletions require explicit one-time confirmation from the user in Settings or the status bar before proceeding. This guarantees an errant script or empty directory mirror can never wipe your vault.</p>
                             </div>
                         </div>
 
                         <div id="snapshots">
                             <h3>Pre-Mutation Snapshots &amp; Rollback Engine</h3>
                             <p>
-                                Before any file is modified or soft-deleted on the server, Synkk creates a local snapshot copy. You can review complete version histories and restore any file version with a single click.
+                                Before any file is modified or soft-deleted on the client or server, Synkk creates an immutable snapshot copy inside <code>.synkk/snapshots/</code>. You can review complete version histories and restore any file version with a single click.
                             </p>
                         </div>
                     </section>
 
-                    <!-- SECTION 6: REST API REFERENCE -->
+                    <!-- SECTION 6: INTERACTIVE LIVEWIRE VAULT PORTALS -->
+                    <section id="portals" class="synkk-docs-section">
+                        <h2><span>06 /</span> Interactive Livewire Vault Portals</h2>
+                        <p>
+                            Publish your Obsidian vault as an interactive, high-performance web portal with zero static site build scripts or complex hosting setups.
+                        </p>
+
+                        <div class="synkk-step-box">
+                            <div class="synkk-step-box__num">🌐</div>
+                            <div class="synkk-step-box__body">
+                                <h3>Zero-Config Publishing Engine</h3>
+                                <p>
+                                    In the Synkk Web Dashboard, navigate to <strong>Portals</strong> and click <strong>Create Portal</strong>. Select any team vault and publish it in seconds at <code>/p/{slug}</code>. Any note edited in Obsidian publishes to your portal in real time upon sync!
+                                </p>
+                            </div>
+                        </div>
+
+                        <div id="portal-themes">
+                            <h3>4 Curated Design Presets</h3>
+                            <p>
+                                Portals feature 4 high-end theme presets tailored for different publishing use cases:
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
+                                <div class="p-3.5 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                                    <div class="font-bold text-sm text-zinc-900 dark:text-white">Obsidian Clean</div>
+                                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Familiar Obsidian interface with collapsible file tree, tag badges, and smooth inline note switching.</p>
+                                </div>
+                                <div class="p-3.5 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                                    <div class="font-bold text-sm text-zinc-900 dark:text-white">Enterprise Documentation</div>
+                                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Stripe-grade API layout with category navigation, center documentation view, and sticky table of contents.</p>
+                                </div>
+                                <div class="p-3.5 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                                    <div class="font-bold text-sm text-zinc-900 dark:text-white">Digital Garden</div>
+                                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Organic knowledge exploration with bidirectional backlinks, network graph context, and note previews.</p>
+                                </div>
+                                <div class="p-3.5 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                                    <div class="font-bold text-sm text-zinc-900 dark:text-white">Minimalist Blog</div>
+                                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Typography-first reading experience with serif/sans typography, reading progress bar, and clean layout.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="synkk-callout synkk-callout--tip">
+                            <span class="synkk-callout__icon">🚀</span>
+                            <div class="synkk-callout__body">
+                                <h4>Experience a Live Synkk Portal</h4>
+                                <p>Check out our official interactive documentation portal rendered directly from our Obsidian vault notes: <a href="{{ url('/p/synkk-docs') }}" target="_blank" class="font-bold underline text-emerald-600 dark:text-emerald-400">View Synkk Documentation Portal ↗</a></p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- SECTION 7: REST API REFERENCE -->
                     <section id="rest-api" class="synkk-docs-section">
-                        <h2><span>06 /</span> REST API Reference</h2>
+                        <h2><span>07 /</span> REST API Reference</h2>
                         <p>
                             Base API Endpoint: <code class="font-mono bg-zinc-200 px-2 py-0.5 rounded text-zinc-900">{{ url('/api/v1') }}</code>
                         </p>
@@ -659,6 +735,26 @@
                             <p class="text-sm text-zinc-700">Returns vector indexing status, chunk counts, indexed files, embedding provider, and active local LLM health.</p>
                         </div>
 
+                        <!-- API Endpoint 17: Pre-Flight Simulation & Quota Verification -->
+                        <div class="synkk-api-endpoint">
+                            <div class="synkk-api-endpoint__title">
+                                <span class="synkk-api-method synkk-api-method--post">POST</span>
+                                <span class="synkk-api-path">/vaults/{slug}/preflight</span>
+                            </div>
+                            <p class="text-sm text-zinc-700">Validates initial sync payload against team storage limits, matches file hashes without transferring data, and returns simulation metrics (upload, download, identical skip counts, bandwidth saved).</p>
+                            <div class="synkk-code-box">
+                                <div class="synkk-code-box__header">
+                                    <span>JSON Request Payload</span>
+                                </div>
+                                <pre><code>{
+  "total_files": 140,
+  "total_bytes": 24800000,
+  "categories": { "markdown": { "count": 120, "bytes": 4800000 } },
+  "files": [ { "path": "Index.md", "size": 1200, "sha256": "4b22..." } ]
+}</code></pre>
+                            </div>
+                        </div>
+
                         <h3>HTTP Status Code Reference</h3>
                         <ul class="font-mono text-sm space-y-1">
                             <li><strong class="text-emerald-600">200 OK:</strong> Request succeeded cleanly.</li>
@@ -666,7 +762,7 @@
                             <li><strong class="text-amber-600">403 Forbidden:</strong> Token lacks required path permission.</li>
                             <li><strong class="text-rose-600">409 Conflict:</strong> Version collision detected (conflict copy generated).</li>
                             <li><strong class="text-rose-600">410 Gone / Revoked:</strong> Device token was remotely wiped by admin.</li>
-                            <li><strong class="text-rose-600">422 Unprocessable Entity:</strong> SHA-256 checksum mismatch or DLP secret detected.</li>
+                            <li><strong class="text-rose-600">422 Unprocessable Entity:</strong> Pre-flight quota exceeded (structured deficit breakdown returned) or DLP secret detected.</li>
                         </ul>
                     </section>
 

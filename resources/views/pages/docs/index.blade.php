@@ -93,6 +93,24 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
             Docker & Self-Hosting
         </flux:button>
 
+        <flux:button 
+            wire:click="setSection('migration')" 
+            :variant="$activeSection === 'migration' ? 'filled' : 'subtle'" 
+            size="sm"
+            icon="arrows-up-down"
+        >
+            Pre-Flight & Migration
+        </flux:button>
+
+        <flux:button 
+            wire:click="setSection('portals')" 
+            :variant="$activeSection === 'portals' ? 'filled' : 'subtle'" 
+            size="sm"
+            icon="globe-alt"
+        >
+            Livewire Vault Portals
+        </flux:button>
+
         <flux:button
             wire:click="setSection('roadmap')"
             :variant="$activeSection === 'roadmap' ? 'filled' : 'subtle'"
@@ -433,6 +451,24 @@ new #[Title('Documentation & Setup Guide')] class extends Component {
                         </div>
                         <flux:text size="sm">Atomic transaction executing batch file uploads and deletions in a single network round-trip.</flux:text>
                     </div>
+
+                    <!-- Endpoint 9 -->
+                    <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-bold text-[10px]">POST</span>
+                            <span class="font-bold text-zinc-900 dark:text-white">/vaults/{slug}/preflight</span>
+                        </div>
+                        <flux:text size="sm">Pre-flight dry-run simulation. Validates client file manifest against server, checks team storage quotas, and previews upload/download/identical-skip counts without modifying files.</flux:text>
+                    </div>
+
+                    <!-- Endpoint 10 -->
+                    <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded bg-amber-600 text-white font-bold text-[10px]">POST</span>
+                            <span class="font-bold text-zinc-900 dark:text-white">/vaults/{slug}/snapshots/restore</span>
+                        </div>
+                        <flux:text size="sm">Rolls back a file or directory to a historical snapshot taken immediately prior to a mutation or sync pulse.</flux:text>
+                    </div>
                 </div>
             </flux:card>
         @endif
@@ -495,7 +531,192 @@ volumes:
         @endif
 
         <!-- ============================================================= -->
-        <!-- SECTION 7: SAFETY & ROADMAP                                  -->
+        <!-- SECTION 7: PRE-FLIGHT MIGRATION & SAFETY SHIELD               -->
+        <!-- ============================================================= -->
+        @if ($activeSection === 'migration')
+            <flux:card class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <flux:badge color="lime">Milestone C Shipped</flux:badge>
+                            <flux:badge color="zinc">Deterministic Dry-Run</flux:badge>
+                        </div>
+                        <flux:heading size="lg">First-Sync Pre-Flight & Migration Engine</flux:heading>
+                        <flux:text class="mt-1">
+                            Migrating 5,000+ notes into a sync server is daunting. Synkk replaces blind syncing with pre-flight inspection and atomic safety shields.
+                        </flux:text>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <flux:badge color="lime">Phase 1</flux:badge>
+                            <flux:heading size="base">Local Inspection & Rollup</flux:heading>
+                        </div>
+                        <flux:text size="sm">
+                            The Obsidian plugin inspects your local vault prior to network transmission, grouping items into Markdown, Canvases, Images, Audio/Media, and PDFs with precise size and count breakdowns.
+                        </flux:text>
+                    </div>
+
+                    <div class="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <flux:badge color="amber">Phase 2</flux:badge>
+                            <flux:heading size="base">Friction Trap & Path Sanitizer</flux:heading>
+                        </div>
+                        <flux:text size="sm">
+                            Scans for hidden traps: ignores <code>.trash/</code> and <code>.git/</code> directories, flags media over 25 MB, and highlights illegal cross-platform characters (<code>: * ? " &lt; &gt; | \</code>) with a 1-click Auto-Sanitize action.
+                        </flux:text>
+                    </div>
+
+                    <div class="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <flux:badge color="blue">Phase 3</flux:badge>
+                            <flux:heading size="base">Simulation Dry-Run (API)</flux:heading>
+                        </div>
+                        <flux:text size="sm">
+                            Sends your local manifest to <code>POST /api/v1/vaults/{slug}/preflight</code>. Compares remote SHA-256 hashes without transferring bodies, returning precise numbers of files needing upload, download, or zero-byte skipping.
+                        </flux:text>
+                    </div>
+
+                    <div class="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <flux:badge color="red">Phase 4</flux:badge>
+                            <flux:heading size="base">Atomic Safety Shield Circuit Breaker</flux:heading>
+                        </div>
+                        <flux:text size="sm">
+                            If any sync pulse attempts to delete >20% of your notes or >10 files at once, sync immediately halts. Requires explicit one-time user authorization, preventing accidental vault wipes.
+                        </flux:text>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <flux:heading size="sm">Pre-Flight Simulation API Request & Response</flux:heading>
+                    <pre class="font-mono text-xs bg-zinc-900 text-emerald-300 p-4 rounded-xl overflow-x-auto"><code>// Request: POST /api/v1/vaults/{slug}/preflight
+{
+  "files": [
+    { "path": "Welcome.md", "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "size": 1024 },
+    { "path": "Canvas/Architecture.canvas", "hash": "a1b2c3d4...", "size": 4096 }
+  ]
+}
+
+// Response: 200 OK
+{
+  "status": "success",
+  "data": {
+    "vault_slug": "synkk-docs",
+    "categories": { "markdown": 1, "canvas": 1, "image": 0, "media": 0, "pdf": 0, "other": 0 },
+    "friction_warnings": [],
+    "quota": { "used_bytes": 10485760, "limit_bytes": 10737418240, "would_exceed": false },
+    "simulation": { "needs_upload": 1, "needs_download": 0, "identical_skip": 1, "total_local": 2, "total_remote": 1 }
+  }
+}</code></pre>
+                </div>
+            </flux:card>
+        @endif
+
+        <!-- ============================================================= -->
+        <!-- SECTION 8: INTERACTIVE LIVEWIRE VAULT PORTALS                 -->
+        <!-- ============================================================= -->
+        @if ($activeSection === 'portals')
+            <flux:card class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <flux:badge color="lime">Milestone B Shipped</flux:badge>
+                            <flux:badge color="zinc">Interactive Livewire 3</flux:badge>
+                        </div>
+                        <flux:heading size="lg">Interactive Livewire Vault Portals</flux:heading>
+                        <flux:text class="mt-1">
+                            Publish your team Obsidian vaults as interactive, beautifully rendered web portals with zero build steps and real-time synchronization.
+                        </flux:text>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <flux:button href="{{ url('/p/synkk-docs') }}" target="_blank" icon="arrow-top-right-on-square" variant="primary">
+                            Explore Live Docs Portal
+                        </flux:button>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
+                        <flux:heading size="sm">⚡ Instant Real-Time Publishing</flux:heading>
+                        <flux:text size="sm">
+                            No static site generators (SSGs), no git commits, and no build pipelines. Every note saved in Obsidian appears on your public or team portal within 300ms of the sync pulse.
+                        </flux:text>
+                    </div>
+
+                    <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
+                        <flux:heading size="sm">🔍 Real-Time Fuzzy Search</flux:heading>
+                        <flux:text size="sm">
+                            Full-text and title search powered by Livewire reactive state. Users can search headings, tags, and content across all published notes instantly with keyboard navigation.
+                        </flux:text>
+                    </div>
+
+                    <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
+                        <flux:heading size="sm">🔗 Obsidian Markdown & Backlinks</flux:heading>
+                        <flux:text size="sm">
+                            Native support for wikilinks (<code>[[Note Name]]</code>), Obsidian callouts (<code>&gt; [!NOTE]</code>), math equations, highlighted code fences with copy buttons, and bidirectional backlinks.
+                        </flux:text>
+                    </div>
+
+                    <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 space-y-2">
+                        <flux:heading size="sm">🎨 4 Curated Design Presets</flux:heading>
+                        <flux:text size="sm">
+                            Switch between Obsidian Clean, Enterprise Documentation, Digital Garden, and Minimalist Blog with a single dropdown in the Vault Portal settings.
+                        </flux:text>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <flux:heading size="sm">Supported Theme Presets</flux:heading>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/30">
+                            <div class="flex items-center gap-2">
+                                <flux:badge color="zinc" size="sm">Theme 1</flux:badge>
+                                <span class="font-bold text-sm text-zinc-900 dark:text-white">Obsidian Clean</span>
+                            </div>
+                            <flux:text size="xs" class="mt-1">Familiar desktop Obsidian layout with collapsible file tree, tag filters, and smooth note transition.</flux:text>
+                        </div>
+                        <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/30">
+                            <div class="flex items-center gap-2">
+                                <flux:badge color="emerald" size="sm">Theme 2</flux:badge>
+                                <span class="font-bold text-sm text-zinc-900 dark:text-white">Enterprise Documentation</span>
+                            </div>
+                            <flux:text size="xs" class="mt-1">Stripe-grade docs with category sidebar, reading time, sticky table of contents, and dark mode.</flux:text>
+                        </div>
+                        <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/30">
+                            <div class="flex items-center gap-2">
+                                <flux:badge color="teal" size="sm">Theme 3</flux:badge>
+                                <span class="font-bold text-sm text-zinc-900 dark:text-white">Digital Garden</span>
+                            </div>
+                            <flux:text size="xs" class="mt-1">Non-linear knowledge graph style with backlinks preview pane, tags cloud, and visual depth.</flux:text>
+                        </div>
+                        <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/30">
+                            <div class="flex items-center gap-2">
+                                <flux:badge color="amber" size="sm">Theme 4</flux:badge>
+                                <span class="font-bold text-sm text-zinc-900 dark:text-white">Minimalist Blog</span>
+                            </div>
+                            <flux:text size="xs" class="mt-1">Editorial long-form reading experience with serif typography, reading progress bar, and clean margins.</flux:text>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="space-y-1">
+                        <flux:heading size="sm">Live Example: Synkk Official Documentation Vault</flux:heading>
+                        <flux:text size="sm">Our complete technical architecture and user guides are hosted in a Synkk vault and served live via the Portal engine.</flux:text>
+                    </div>
+                    <flux:button href="{{ url('/p/synkk-docs') }}" target="_blank" icon="arrow-top-right-on-square" variant="filled">
+                        Open /p/synkk-docs ↗
+                    </flux:button>
+                </div>
+            </flux:card>
+        @endif
+
+        <!-- ============================================================= -->
+        <!-- SECTION 9: SAFETY & ROADMAP                                  -->
         <!-- ============================================================= -->
         @if ($activeSection === 'roadmap')
             <flux:card class="space-y-6">
@@ -507,18 +728,18 @@ volumes:
                 <div class="grid gap-4 md:grid-cols-3">
                     <div class="rounded-2xl border border-lime-500/30 bg-lime-500/10 p-5">
                         <flux:badge color="lime">Available now</flux:badge>
-                        <flux:heading size="sm" class="mt-3">Safety Shield, DLP & Instant QR</flux:heading>
-                        <flux:text size="sm" class="mt-2">Instant QR mobile pairing, real-time DLP secret scanning, 10% mass-deletion guard, selective folder sync, and 1-click enterprise remote wipe.</flux:text>
+                        <flux:heading size="sm" class="mt-3">Portals, Pre-Flight & QR</flux:heading>
+                        <flux:text size="sm" class="mt-2">Instant QR mobile pairing, First-Sync Pre-Flight simulation wizard, Atomic Safety Shield (20% threshold), and Interactive Livewire Vault Portals.</flux:text>
                     </div>
                     <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800/40">
                         <flux:badge color="zinc">Next milestone</flux:badge>
-                        <flux:heading size="sm" class="mt-3">Zero-Knowledge E2EE</flux:heading>
-                        <flux:text size="sm" class="mt-2">Client-side encryption using device keys (XChaCha20-Poly1305) and zero-knowledge encrypted transport options for compliance-heavy teams.</flux:text>
+                        <flux:heading size="sm" class="mt-3">Zero-Knowledge E2EE & Ghost Files</flux:heading>
+                        <flux:text size="sm" class="mt-2">Client-side encryption using device keys (XChaCha20-Poly1305) and mobile metadata-only ghost files with on-demand streaming.</flux:text>
                     </div>
                     <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800/40">
                         <flux:badge color="zinc">Viral moonshot</flux:badge>
-                        <flux:heading size="sm" class="mt-3">Yjs CRDT & Agentic Graph</flux:heading>
-                        <flux:text size="sm" class="mt-2">Real-time character-level multiplayer editing via Yjs, MCP AI server endpoints, and agentic knowledge retrieval over your team graph.</flux:text>
+                        <flux:heading size="sm" class="mt-3">Live Multiplayer CRDT & Carets</flux:heading>
+                        <flux:text size="sm" class="mt-2">Real-time character-level multiplayer editing via Yjs, active colleague cursor carets, and Vault Copilot vector RAG server.</flux:text>
                     </div>
                 </div>
             </flux:card>
