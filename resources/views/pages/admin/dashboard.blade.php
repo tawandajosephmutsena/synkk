@@ -188,7 +188,7 @@ new #[Title('Platform Super Admin')] class extends Component {
     public function inspectTenant(int $teamId): void
     {
         $this->inspectingTeamId = $teamId;
-        $this->dispatch('open-modal', name: 'inspect-tenant');
+        $this->dispatch('modal-show', name: 'inspect-tenant');
     }
 
     public function revokeAllTenantDevices(int $teamId): void
@@ -242,7 +242,7 @@ new #[Title('Platform Super Admin')] class extends Component {
         $this->editMaxVaults = $team->max_vaults ?? $planService->getVaultLimit($team);
         $this->editMaxMembers = $team->max_members ?? $planService->getMemberLimit($team);
 
-        $this->dispatch('open-modal', name: 'edit-quota');
+        $this->dispatch('modal-show', name: 'edit-quota');
     }
 
     public function saveQuotas(): void
@@ -266,7 +266,7 @@ new #[Title('Platform Super Admin')] class extends Component {
             'max_members' => $this->editMaxMembers,
         ]);
 
-        $this->dispatch('close-modal', name: 'edit-quota');
+        $this->dispatch('modal-close', name: 'edit-quota');
         Flux::toast(variant: 'success', text: __("Custom limits saved for tenant ':name'.", ['name' => $team->name]));
     }
 
@@ -280,7 +280,7 @@ new #[Title('Platform Super Admin')] class extends Component {
             'max_members' => null,
         ]);
 
-        $this->dispatch('close-modal', name: 'edit-quota');
+        $this->dispatch('modal-close', name: 'edit-quota');
         Flux::toast(variant: 'success', text: __("Quotas for ':name' restored to tier defaults.", ['name' => $team->name]));
     }
 

@@ -13,6 +13,7 @@ beforeEach(function () {
     $this->user = User::factory()->create();
     $this->team = Team::factory()->create();
     $this->team->members()->attach($this->user, ['role' => 'owner']);
+    $this->user->switchTeam($this->team);
     $this->actingAs($this->user);
 
     $this->vault = Vault::create([
@@ -79,20 +80,48 @@ test('portals studio index displays team portals and metrics', function () {
 
 test('team member can create a new portal via studio', function () {
     Livewire::test('pages::portals.index', ['current_team' => $this->team->slug])
-        ->set('vault_id', $this->vault->id)
+        ->call('openCreateModal')
+        ->assertDispatched('modal-show', name: 'portal-modal')
+        ->assertSet('vault_id', $this->vault->id)
         ->set('name', 'Product Blueprint')
         ->set('slug', 'product-blueprint')
         ->set('layout', 'bento')
         ->set('theme', 'midnight-emerald')
         ->set('description', 'Interactive roadmap and design system')
         ->call('savePortal')
-        ->assertHasNoErrors();
+        ->assertHasNoErrors()
+        ->assertDispatched('modal-close', name: 'portal-modal');
 
     $portal = VaultPortal::where('slug', 'product-blueprint')->first();
     expect($portal)->not->toBeNull()
         ->and($portal->name)->toBe('Product Blueprint')
         ->and($portal->layout)->toBe('bento')
         ->and($portal->theme)->toBe('midnight-emerald');
+});
+
+test('editing a portal dispatches modal-show and populates state', function () {
+    $portal = VaultPortal::create([
+        'team_id' => $this->team->id,
+        'vault_id' => $this->vault->id,
+        'name' => 'Internal Docs',
+        'slug' => 'internal-docs',
+        'layout' => 'docs',
+        'theme' => 'obsidian-noir',
+        'is_public' => false,
+        'created_by' => $this->user->id,
+    ]);
+
+    Livewire::test('pages::portals.index', ['current_team' => $this->team->slug])
+        ->call('editPortal', $portal->id)
+        ->assertDispatched('modal-show', name: 'portal-modal')
+        ->assertSet('editingPortalId', $portal->id)
+        ->assertSet('name', 'Internal Docs')
+        ->set('name', 'Updated Internal Docs')
+        ->call('savePortal')
+        ->assertHasNoErrors()
+        ->assertDispatched('modal-close', name: 'portal-modal');
+
+    expect($portal->fresh()->name)->toBe('Updated Internal Docs');
 });
 
 test('public portal renders docs layout with active note, callouts, and backlinks', function () {

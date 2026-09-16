@@ -39,7 +39,7 @@ new #[Title('Synkk Portals')] class extends Component {
         if ($this->vaults->isNotEmpty()) {
             $this->vault_id = $this->vaults->first()->id;
         }
-        $this->dispatch('open-modal', name: 'portal-modal');
+        $this->dispatch('modal-show', name: 'portal-modal');
     }
 
     public function editPortal(int $id): void
@@ -62,7 +62,7 @@ new #[Title('Synkk Portals')] class extends Component {
         $this->enable_backlinks = (bool) $portal->getSetting('enable_backlinks', true);
         $this->enable_popover = (bool) $portal->getSetting('enable_popover', true);
 
-        $this->dispatch('open-modal', name: 'portal-modal');
+        $this->dispatch('modal-show', name: 'portal-modal');
     }
 
     public function savePortal(): void
@@ -133,7 +133,7 @@ new #[Title('Synkk Portals')] class extends Component {
         }
 
         $this->resetForm();
-        $this->dispatch('close-modal', name: 'portal-modal');
+        $this->dispatch('modal-close', name: 'portal-modal');
     }
 
     public function deletePortal(int $id): void
