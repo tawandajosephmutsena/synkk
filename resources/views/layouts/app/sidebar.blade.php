@@ -42,6 +42,10 @@
                     {{ __('Vaults') }}
                 </flux:sidebar.item>
 
+                <flux:sidebar.item icon="globe-alt" :href="route('portals.index')" :current="request()->routeIs('portals.*')" wire:navigate>
+                    {{ __('Portals') }}
+                </flux:sidebar.item>
+
                 <flux:sidebar.item icon="device-phone-mobile" :href="route('devices.index')" :current="request()->routeIs('devices.*')" wire:navigate>
                     {{ __('Devices & Tokens') }}
                 </flux:sidebar.item>

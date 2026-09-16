@@ -204,6 +204,16 @@ class Team extends Model
     }
 
     /**
+     * Get all published portals belonging to this team.
+     *
+     * @return HasMany<VaultPortal, $this>
+     */
+    public function portals(): HasMany
+    {
+        return $this->hasMany(VaultPortal::class);
+    }
+
+    /**
      * Get all notifications for this team.
      *
      * @return HasMany<TeamNotification, $this>

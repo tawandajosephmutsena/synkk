@@ -101,6 +101,14 @@ class Vault extends Model
     }
 
     /**
+     * @return HasMany<VaultPortal, $this>
+     */
+    public function portals(): HasMany
+    {
+        return $this->hasMany(VaultPortal::class);
+    }
+
+    /**
      * @return HasMany<VaultFileVersion, $this>
      */
     public function fileVersions(): HasMany

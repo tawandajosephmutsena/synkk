@@ -54,6 +54,21 @@ Route::get('devices', function () {
     return redirect()->route('login');
 });
 
+Route::get('portals', function () {
+    if (auth()->check()) {
+        $team = auth()->user()->currentTeam ?? auth()->user()->personalTeam() ?? auth()->user()->teams->first();
+        if ($team) {
+            return redirect()->route('portals.index', ['current_team' => $team->slug]);
+        }
+    }
+
+    return redirect()->route('login');
+});
+
+Route::livewire('p/{slug}/{path?}', 'pages::portals.show')
+    ->name('portal.show')
+    ->where('path', '.*');
+
 Route::view('/documentation', 'documentation')->name('public.docs');
 
 Route::get('docs', function () {
@@ -79,6 +94,7 @@ Route::prefix('{current_team}')
         Route::livewire('dashboard', 'pages::dashboard.index')->name('dashboard');
         Route::livewire('vaults', 'pages::vaults.index')->name('vaults.index');
         Route::livewire('vaults/{vault}', 'pages::vaults.show')->name('vaults.show');
+        Route::livewire('portals', 'pages::portals.index')->name('portals.index');
         Route::livewire('devices', 'pages::devices.index')->name('devices.index');
         Route::livewire('docs', 'pages::docs.index')->name('docs');
         Route::post('billing/dodo/checkout', [DodoBillingController::class, 'checkout'])
