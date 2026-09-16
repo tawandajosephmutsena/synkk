@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\VaultCollaborationController;
+use App\Http\Controllers\Api\VaultPreflightController;
 use App\Http\Controllers\Api\VaultSyncController;
 use App\Http\Controllers\Billing\DodoWebhookController;
 use App\Http\Middleware\AuthenticateDeviceToken;
@@ -32,6 +33,7 @@ Route::prefix('v1')
 
         // Vault Sync Endpoints
         Route::prefix('vaults/{vault:slug}')->group(function () {
+            Route::post('preflight', [VaultPreflightController::class, 'preflight'])->name('api.vaults.preflight');
             Route::get('manifest', [VaultSyncController::class, 'manifest'])->name('api.vaults.manifest');
             Route::get('changes', [VaultSyncController::class, 'changes'])->name('api.vaults.changes');
             Route::get('download', [VaultSyncController::class, 'download'])->name('api.vaults.download');

@@ -1414,6 +1414,44 @@ new #[Title('Vault Details')] class extends Component
     {
         return app(VaultRagService::class)->getStatus($this->vault);
     }
+
+    #[Computed]
+    public function preflightStorageTelemetry(): array
+    {
+        $planService = app(PlanService::class);
+        $team = $this->vault->team;
+
+        $currentBytes = $planService->getTotalStorageBytes($team);
+        $limitMb = $planService->getStorageLimitMb($team);
+        $limitBytes = $limitMb * 1024 * 1024;
+        $usagePercent = $limitBytes > 0 ? min(100, round(($currentBytes / $limitBytes) * 100, 1)) : 0;
+
+        $vaultFiles = $this->vault->files()->where('is_deleted', false)->get(['id', 'path', 'size', 'is_ghost']);
+        $totalVaultBytes = (int) $vaultFiles->sum('size');
+        $totalVaultFiles = $vaultFiles->count();
+
+        $markdownBytes = (int) $vaultFiles->filter(fn ($f) => str_ends_with(strtolower($f->path), '.md'))->sum('size');
+        $imageBytes = (int) $vaultFiles->filter(fn ($f) => preg_match('/\.(png|jpe?g|gif|svg|webp)$/i', $f->path))->sum('size');
+        $ghostCount = $vaultFiles->where('is_ghost', true)->count();
+
+        return [
+            'team_storage_used_bytes' => $currentBytes,
+            'team_storage_used_formatted' => Number::fileSize($currentBytes),
+            'team_storage_limit_bytes' => $limitBytes,
+            'team_storage_limit_formatted' => Number::fileSize($limitBytes),
+            'team_storage_remaining_bytes' => max(0, $limitBytes - $currentBytes),
+            'team_storage_remaining_formatted' => Number::fileSize(max(0, $limitBytes - $currentBytes)),
+            'team_storage_usage_percent' => $usagePercent,
+            'vault_total_bytes' => $totalVaultBytes,
+            'vault_total_formatted' => Number::fileSize($totalVaultBytes),
+            'vault_total_files' => $totalVaultFiles,
+            'markdown_bytes_formatted' => Number::fileSize($markdownBytes),
+            'image_bytes_formatted' => Number::fileSize($imageBytes),
+            'ghost_files_count' => $ghostCount,
+            'atomic_shield_active' => true,
+            'shield_deletion_limit_percent' => 20,
+        ];
+    }
 }; ?>
 
 <div class="flex h-full w-full flex-1 flex-col gap-6">
@@ -3404,6 +3442,75 @@ new #[Title('Vault Details')] class extends Component
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Pre-Flight Storage & Atomic Safety Shield Card -->
+            <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                            <flux:icon icon="shield-check" class="size-6" />
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Pre-Flight Shield & Storage Inspector') }}</h3>
+                                <span class="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
+                                    {{ __('Atomic Shield Active') }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 dark:text-zinc-400">{{ __('Real-time team cloud storage quota, payload distribution, and bulk-deletion safety thresholds.') }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <code class="rounded bg-slate-100 px-2.5 py-1 text-[11px] font-mono text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            {{ __('Protocol v2 • Preflight API Ready') }}
+                        </code>
+                    </div>
+                </div>
+
+                <!-- Storage Quota Progress Bar -->
+                <div class="mb-5 rounded-xl bg-slate-50 p-4 border border-gray-100 dark:bg-zinc-800/40 dark:border-zinc-800">
+                    <div class="flex items-center justify-between text-xs mb-2">
+                        <span class="font-medium text-slate-700 dark:text-zinc-300">{{ __('Team Storage Quota Allocation') }}</span>
+                        <span class="font-bold text-slate-900 dark:text-white">
+                            {{ $this->preflightStorageTelemetry['team_storage_used_formatted'] }} / {{ $this->preflightStorageTelemetry['team_storage_limit_formatted'] }} ({{ $this->preflightStorageTelemetry['team_storage_usage_percent'] }}%)
+                        </span>
+                    </div>
+
+                    <div class="w-full h-3 rounded-full bg-slate-200 overflow-hidden dark:bg-zinc-700">
+                        <div
+                            class="h-full rounded-full transition-all duration-500 {{ $this->preflightStorageTelemetry['team_storage_usage_percent'] > 90 ? 'bg-rose-500' : ($this->preflightStorageTelemetry['team_storage_usage_percent'] > 70 ? 'bg-amber-500' : 'bg-emerald-500') }}"
+                            style="width: {{ max(1, $this->preflightStorageTelemetry['team_storage_usage_percent']) }}%;"
+                        ></div>
+                    </div>
+
+                    <div class="mt-2.5 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
+                        <span>{{ __('Available remaining:') }} <strong class="text-slate-700 dark:text-zinc-200">{{ $this->preflightStorageTelemetry['team_storage_remaining_formatted'] }}</strong></span>
+                        <span>{{ __('Vault Footprint:') }} <strong class="text-slate-700 dark:text-zinc-200">{{ $this->preflightStorageTelemetry['vault_total_formatted'] }} ({{ number_format($this->preflightStorageTelemetry['vault_total_files']) }} files)</strong></span>
+                    </div>
+                </div>
+
+                <!-- 3 Metric Blocks -->
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div class="rounded-xl border border-gray-100 bg-white p-3.5 dark:border-zinc-800 dark:bg-zinc-900/60">
+                        <div class="text-[11px] font-medium text-slate-500 dark:text-zinc-400">{{ __('Markdown Notes') }}</div>
+                        <div class="mt-1 text-base font-bold text-slate-900 dark:text-white">{{ $this->preflightStorageTelemetry['markdown_bytes_formatted'] }}</div>
+                        <div class="mt-1 text-[10px] text-slate-400">{{ __('Zero-Knowledge E2EE & CRDT ready') }}</div>
+                    </div>
+
+                    <div class="rounded-xl border border-gray-100 bg-white p-3.5 dark:border-zinc-800 dark:bg-zinc-900/60">
+                        <div class="text-[11px] font-medium text-slate-500 dark:text-zinc-400">{{ __('Attachments & Media') }}</div>
+                        <div class="mt-1 text-base font-bold text-slate-900 dark:text-white">{{ $this->preflightStorageTelemetry['image_bytes_formatted'] }}</div>
+                        <div class="mt-1 text-[10px] text-slate-400">{{ $this->preflightStorageTelemetry['ghost_files_count'] }} {{ __('mobile ghost stubs active') }}</div>
+                    </div>
+
+                    <div class="rounded-xl border border-gray-100 bg-white p-3.5 dark:border-zinc-800 dark:bg-zinc-900/60">
+                        <div class="text-[11px] font-medium text-slate-500 dark:text-zinc-400">{{ __('Atomic Safety Guard') }}</div>
+                        <div class="mt-1 text-base font-bold text-emerald-600 dark:text-emerald-400">≤ {{ $this->preflightStorageTelemetry['shield_deletion_limit_percent'] }}% {{ __('Threshold') }}</div>
+                        <div class="mt-1 text-[10px] text-slate-400">{{ __('Guards against accidental bulk deletion') }}</div>
+                    </div>
                 </div>
             </div>
         </div>
