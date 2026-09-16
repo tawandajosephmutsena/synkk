@@ -1,6 +1,7 @@
 import * as Y from 'yjs';
 import { yCollab } from 'y-codemirror.next';
 import { SynkkYjsProvider, SynkkAwareness } from './collaboration/yjs-provider.js';
+import { createSynkkEditor } from './editor/synkk-codemirror.js';
 
 const getVaultCrypto = () => (typeof window !== 'undefined' && window.VaultCrypto ? window.VaultCrypto : null);
 
@@ -345,6 +346,7 @@ export function createMarkdownEditor(options = {}) {
         isSaving: false,
         saveFailed: false,
         beforeUnloadHandler: null,
+        editorInstance: null,
 
         // CRDT / Yjs Collaboration State
         user: options.user || { id: null, name: 'Web Editor', color: '#10B981' },
@@ -387,6 +389,15 @@ export function createMarkdownEditor(options = {}) {
                 await this.initCollaboration();
             }
 
+            // Mount CodeMirror 6 Collaborative Editor
+            if (this.isUnlocked) {
+                if (typeof this.$nextTick === 'function') {
+                    this.$nextTick(() => this.mountEditorView());
+                } else {
+                    this.mountEditorView();
+                }
+            }
+
             this.$watch('content', (value) => {
                 this.updateMetrics();
                 this.isDirty = this.initialContent === null || value !== this.initialContent;
@@ -399,7 +410,7 @@ export function createMarkdownEditor(options = {}) {
                     this.$wire.editorIsDirty = this.isDirty;
                 }
 
-                // Sync local textarea changes to Yjs
+                // Sync local content changes to Yjs
                 if (this.ytext && !this.isApplyingRemote && value !== this.ytext.toString()) {
                     this.ydoc.transact(() => {
                         this.ytext.delete(0, this.ytext.length);
@@ -407,8 +418,18 @@ export function createMarkdownEditor(options = {}) {
                     }, 'local');
                 }
 
+                if (this.editorInstance && this.editorInstance.getContent() !== value) {
+                    this.editorInstance.setContent(value);
+                }
+
                 if (this.canEdit && this.isDirty) {
                     this.scheduleSnapshotFlush();
+                }
+            });
+
+            this.$watch('canEdit', (val) => {
+                if (this.editorInstance) {
+                    this.editorInstance.setReadOnly(!val);
                 }
             });
 
@@ -421,6 +442,51 @@ export function createMarkdownEditor(options = {}) {
             if (typeof window !== 'undefined') {
                 window.addEventListener('beforeunload', this.beforeUnloadHandler);
             }
+        },
+
+        mountEditorView() {
+            const container = this.$refs?.editorContainer;
+            if (!container) return;
+
+            if (this.editorInstance) {
+                this.editorInstance.destroy();
+                this.editorInstance = null;
+            }
+
+            const self = this;
+            this.editorInstance = createSynkkEditor(container, {
+                initialDoc: this.content || '',
+                ytext: this.collabEnabled && this.isUnlocked ? this.ytext : null,
+                awareness: this.collabEnabled && this.isUnlocked ? this.awareness : null,
+                undoManager: this.collabEnabled && this.isUnlocked ? this.undoManager : null,
+                canEdit: this.canEdit,
+                onSave: () => {
+                    if (self.canEdit && self.isDirty && !self.isSaving) {
+                        self.saveEditor();
+                    }
+                },
+                onChange: ({ content, metrics, headings }) => {
+                    self.content = content;
+                    self.lineCount = metrics.lineCount;
+                    self.charCount = metrics.characters;
+                    self.wordCount = metrics.words;
+                    self.readTimeMinutes = Math.max(1, Math.ceil(metrics.words / 200));
+                    self.headings = headings;
+                    self.previewHtml = renderMarkdownPreview(content);
+                    self.isDirty = self.initialContent === null || content !== self.initialContent;
+
+                    if (self.$wire) {
+                        if (!self.isEncrypted) {
+                            self.$wire.editorContent = content;
+                        }
+                        self.$wire.editorIsDirty = self.isDirty;
+                    }
+
+                    if (self.canEdit && self.isDirty) {
+                        self.scheduleSnapshotFlush();
+                    }
+                },
+            });
         },
 
         async initCollaboration() {
@@ -594,6 +660,10 @@ export function createMarkdownEditor(options = {}) {
         },
 
         cleanupCollaboration() {
+            if (this.editorInstance) {
+                this.editorInstance.destroy();
+                this.editorInstance = null;
+            }
             if (this.snapshotTimer) {
                 clearTimeout(this.snapshotTimer);
                 this.snapshotTimer = null;
@@ -681,6 +751,8 @@ export function createMarkdownEditor(options = {}) {
                 if (this.collabEnabled) {
                     await this.initCollaboration();
                 }
+
+                this.mountEditorView();
             } catch (err) {
                 this.unlockError = err.message || 'Key derivation failed.';
             } finally {
@@ -739,6 +811,18 @@ export function createMarkdownEditor(options = {}) {
 
         insertFormat(prefix, suffix = '', defaultText = '') {
             if (!this.canEdit) return;
+            if (this.editorInstance) {
+                if (prefix === '**' && suffix === '**') return this.editorInstance.bold();
+                if (prefix === '*' && suffix === '*') return this.editorInstance.italic();
+                if (prefix === '~~' && suffix === '~~') return this.editorInstance.strikethrough();
+                if (prefix === '`' && suffix === '`') return this.editorInstance.inlineCode();
+                if (prefix === '[[' && suffix === ']]') return this.editorInstance.wikilink();
+                if (prefix === '[' && suffix.startsWith('](')) return this.editorInstance.link();
+                if (prefix === '![' && suffix.startsWith('](')) return this.editorInstance.image();
+                if (prefix.startsWith('> [!')) return this.editorInstance.callout('TIP');
+                if (prefix.includes('---')) return this.editorInstance.horizontalRule();
+                if (prefix.startsWith('```')) return this.editorInstance.codeBlock('javascript');
+            }
             const textarea = this.$refs.editorTextarea;
             if (!textarea) return;
             const start = textarea.selectionStart;
@@ -751,6 +835,14 @@ export function createMarkdownEditor(options = {}) {
 
         insertLinePrefix(prefix) {
             if (!this.canEdit) return;
+            if (this.editorInstance) {
+                if (prefix.startsWith('# ')) return this.editorInstance.heading(1);
+                if (prefix.startsWith('## ')) return this.editorInstance.heading(2);
+                if (prefix.startsWith('### ')) return this.editorInstance.heading(3);
+                if (prefix.startsWith('- [ ] ')) return this.editorInstance.taskList();
+                if (prefix.startsWith('- ')) return this.editorInstance.bulletList();
+                if (prefix.startsWith('1. ')) return this.editorInstance.numberedList();
+            }
             const textarea = this.$refs.editorTextarea;
             if (!textarea) return;
             const start = textarea.selectionStart;
@@ -761,11 +853,18 @@ export function createMarkdownEditor(options = {}) {
         },
 
         insertTable() {
+            if (!this.canEdit) return;
+            if (this.editorInstance) {
+                return this.editorInstance.table();
+            }
             this.insertFormat('', '', '\n| Header 1 | Header 2 | Header 3 |\n| --- | --- | --- |\n| Cell 1 | Cell 2 | Cell 3 |\n| Cell 4 | Cell 5 | Cell 6 |\n\n');
         },
 
         scrollToHeading(heading) {
             this.activeHeading = heading.title;
+            if (this.editorInstance) {
+                this.editorInstance.scrollToHeading(heading);
+            }
             const preview = this.$refs.previewPane;
             if (!preview) return;
             const element = Array.from(preview.querySelectorAll('h1, h2, h3'))
@@ -823,7 +922,8 @@ export function createMarkdownEditor(options = {}) {
             if (!this.canEdit || !this.isDirty || this.isSaving || !this.$wire) return false;
             this.isSaving = true;
             this.saveFailed = false;
-            const savedContent = this.content;
+            const savedContent = this.editorInstance ? this.editorInstance.getContent() : this.content;
+            this.content = savedContent;
 
             try {
                 const vc = getVaultCrypto();

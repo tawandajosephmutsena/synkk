@@ -58,15 +58,15 @@ return [
     |
     */
     'pricing' => [
-        'pro_ltd' => [
-            'amount' => 79,
+        '1_year' => [
+            'amount' => 45,
             'currency_symbol' => '$',
-            'billing_label' => 'one-time lifetime deal',
+            'billing_label' => '1-year update license',
         ],
-        'cloud' => [
-            'amount' => 12,
+        'lifetime' => [
+            'amount' => 65,
             'currency_symbol' => '$',
-            'billing_label' => 'per workspace / month',
+            'billing_label' => 'lifetime license · pay once, own forever',
         ],
     ],
 

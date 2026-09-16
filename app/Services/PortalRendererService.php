@@ -118,7 +118,13 @@ class PortalRendererService
             'allow_unsafe_links' => false,
         ]);
 
-        // 6. Compute Backlinks for current note
+        // 6. Post-process code blocks into macOS styled windows
+        $html = $this->renderCodeWindows($html);
+
+        // 7. Post-process tables into responsive styled wrappers
+        $html = $this->renderTableWrappers($html);
+
+        // 8. Compute Backlinks for current note
         $backlinks = [];
         if ($currentFile) {
             $currentBasename = pathinfo($currentFile->path, PATHINFO_FILENAME);
@@ -147,6 +153,50 @@ class PortalRendererService
     }
 
     /**
+     * Post-process code blocks into macOS styled windows with traffic lights and copy action.
+     */
+    protected function renderCodeWindows(string $html): string
+    {
+        $pattern = '/<pre><code(?:\s+class="language-([a-zA-Z0-9_+-]+)")?>(.*?)<\/code><\/pre>/s';
+
+        return preg_replace_callback($pattern, function ($matches) {
+            $lang = ! empty($matches[1]) ? strtolower(trim($matches[1])) : 'code';
+            $code = $matches[2];
+            $displayLang = e(strtoupper($lang));
+
+            return <<<HTML
+<div class="synkk-code-window">
+    <div class="synkk-code-bar">
+        <div class="synkk-traffic-lights">
+            <span class="synkk-traffic-dot synkk-dot-red"></span>
+            <span class="synkk-traffic-dot synkk-dot-yellow"></span>
+            <span class="synkk-traffic-dot synkk-dot-green"></span>
+        </div>
+        <span class="synkk-code-lang">{$displayLang}</span>
+        <button type="button" class="synkk-code-copy-btn" onclick="copyCode(this)" title="Copy code">
+            <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span>Copy</span>
+        </button>
+    </div>
+    <pre><code class="language-{$lang}">{$code}</code></pre>
+</div>
+HTML;
+        }, $html) ?? $html;
+    }
+
+    /**
+     * Wrap HTML tables in responsive glass container for proper horizontal scrolling.
+     */
+    protected function renderTableWrappers(string $html): string
+    {
+        return preg_replace_callback('/<table(?:\s+[^>]*)?>.*?<\/table>/s', function ($matches) {
+            return '<div class="synkk-prose-table-container">'.$matches[0].'</div>';
+        }, $html) ?? $html;
+    }
+
+    /**
      * Render Obsidian Callouts (> [!NOTE]) into styled HTML blocks.
      */
     protected function renderCallouts(string $text): string
@@ -155,8 +205,6 @@ class PortalRendererService
 
         return preg_replace_callback($pattern, function ($matches) {
             $type = strtoupper(trim($matches[1]));
-            $foldable = $matches[2] !== '';
-            $isCollapsed = $matches[2] === '-';
             $title = ! empty(trim($matches[3] ?? '')) ? trim($matches[3]) : ucfirst(strtolower($type));
             $rawBodyLines = explode("\n", $matches[4]);
 
@@ -166,54 +214,32 @@ class PortalRendererService
             }
             $innerContent = trim(implode("\n", $cleanBody));
 
-            $palette = match ($type) {
-                'TIP', 'SUCCESS', 'CHECK', 'DONE' => [
-                    'border' => 'border-emerald-500/30',
-                    'bg' => 'bg-emerald-500/5 dark:bg-emerald-950/20',
-                    'text' => 'text-emerald-500 dark:text-emerald-400',
-                    'icon' => 'check-circle',
-                ],
-                'WARNING', 'CAUTION', 'ATTENTION' => [
-                    'border' => 'border-amber-500/30',
-                    'bg' => 'bg-amber-500/5 dark:bg-amber-950/20',
-                    'text' => 'text-amber-500 dark:text-amber-400',
-                    'icon' => 'exclamation-triangle',
-                ],
-                'DANGER', 'ERROR', 'BUG', 'FAILURE' => [
-                    'border' => 'border-rose-500/30',
-                    'bg' => 'bg-rose-500/5 dark:bg-rose-950/20',
-                    'text' => 'text-rose-500 dark:text-rose-400',
-                    'icon' => 'x-circle',
-                ],
-                'IMPORTANT', 'QUESTION', 'HELP', 'FAQ' => [
-                    'border' => 'border-purple-500/30',
-                    'bg' => 'bg-purple-500/5 dark:bg-purple-950/20',
-                    'text' => 'text-purple-500 dark:text-purple-400',
-                    'icon' => 'question-mark-circle',
-                ],
-                default => [ // NOTE, INFO, QUOTE, ABSTRACT
-                    'border' => 'border-sky-500/30',
-                    'bg' => 'bg-sky-500/5 dark:bg-sky-950/20',
-                    'text' => 'text-sky-500 dark:text-sky-400',
-                    'icon' => 'information-circle',
-                ],
+            $classType = match ($type) {
+                'TIP', 'SUCCESS', 'CHECK', 'DONE' => 'tip',
+                'WARNING', 'CAUTION', 'ATTENTION' => 'warning',
+                'DANGER', 'ERROR', 'BUG', 'FAILURE' => 'danger',
+                'IMPORTANT', 'QUESTION', 'HELP', 'FAQ' => 'important',
+                default => 'note',
+            };
+
+            $iconSvg = match ($classType) {
+                'tip' => '<svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
+                'warning' => '<svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>',
+                'danger' => '<svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>',
+                'important' => '<svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>',
+                default => '<svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>',
             };
 
             $safeTitle = e($title);
             $parsedInner = Str::markdown($innerContent);
 
             return <<<HTML
-<div class="synkk-callout my-4 rounded-xl border {$palette['border']} {$palette['bg']} p-4 text-xs transition-all shadow-xs">
-    <div class="flex items-center gap-2 font-semibold {$palette['text']} mb-1.5">
-        <span class="size-4 shrink-0">
-            <!-- Icon -->
-            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-        </span>
+<div class="synkk-callout synkk-callout--{$classType}">
+    <div class="synkk-callout-header">
+        {$iconSvg}
         <span>{$safeTitle}</span>
     </div>
-    <div class="synkk-callout-body prose prose-sm dark:prose-invert max-w-none text-zinc-700 dark:text-zinc-300 leading-relaxed">
+    <div class="synkk-callout-body">
         {$parsedInner}
     </div>
 </div>

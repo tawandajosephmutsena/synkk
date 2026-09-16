@@ -9,9 +9,11 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/css/landing.css',
+                'resources/css/portal.css',
                 'resources/js/app.js',
                 'resources/js/landing.js',
                 'resources/js/passkeys.js',
+                'resources/js/portal.js',
             ],
             refresh: true,
             fonts: [

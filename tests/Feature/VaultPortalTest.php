@@ -308,3 +308,63 @@ test('subfolder root path scopes accessible files strictly to the subfolder', fu
         ->and($accessiblePaths)->not->toContain('Secret/Confidential.md')
         ->and($accessiblePaths)->not->toContain('Getting Started.md');
 });
+
+test('portal renderer service wraps code fences in macOS chrome windows with traffic lights and copy button', function () {
+    $service = app(PortalRendererService::class);
+    $markdown = <<<'MD'
+# Code Example
+
+```php
+echo "Hello Synkk";
+```
+MD;
+
+    $rendered = $service->renderNoteHtml($markdown, new VaultPortal, collect([$this->file1]));
+
+    expect($rendered['html'])->toContain('synkk-code-window')
+        ->and($rendered['html'])->toContain('synkk-traffic-lights')
+        ->and($rendered['html'])->toContain('synkk-dot-red')
+        ->and($rendered['html'])->toContain('synkk-dot-yellow')
+        ->and($rendered['html'])->toContain('synkk-dot-green')
+        ->and($rendered['html'])->toContain('synkk-code-lang')
+        ->and($rendered['html'])->toContain('PHP')
+        ->and($rendered['html'])->toContain('synkk-code-copy-btn');
+});
+
+test('portal renderer service wraps tables in responsive container', function () {
+    $service = app(PortalRendererService::class);
+    $markdown = <<<'MD'
+| Feature | Supported |
+| --- | --- |
+| Local SQLite | Yes |
+| Obsidian | Yes |
+MD;
+
+    $rendered = $service->renderNoteHtml($markdown, new VaultPortal, collect([$this->file1]));
+
+    expect($rendered['html'])->toContain('synkk-prose-table-container')
+        ->and($rendered['html'])->toContain('<table>');
+});
+
+test('portal show component supports switching themes and layouts dynamically', function () {
+    $portal = VaultPortal::create([
+        'team_id' => $this->team->id,
+        'vault_id' => $this->vault->id,
+        'name' => 'Studio Hub',
+        'slug' => 'studio-hub',
+        'layout' => 'docs',
+        'theme' => 'obsidian-noir',
+        'is_public' => true,
+        'created_by' => $this->user->id,
+    ]);
+
+    Livewire::test('pages::portals.show', ['slug' => 'studio-hub'])
+        ->assertSet('currentLayout', 'docs')
+        ->assertSet('currentTheme', 'obsidian-noir')
+        ->call('switchLayout', 'bento')
+        ->assertSet('currentLayout', 'bento')
+        ->call('switchTheme', 'midnight-emerald')
+        ->assertSet('currentTheme', 'midnight-emerald')
+        ->call('switchLayout', 'dashboard')
+        ->assertSet('currentLayout', 'dashboard');
+});

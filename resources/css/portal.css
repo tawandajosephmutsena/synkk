@@ -1,0 +1,724 @@
+/* ==========================================================================
+   SYNKk PORTALS — ENTERPRISE KNOWLEDGE ENGINE & PUBLISHING DESIGN SYSTEM
+   High-end aesthetics, atmospheric depth, rich typography, and micro-interactions.
+   ========================================================================== */
+
+:root {
+    --portal-primary: #f59e0b;
+    --portal-primary-glow: rgba(245, 158, 11, 0.25);
+    --portal-bg: #09090b;
+    --portal-card-bg: rgba(18, 18, 21, 0.75);
+    --portal-border: rgba(255, 255, 255, 0.08);
+    --portal-border-hover: rgba(245, 158, 11, 0.4);
+    --portal-text: #f4f4f5;
+    --portal-text-muted: #a1a1aa;
+}
+
+/* Theme Variable Overrides */
+[data-portal-theme="slate-luxe"] {
+    --portal-primary: #6366f1;
+    --portal-primary-glow: rgba(99, 102, 241, 0.25);
+    --portal-bg: #020617;
+    --portal-card-bg: rgba(15, 23, 42, 0.75);
+    --portal-border: rgba(99, 102, 241, 0.15);
+    --portal-border-hover: rgba(99, 102, 241, 0.5);
+    --portal-text: #f8fafc;
+    --portal-text-muted: #94a3b8;
+}
+
+[data-portal-theme="midnight-emerald"] {
+    --portal-primary: #10b981;
+    --portal-primary-glow: rgba(16, 185, 129, 0.25);
+    --portal-bg: #040d08;
+    --portal-card-bg: rgba(6, 26, 17, 0.8);
+    --portal-border: rgba(16, 185, 129, 0.18);
+    --portal-border-hover: rgba(16, 185, 129, 0.5);
+    --portal-text: #ecfdf5;
+    --portal-text-muted: #6ee7b7;
+}
+
+[data-portal-theme="paper-craft"] {
+    --portal-primary: #d97706;
+    --portal-primary-glow: rgba(217, 119, 6, 0.15);
+    --portal-bg: #fbfbfa;
+    --portal-card-bg: #ffffff;
+    --portal-border: #e7e5e4;
+    --portal-border-hover: #d6d3d1;
+    --portal-text: #1c1917;
+    --portal-text-muted: #78716c;
+}
+
+[data-portal-theme="amber-gold"] {
+    --portal-primary: #f59e0b;
+    --portal-primary-glow: rgba(245, 158, 11, 0.3);
+    --portal-bg: #0c0a09;
+    --portal-card-bg: rgba(28, 25, 23, 0.8);
+    --portal-border: rgba(245, 158, 11, 0.2);
+    --portal-border-hover: rgba(245, 158, 11, 0.5);
+    --portal-text: #fef3c7;
+    --portal-text-muted: #d97706;
+}
+
+/* --------------------------------------------------------------------------
+   Atmospheric Background & Lighting
+   -------------------------------------------------------------------------- */
+.synkk-portal-wrapper {
+    position: relative;
+    min-height: 100vh;
+    background-color: var(--portal-bg);
+    color: var(--portal-text);
+    overflow-x: hidden;
+}
+
+/* Subtle dot matrix grid overlay */
+.synkk-portal-grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 10%, #000 70%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+[data-portal-theme="paper-craft"] .synkk-portal-grid-bg {
+    background-image: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+}
+
+/* Animated pulsating ambient aurora orbs */
+.synkk-portal-aurora-1 {
+    position: absolute;
+    top: -120px;
+    left: 20%;
+    width: 650px;
+    height: 450px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--portal-primary-glow) 0%, transparent 70%);
+    filter: blur(80px);
+    opacity: 0.6;
+    animation: synkk-aurora-float-1 18s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.synkk-portal-aurora-2 {
+    position: absolute;
+    top: 150px;
+    right: 15%;
+    width: 500px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+    filter: blur(90px);
+    opacity: 0.5;
+    animation: synkk-aurora-float-2 22s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+}
+
+@keyframes synkk-aurora-float-1 {
+    0% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(60px, 40px) scale(1.08); }
+    100% { transform: translate(-40px, 80px) scale(0.95); }
+}
+
+@keyframes synkk-aurora-float-2 {
+    0% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-50px, 30px) scale(1.12); }
+    100% { transform: translate(40px, -50px) scale(0.98); }
+}
+
+/* --------------------------------------------------------------------------
+   Reading Progress Bar & Sticky Header Polish
+   -------------------------------------------------------------------------- */
+.synkk-portal-progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    z-index: 100;
+    background: linear-gradient(90deg, var(--portal-primary), #10b981, #6366f1);
+    box-shadow: 0 0 12px var(--portal-primary);
+    transition: width 0.08s ease-out;
+}
+
+.synkk-portal-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--portal-border);
+    background: rgba(9, 9, 11, 0.85);
+    transition: border-color 0.2s ease;
+}
+
+[data-portal-theme="paper-craft"] .synkk-portal-header {
+    background: rgba(251, 251, 250, 0.88);
+}
+
+/* --------------------------------------------------------------------------
+   Glassmorphic Surface Cards
+   -------------------------------------------------------------------------- */
+.synkk-glass-card {
+    position: relative;
+    background: var(--portal-card-bg);
+    border: 1px solid var(--portal-border);
+    border-radius: 1.25rem;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.synkk-glass-card:hover {
+    border-color: var(--portal-border-hover);
+    box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(245, 158, 11, 0.1) inset;
+}
+
+/* --------------------------------------------------------------------------
+   Bento Grid Card 3D Lift & Cursor Spotlight
+   -------------------------------------------------------------------------- */
+.synkk-bento-card {
+    position: relative;
+    border-radius: 1.25rem;
+    border: 1px solid var(--portal-border);
+    background: var(--portal-card-bg);
+    backdrop-filter: blur(16px);
+    overflow: hidden;
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    cursor: pointer;
+}
+
+.synkk-bento-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(600px circle at var(--mouse-x, 0px) var(--mouse-y, 0px), var(--portal-primary-glow), transparent 40%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.synkk-bento-card:hover::before {
+    opacity: 1;
+}
+
+.synkk-bento-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--portal-border-hover);
+    box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.5), 0 0 20px -5px var(--portal-primary-glow);
+}
+
+/* --------------------------------------------------------------------------
+   THE TYPOGRAPHY & PROSE ENGINE (.synkk-prose)
+   Stripe/Linear/Obsidian-grade typography for Markdown rendering
+   -------------------------------------------------------------------------- */
+.synkk-prose {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--portal-text);
+    word-break: break-word;
+}
+
+.synkk-prose > *:first-child {
+    margin-top: 0 !important;
+}
+
+/* Headings */
+.synkk-prose h1 {
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    margin-top: 2.5rem;
+    margin-bottom: 1.25rem;
+    color: #ffffff;
+}
+
+[data-portal-theme="paper-craft"] .synkk-prose h1 {
+    color: #1c1917;
+}
+
+.synkk-prose h2 {
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1.28;
+    letter-spacing: -0.025em;
+    margin-top: 2.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--portal-border);
+    color: #ffffff;
+}
+
+[data-portal-theme="paper-craft"] .synkk-prose h2 {
+    color: #1c1917;
+}
+
+.synkk-prose h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+    margin-top: 2.25rem;
+    margin-bottom: 0.75rem;
+    color: #f4f4f5;
+}
+
+[data-portal-theme="paper-craft"] .synkk-prose h3 {
+    color: #292524;
+}
+
+.synkk-prose h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+    color: #e4e4e7;
+}
+
+.synkk-prose p {
+    margin-top: 0;
+    margin-bottom: 1.4rem;
+    color: var(--portal-text-muted);
+}
+
+.synkk-prose strong {
+    font-weight: 600;
+    color: var(--portal-text);
+}
+
+.synkk-prose em {
+    font-style: italic;
+}
+
+/* Links */
+.synkk-prose a:not(.synkk-wikilink):not(.synkk-code-copy-btn) {
+    color: var(--portal-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 500;
+    transition: opacity 0.15s ease;
+}
+
+.synkk-prose a:not(.synkk-wikilink):hover {
+    opacity: 0.8;
+}
+
+/* Lists */
+.synkk-prose ul {
+    list-style-type: disc;
+    padding-left: 1.6rem;
+    margin-top: 0;
+    margin-bottom: 1.4rem;
+}
+
+.synkk-prose ol {
+    list-style-type: decimal;
+    padding-left: 1.6rem;
+    margin-top: 0;
+    margin-bottom: 1.4rem;
+}
+
+.synkk-prose li {
+    margin-top: 0.35rem;
+    margin-bottom: 0.35rem;
+    padding-left: 0.25rem;
+    color: var(--portal-text-muted);
+}
+
+.synkk-prose li > ul,
+.synkk-prose li > ol {
+    margin-top: 0.35rem;
+    margin-bottom: 0.35rem;
+}
+
+/* Task lists */
+.synkk-prose ul.contains-task-list {
+    list-style: none;
+    padding-left: 0.25rem;
+}
+
+.synkk-prose li.task-list-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.synkk-prose input[type="checkbox"] {
+    accent-color: var(--portal-primary);
+    cursor: pointer;
+}
+
+/* Blockquotes */
+.synkk-prose blockquote:not(.synkk-callout) {
+    position: relative;
+    border-left: 3px solid var(--portal-primary);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0 0.75rem 0.75rem 0;
+    padding: 0.85rem 1.4rem;
+    margin: 1.75rem 0;
+    font-style: italic;
+    color: var(--portal-text-muted);
+}
+
+/* Horizontal Dividers */
+.synkk-prose hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--portal-border), transparent);
+    margin: 2.75rem 0;
+}
+
+/* Tables */
+.synkk-prose-table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin: 2rem 0;
+    border-radius: 1rem;
+    border: 1px solid var(--portal-border);
+    background: var(--portal-card-bg);
+}
+
+.synkk-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    text-align: left;
+}
+
+.synkk-prose th {
+    padding: 0.85rem 1.25rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid var(--portal-border);
+    color: var(--portal-text);
+}
+
+.synkk-prose td {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: var(--portal-text-muted);
+}
+
+.synkk-prose tr:last-child td {
+    border-bottom: none;
+}
+
+.synkk-prose tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Keyboard keys */
+.synkk-prose kbd {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.75rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 600;
+    line-height: 1;
+    color: #e4e4e7;
+    background-color: #27272a;
+    border: 1px solid #3f3f46;
+    border-radius: 0.35rem;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+/* Inline code */
+.synkk-prose :not(pre) > code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85em;
+    font-weight: 600;
+    padding: 0.2em 0.45em;
+    border-radius: 0.4rem;
+    background: rgba(255, 255, 255, 0.07);
+    color: #fcd34d;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+[data-portal-theme="paper-craft"] .synkk-prose :not(pre) > code {
+    background: #f5f5f4;
+    color: #b45309;
+    border-color: #e7e5e4;
+}
+
+/* --------------------------------------------------------------------------
+   macOS CHROME CODE WINDOWS & SYNTAX FENCES
+   -------------------------------------------------------------------------- */
+.synkk-code-window {
+    margin: 2rem 0;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #0d1117;
+    box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+.synkk-code-bar {
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.synkk-traffic-lights {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.synkk-traffic-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.synkk-dot-red { background-color: #ff5f56; }
+.synkk-dot-yellow { background-color: #ffbd2e; }
+.synkk-dot-green { background-color: #27c93f; }
+
+.synkk-code-lang {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #71717a;
+}
+
+.synkk-code-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #a1a1aa;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.synkk-code-copy-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.synkk-code-window pre {
+    margin: 0 !important;
+    padding: 1.25rem 1.5rem !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow-x: auto;
+}
+
+.synkk-code-window pre code {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #e6edf3 !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-size: 0.85rem !important;
+    line-height: 1.7 !important;
+}
+
+/* --------------------------------------------------------------------------
+   OBSIDIAN CALLOUTS SYSTEM
+   -------------------------------------------------------------------------- */
+.synkk-callout {
+    position: relative;
+    border-radius: 1rem;
+    border: 1px solid;
+    padding: 1.25rem 1.5rem;
+    margin: 1.75rem 0;
+    backdrop-filter: blur(12px);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.synkk-callout:hover {
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.25);
+}
+
+.synkk-callout-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 0.65rem;
+    letter-spacing: -0.01em;
+}
+
+.synkk-callout-body {
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+
+.synkk-callout-body > *:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Note / Info */
+.synkk-callout--note {
+    background: rgba(14, 165, 233, 0.06);
+    border-color: rgba(14, 165, 233, 0.3);
+    color: #e0f2fe;
+}
+.synkk-callout--note .synkk-callout-header { color: #38bdf8; }
+
+/* Tip / Success */
+.synkk-callout--tip {
+    background: rgba(16, 185, 129, 0.06);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #ecfdf5;
+}
+.synkk-callout--tip .synkk-callout-header { color: #34d399; }
+
+/* Warning / Caution */
+.synkk-callout--warning {
+    background: rgba(245, 158, 11, 0.06);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #fffbeb;
+}
+.synkk-callout--warning .synkk-callout-header { color: #fbbf24; }
+
+/* Danger / Failure */
+.synkk-callout--danger {
+    background: rgba(244, 63, 94, 0.07);
+    border-color: rgba(244, 63, 94, 0.3);
+    color: #fff1f2;
+}
+.synkk-callout--danger .synkk-callout-header { color: #fb7185; }
+
+/* Important */
+.synkk-callout--important {
+    background: rgba(168, 85, 247, 0.06);
+    border-color: rgba(168, 85, 247, 0.3);
+    color: #faf5ff;
+}
+.synkk-callout--important .synkk-callout-header { color: #c084fc; }
+
+/* --------------------------------------------------------------------------
+   INTERACTIVE WIKILINKS & POPUP PREVIEWS
+   -------------------------------------------------------------------------- */
+.synkk-wikilink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 0.5rem;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--portal-primary);
+    background: var(--portal-primary-glow);
+    border: 1px solid var(--portal-border-hover);
+    text-decoration: none !important;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.synkk-wikilink:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--portal-primary-glow);
+    filter: brightness(1.15);
+}
+
+.synkk-wikilink svg {
+    opacity: 0.65;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.synkk-wikilink:hover svg {
+    opacity: 1;
+    transform: translateX(1px);
+}
+
+/* Floating Wikilink Instant-Preview Card */
+.synkk-wikilink-preview-card {
+    position: fixed;
+    z-index: 100;
+    width: 20rem;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(18, 18, 24, 0.95);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    padding: 1.25rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    animation: synkk-popover 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+}
+
+@keyframes synkk-popover {
+    from { opacity: 0; transform: translateY(8px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --------------------------------------------------------------------------
+   Table of Contents Scrollspy Polish
+   -------------------------------------------------------------------------- */
+.synkk-toc-link {
+    position: relative;
+    display: block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--portal-text-muted);
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border-left: 2px solid transparent;
+}
+
+.synkk-toc-link:hover {
+    color: var(--portal-text);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.synkk-toc-link.is-active {
+    color: var(--portal-primary);
+    font-weight: 600;
+    border-left-color: var(--portal-primary);
+    background: var(--portal-primary-glow);
+}
+
+/* --------------------------------------------------------------------------
+   Knowledge Graph Canvas Styling
+   -------------------------------------------------------------------------- */
+.synkk-graph-canvas-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    overflow: hidden;
+    background: radial-gradient(circle at center, rgba(18, 18, 28, 0.8), #09090b);
+    border-radius: 1.5rem;
+}
+
+canvas#synkk-knowledge-graph-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+}
+
+canvas#synkk-knowledge-graph-canvas:active {
+    cursor: grabbing;
+}

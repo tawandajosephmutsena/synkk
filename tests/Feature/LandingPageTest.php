@@ -1,9 +1,5 @@
 <?php
 
-use App\Enums\TeamRole;
-use App\Models\Team;
-use App\Models\User;
-
 test('the landing page explains the complete Obsidian sync workflow', function () {
     $response = $this->get(route('home'));
 
@@ -80,60 +76,20 @@ test('the landing page presents real product captures without a mascot overlay',
     $this->assertFileDoesNotExist(public_path('images/showcase/devices-full.png'));
 });
 
-test('the landing page presents the complete 3-tier packaging and pricing architecture', function () {
+test('the landing page presents the transparent pricing architecture', function () {
     $response = $this->get(route('home'));
 
     $response
-        ->assertSee('Packaging &amp; Pricing Architecture', escape: false)
-        ->assertSee('Synkk Community')
-        ->assertSee('$0')
-        ->assertSee('FREE &amp; OPEN SOURCE', escape: false)
-        ->assertSee('Synkk Pro / Team')
-        ->assertSee('$79')
-        ->assertSee('APPSUMO LAUNCH DEAL')
-        ->assertSee('AppSumo launch offer')
-        ->assertSee('Synkk Cloud')
-        ->assertSee('$12')
-        ->assertSee('per workspace / month')
-        ->assertSee('ZERO-CONFIG MANAGED SAAS')
-        ->assertSee('Frankfurt')
-        ->assertSee('US-East')
+        ->assertSee('Simple, transparent pricing. No recurring trap.')
+        ->assertSee('1-YEAR UPDATE LICENSE')
+        ->assertSee('$45')
+        ->assertSee('LIFETIME LICENSE')
+        ->assertSee('$65')
+        ->assertSee('BEST VALUE')
+        ->assertSee('ENTERPRISE &amp; TEAMS', escape: false)
+        ->assertSee('No Subscription Trap · Pay Once')
         ->assertSee('book-it.ottomate.space', escape: false)
         ->assertSee('Book a meeting');
-});
-
-test('an authenticated workspace owner can start a configured Dodo test checkout from the landing page', function () {
-    config()->set([
-        'services.dodo.api_key' => 'test-api-key',
-        'services.dodo.environment' => 'test_mode',
-        'services.dodo.cloud_product_id' => 'pdt_cloud_monthly',
-    ]);
-
-    $user = User::factory()->create();
-    $team = Team::factory()->create(['plan' => 'free']);
-    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
-    $user->update(['current_team_id' => $team->id]);
-    $user->refresh();
-
-    $this->actingAs($user)
-        ->get(route('home'))
-        ->assertSee('Subscribe with Dodo')
-        ->assertSee('Test mode')
-        ->assertSee('Test checkout enabled — no live charge.')
-        ->assertSee($team->slug)
-        ->assertSee('/billing/dodo/checkout', escape: false)
-        ->assertSee('per workspace / month');
-});
-
-test('a guest is sent to workspace creation before starting Cloud checkout', function () {
-    config()->set([
-        'services.dodo.api_key' => 'test-api-key',
-        'services.dodo.cloud_product_id' => 'pdt_cloud_monthly',
-    ]);
-
-    $this->get(route('home'))
-        ->assertSee('Create workspace to subscribe')
-        ->assertDontSee('Subscribe with Dodo');
 });
 
 test('the landing page presents the synkk moonshot engine with its 4 core pillars', function () {

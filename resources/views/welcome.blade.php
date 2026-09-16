@@ -1595,57 +1595,51 @@
                 <div class="synkk-shell">
                     <header class="synkk-section-heading">
                         <div>
-                            <p class="synkk-eyebrow">07 / Packaging &amp; Pricing Architecture</p>
-                            <h2 id="pricing-heading">Choose how your team runs Synkk.</h2>
+                            <p class="synkk-eyebrow">05 / Simple pricing</p>
+                            <h2 id="pricing-heading">Simple, transparent pricing. No recurring trap.</h2>
                         </div>
-                        <p>Start free, own a self-hosted commercial license once, or subscribe to zero-config managed cloud for {{ $cloudPrice }} {{ $cloudPricing['billing_label'] ?? 'per workspace / month' }}.</p>
+                        <p>Own the self-hosted server on your terms. The Obsidian plugin is free, while commercial licenses give you software updates and direct support.</p>
                     </header>
 
                     <div class="synkk-pricing-grid">
-                        <!-- Tier 1: Synkk Community -->
-                        <article class="synkk-pricing-card synkk-pricing-card--community">
+                        <article>
                             <div class="synkk-price-heading">
-                                <span>FREE &amp; OPEN SOURCE · SELF-HOSTED</span>
-                                <p><strong>$0</strong><small>free forever · full source code</small></p>
+                                <span>1-YEAR UPDATE LICENSE</span>
+                                <p><strong>$45</strong><small>1-year update license</small></p>
                             </div>
-                            <h3>Synkk Community</h3>
-                            <p class="synkk-price-subtitle">Full source code for developers, homelabs &amp; independent creators.</p>
+                            <h3>Self-host with one full year of updates.</h3>
                             <ul>
-                                <li>Full source code (Laravel backend + Obsidian plugin)</li>
-                                <li>Whole-file sync &amp; cryptographic SHA-256 verification</li>
-                                <li>Note version history &amp; 1-click snapshot restore</li>
-                                <li>In-browser Markdown web editor &amp; document outline</li>
-                                <li>Basic folder scoping &amp; path exclusions</li>
-                                <li>Unlimited notes, unlimited vaults &amp; unlimited devices</li>
-                                <li>Public community support via GitHub Discussions</li>
+                                <li>1 year of software updates &amp; new feature releases</li>
+                                <li>Perpetual access to the purchased version forever</li>
+                                <li>Self-host on your own infrastructure or Docker</li>
+                                <li>Unlimited vaults, notes, and local devices</li>
+                                <li>Obsidian plugin v1.0.0 integration included</li>
+                                <li>Community support &amp; documentation access</li>
                             </ul>
-                            <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Clone on GitHub <span aria-hidden="true">↗</span></a>
+                            @if ($storeReady)
+                                <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Get 1-Year License <span aria-hidden="true">↗</span></a>
+                            @else
+                                <button type="button" class="synkk-button synkk-button--pending" disabled>Checkout opens after launch checks</button>
+                            @endif
                         </article>
 
-                        <!-- Tier 2: Synkk Pro / Team (Featured) -->
-                        <article class="synkk-pricing-card synkk-pricing-card--pro is-featured">
+                        <article class="is-featured">
                             <div class="synkk-price-featured-badge">
                                 <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
-                                <span>APPSUMO LAUNCH DEAL · BEST VALUE</span>
+                                <span>LIFETIME LICENSE · BEST VALUE</span>
                             </div>
                             <div class="synkk-price-heading">
-                                <span>SELF-HOSTED COMMERCIAL LICENSE</span>
-                                <p><strong>{{ $proPrice }}</strong><small>{{ $proPricing['billing_label'] ?? 'one-time lifetime deal' }}</small></p>
+                                <span>LIFETIME LICENSE</span>
+                                <p><strong>$65</strong><small>lifetime license · pay once, own forever</small></p>
                             </div>
-                            <div class="synkk-price-commercial-toggle">
-                                <span>AppSumo launch offer: <strong>{{ $proPrice }}</strong> once · no subscription</span>
-                            </div>
-                            <h3>Synkk Pro / Team</h3>
-                            <p class="synkk-price-subtitle">Self-hosted commercial server with full governance (up to 10 users).</p>
+                            <h3>Own Synkk forever. Every update included.</h3>
                             <ul>
-                                <li>Everything in Community, plus:</li>
-                                <li>Lifetime self-hosted team server (up to 10 users with launch deal)</li>
-                                <li>In-App DLP Secret Scanning (intercepts leaked OpenAI / AWS keys)</li>
-                                <li>IP Whitelisting &amp; Subnet restriction rules</li>
-                                <li>1-Click Instant Remote Device Wipe (HTTP 410 token purge)</li>
-                                <li>Webhook automation &amp; event relays (Slack, Discord, Zapier) <span class="synkk-roadmap-pill">Q4 Roadmap</span></li>
-                                <li>Granular Path-Level ACLs (Inbox vs Client vs Internal)</li>
-                                <li>Priority Support directly from core maintainers</li>
+                                <li>Lifetime software updates — never pay a renewal fee</li>
+                                <li>All future v1.x, v2.x, and major milestone releases</li>
+                                <li>Self-host on unlimited servers you control</li>
+                                <li>Priority access to CRDT collaboration &amp; E2EE betas</li>
+                                <li>Direct priority support from core maintainers</li>
+                                <li>Full commercial and personal use rights</li>
                             </ul>
                             @if ($storeReady)
                                 <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Get Lifetime License <span aria-hidden="true">↗</span></a>
@@ -1654,75 +1648,43 @@
                             @endif
                         </article>
 
-                        <!-- Tier 3: Synkk Cloud -->
-                        <article class="synkk-pricing-card synkk-pricing-card--cloud">
+                        <article class="synkk-pricing-grid__team">
                             <div class="synkk-price-heading">
-                                <span>ZERO-CONFIG MANAGED SAAS</span>
-                                <p><strong>{{ $cloudPrice }}</strong><small>{{ $cloudPricing['billing_label'] ?? 'per workspace / month' }}</small></p>
+                                <span>ENTERPRISE &amp; TEAMS</span>
+                                <p><strong>Enterprise</strong><small>teams &amp; organizations</small></p>
                             </div>
-                            <h3>Synkk Cloud</h3>
-                            <p class="synkk-price-subtitle">For teams that love Obsidian but do not want to manage Docker or servers.</p>
+                            <h3>Deploy Synkk across your team or company.</h3>
                             <ul>
-                                <li>Zero DevOps: no Docker, PHP, SSL certs, or database backups</li>
-                                <li>1-Click team setup — hosted in Frankfurt (GDPR) or US-East</li>
-                                <li>Automated hourly offsite encrypted backups &amp; failover</li>
-                                <li>Full Pro feature suite: DLP scanning, remote wipe &amp; webhooks <span class="synkk-roadmap-pill">Webhooks Q4</span></li>
-                                <li>Automated updates, security patches, and zero maintenance</li>
-                                <li>99.99% uptime SLA &amp; dedicated priority cloud support</li>
-                                <li>Multi-device sync with instant 2-second QR pairing</li>
+                                <li>Custom deployment assistance (Docker, K8s, Bare Metal)</li>
+                                <li>Granular path permission &amp; team onboarding architecture</li>
+                                <li>Dedicated support channel with core maintainers</li>
+                                <li>Custom SLA, invoice billing, and security audit review</li>
+                                <li>Unlimited team members, devices, and enterprise vaults</li>
                             </ul>
-                            @if ($dodoReady && $userTeam)
-                                <form method="POST" action="{{ route('billing.dodo.checkout', ['current_team' => $userTeam->slug]) }}" class="mt-auto grid gap-2">
-                                    @csrf
-                                    <button type="submit" class="synkk-button synkk-button--ink">
-                                        Subscribe with Dodo
-                                        @if ($dodoTestMode)
-                                            <span class="synkk-roadmap-pill">Test mode</span>
-                                        @endif
-                                        <span aria-hidden="true">→</span>
-                                    </button>
-                                    @if ($dodoTestMode)
-                                        <small class="text-center text-xs text-amber-700">Test checkout enabled — no live charge.</small>
-                                    @endif
-                                </form>
-                            @elseif (auth()->check())
-                                <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--ink">Open Cloud billing <span aria-hidden="true">→</span></a>
-                            @elseif (Route::has('register'))
-                                <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Create workspace to subscribe <span aria-hidden="true">→</span></a>
-                            @else
-                                <a href="{{ route('login') }}" class="synkk-button synkk-button--ink">Log in to subscribe <span aria-hidden="true">→</span></a>
-                            @endif
+                            <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Book a meeting <span aria-hidden="true">↗</span></a>
                         </article>
-                    </div>
-
-                    <div class="synkk-pricing-enterprise">
-                        <div class="synkk-pricing-enterprise__copy">
-                            <strong>Need custom Kubernetes clusters, air-gapped deployments, or SOC2 compliance?</strong>
-                            <p>We provide dedicated support channels, IP subnet audit logging, and custom SLAs for enterprise organizations.</p>
-                        </div>
-                        <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--quiet">Book a meeting <span aria-hidden="true">↗</span></a>
                     </div>
 
                     <div class="synkk-pricing-trust">
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
-                            <span>100% Self-Hosted or Managed Cloud</span>
+                            <span>100% Self-Hosted &amp; Local-First</span>
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
-                            <span>Instant License &amp; Cloud Activation</span>
+                            <span>Instant Software License Activation</span>
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
-                            <span>AppSumo Lifetime Deal · Zero Recurring Seat Tax</span>
+                            <span>No Subscription Trap · Pay Once</span>
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 16v-1a4.978 4.978 0 00-1.552-3.619A6.974 6.974 0 0118 15v1h-2zM4 16v-1c0-.853.21-1.657.58-2.368A4.978 4.978 0 003 15v1h1z"/></svg>
-                            <span>Obsidian Plugin Always Free</span>
+                            <span>Commercial Use Rights Included</span>
                         </div>
                     </div>
 
-                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public open-source plugin and server code. Dodo Payments handles monthly Cloud subscriptions, while AppSumo manages the one-time Pro lifetime license. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline hover:text-zinc-900">book-it.ottomate.space</a>.</p>
+                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public plugin. Lemon Squeezy manages license checkout. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline hover:text-zinc-900">book-it.ottomate.space</a>.</p>
                 </div>
             </section>
 

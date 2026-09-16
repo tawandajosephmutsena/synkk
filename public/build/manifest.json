@@ -28,7 +28,7 @@
     "src": "_instrument-sans-600-normal-B9e8oLYv.woff"
   },
   "resources/css/app.css": {
-    "file": "assets/app-CCWIGneT.css",
+    "file": "assets/app-t8enZkWz.css",
     "name": "app",
     "names": [
       "app.css"
@@ -37,7 +37,7 @@
     "isEntry": true
   },
   "resources/css/landing.css": {
-    "file": "assets/landing-DA8QD6gw.css",
+    "file": "assets/landing-glO_L-8n.css",
     "name": "landing",
     "names": [
       "landing.css"
@@ -45,8 +45,17 @@
     "src": "resources/css/landing.css",
     "isEntry": true
   },
+  "resources/css/portal.css": {
+    "file": "assets/portal-DZ4p1CEi.css",
+    "name": "portal",
+    "names": [
+      "portal.css"
+    ],
+    "src": "resources/css/portal.css",
+    "isEntry": true
+  },
   "resources/js/app.js": {
-    "file": "assets/app-BPYxFfzy.js",
+    "file": "assets/app-fPgXsY-_.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
@@ -61,6 +70,12 @@
     "file": "assets/passkeys-ZWACIUjA.js",
     "name": "passkeys",
     "src": "resources/js/passkeys.js",
+    "isEntry": true
+  },
+  "resources/js/portal.js": {
+    "file": "assets/portal-B8KBhTew.js",
+    "name": "portal",
+    "src": "resources/js/portal.js",
     "isEntry": true
   }
 }

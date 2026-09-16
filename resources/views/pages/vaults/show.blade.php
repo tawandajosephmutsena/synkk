@@ -1722,8 +1722,13 @@ new #[Title('Vault Details')] class extends Component
                 <div class="flex items-center gap-2.5">
                     <!-- CRDT Multiplayer Collaborators Stack & Relay Indicator -->
                     <div class="hidden sm:flex items-center gap-2">
+                        <!-- Real-time client awareness indicator -->
+                        <div x-show="activePeers.length > 0" x-cloak class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-[10px] font-semibold animate-pulse shadow-xs" title="{{ __('Active CRDT Multiplayer Peers') }}">
+                            <span class="size-1.5 rounded-full bg-emerald-400"></span>
+                            <span x-text="`${activePeers.length} live`"></span>
+                        </div>
                         @if (! empty($collabActivePeers))
-                            <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-[10px] font-semibold animate-pulse" title="{{ __('Active CRDT Multiplayer Peers') }}">
+                            <div x-show="activePeers.length === 0" class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-[10px] font-semibold animate-pulse" title="{{ __('Active CRDT Multiplayer Peers') }}">
                                 <span class="size-1.5 rounded-full bg-emerald-400"></span>
                                 <span>{{ count($collabActivePeers) }} {{ __('live') }}</span>
                             </div>
@@ -2078,17 +2083,22 @@ new #[Title('Vault Details')] class extends Component
                             </template>
                         </div>
 
-                        <!-- Line Numbers Gutter -->
-                        <div class="w-10 shrink-0 py-3 text-right pr-2 text-zinc-600 font-mono text-xs select-none border-r border-zinc-800/60 bg-[#0C0E13]">
+                        <!-- Line Numbers Gutter (Fallback when CodeMirror not loaded) -->
+                        <div x-show="!editorInstance" class="w-10 shrink-0 py-3 text-right pr-2 text-zinc-600 font-mono text-xs select-none border-r border-zinc-800/60 bg-[#0C0E13]">
                             <template x-for="n in lineCount" :key="n">
                                 <div class="leading-relaxed text-[11px]" x-text="n"></div>
                             </template>
                         </div>
 
-                        <!-- Textarea -->
-                        <div class="flex-1 relative overflow-y-auto">
+                        <!-- CodeMirror 6 Root Host Surface with Textarea Fallback -->
+                        <div class="flex-1 relative overflow-hidden bg-[#0E1015] flex flex-col">
+                            <div
+                                x-ref="editorContainer"
+                                class="cm-synkk-host w-full h-full min-h-[580px] overflow-auto focus:outline-none"
+                            ></div>
                             <textarea
                                 x-ref="editorTextarea"
+                                x-show="!editorInstance"
                                 x-model="content"
                                 @keydown="handleEditorKeydown($event)"
                                 @if (! $this->canEditActiveFile) readonly @endif
