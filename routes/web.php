@@ -1,10 +1,15 @@
 <?php
 
+use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Billing\DodoBillingController;
+use App\Http\Controllers\PairingBridgeController;
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 Route::view('/about', 'about')->name('about');
+Route::get('/pair', [PairingBridgeController::class, 'show'])->name('pairing.bridge');
 
 if (app()->environment('local')) {
     Route::get('dev-login', function () {
@@ -54,10 +59,6 @@ Route::view('/documentation', 'documentation')->name('public.docs');
 Route::get('docs', function () {
     return redirect()->route('public.docs');
 })->name('docs.redirect');
-
-use App\Http\Controllers\Admin\ImpersonationController;
-use App\Http\Controllers\Billing\DodoBillingController;
-use App\Http\Middleware\EnsureSuperAdmin;
 
 Route::prefix('admin')
     ->middleware(['auth', 'verified', EnsureSuperAdmin::class])

@@ -23,6 +23,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
     public ?string $generatedPlainToken = null;
     public ?string $generatedQrCodeSvg = null;
     public ?string $generatedPairingUrl = null;
+    public ?string $generatedWebPairingUrl = null;
     public ?string $pairingSessionId = null;
 
     public ?int $editingTokenId = null;
@@ -95,10 +96,12 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
             );
             $this->generatedQrCodeSvg = $sessionData['qr_svg'];
             $this->generatedPairingUrl = $sessionData['pairing_url'] ?? null;
+            $this->generatedWebPairingUrl = $sessionData['web_pairing_url'] ?? null;
             $this->pairingSessionId = $sessionData['session'];
         } catch (\Throwable $e) {
             $this->generatedQrCodeSvg = null;
             $this->generatedPairingUrl = null;
+            $this->generatedWebPairingUrl = null;
             $this->pairingSessionId = null;
         }
 
@@ -116,6 +119,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         $this->generatedPlainToken = null;
         $this->generatedQrCodeSvg = null;
         $this->generatedPairingUrl = null;
+        $this->generatedWebPairingUrl = null;
         $this->pairingSessionId = null;
         $this->dispatch('modal-close', name: 'show-token-modal');
     }
@@ -513,6 +517,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                 claimedDevice: '',
                 pollTimer: null,
                 startPolling() {
+                    this.sessionId = $wire.pairingSessionId || this.sessionId;
                     if (!this.sessionId) return;
                     if (this.pollTimer) clearInterval(this.pollTimer);
                     this.pollTimer = setInterval(async () => {
@@ -544,7 +549,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                     this.activeTab = 'qr';
                     this.pairStatus = 'pending';
                     this.claimedDevice = '';
-                    this.sessionId = @js($pairingSessionId);
+                    this.sessionId = $wire.pairingSessionId || @js($pairingSessionId);
                     this.startPolling();
                     this.$nextTick(() => {
                         this.$refs.tokenInput?.focus();
@@ -619,15 +624,26 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                     <div>
                         <p class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{{ __('Scan with Obsidian Mobile Camera') }}</p>
                         <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{{ __('Instantly pairs your server endpoint, target vault, and scoped device token via obsidian://synkk-pair.') }}</p>
-                        @if ($generatedPairingUrl)
-                            <div class="mt-2.5">
-                                <flux:button
-                                    size="xs"
-                                    icon="link"
-                                    x-on:click="navigator.clipboard.writeText('{{ $generatedPairingUrl }}'); $flux.toast({ text: '{{ __('Deep link URL copied to clipboard') }}', variant: 'success' })"
-                                >
-                                    {{ __('Copy Deep Link URL') }}
-                                </flux:button>
+                        @if ($generatedPairingUrl || $generatedWebPairingUrl)
+                            <div class="mt-2.5 flex flex-wrap items-center justify-center gap-2">
+                                @if ($generatedPairingUrl)
+                                    <flux:button
+                                        size="xs"
+                                        icon="link"
+                                        x-on:click="navigator.clipboard.writeText('{{ $generatedPairingUrl }}'); $flux.toast({ text: '{{ __('Obsidian Deep Link copied to clipboard') }}', variant: 'success' })"
+                                    >
+                                        {{ __('Copy Deep Link') }}
+                                    </flux:button>
+                                @endif
+                                @if ($generatedWebPairingUrl)
+                                    <flux:button
+                                        size="xs"
+                                        icon="globe-alt"
+                                        x-on:click="navigator.clipboard.writeText('{{ $generatedWebPairingUrl }}'); $flux.toast({ text: '{{ __('Mobile Web Bridge URL copied to clipboard') }}', variant: 'success' })"
+                                    >
+                                        {{ __('Copy Web URL') }}
+                                    </flux:button>
+                                @endif
                             </div>
                         @endif
                     </div>

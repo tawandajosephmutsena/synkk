@@ -29,6 +29,7 @@ class QrPairingService
      *     session: string,
      *     session_id: string,
      *     pairing_url: string,
+     *     web_pairing_url: string,
      *     qr_svg: string,
      *     json_payload: string,
      *     payload: array<string, mixed>,
@@ -97,6 +98,7 @@ class QrPairingService
         $jsonPayload = json_encode($payloadData, JSON_UNESCAPED_SLASHES) ?: '{}';
         // Format obsidian protocol URI for genuine one-scan pairing
         $pairingUrl = 'obsidian://synkk-pair?server='.urlencode($serverUrl).'&session='.urlencode($sessionId).'&vault='.urlencode($vaultSlug).'&v=2';
+        $webPairingUrl = url('/pair').'?session='.urlencode($sessionId).'&server='.urlencode($serverUrl).'&v=2'.($vaultSlug ? '&vault='.urlencode($vaultSlug) : '');
 
         // Render QR Code SVG using BaconQrCode
         $renderer = new ImageRenderer(
@@ -126,6 +128,7 @@ class QrPairingService
             'session' => $sessionId,
             'session_id' => $sessionId,
             'pairing_url' => $pairingUrl,
+            'web_pairing_url' => $webPairingUrl,
             'qr_svg' => $cleanSvg,
             'json_payload' => $jsonPayload,
             'payload' => $payloadData,

@@ -218,3 +218,45 @@ test('initiator token scope and vault restrictions are strictly inherited by chi
         ->and($childDevice->canAccessVault($vaultA->id))->toBeTrue()
         ->and($childDevice->canAccessVault($vaultB->id))->toBeFalse();
 });
+
+test('public mobile pairing bridge renders auto-redirect and obsidian protocol links', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => 'owner']);
+    $user->switchTeam($team);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Bridge Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $user->id,
+    ]);
+
+    $service = new QrPairingService;
+    $sessionData = $service->createPairingSession($user, $team, $vault->slug);
+    $sessionId = $sessionData['session'];
+
+    expect($sessionData)->toHaveKey('web_pairing_url')
+        ->and($sessionData['web_pairing_url'])->toContain('/pair?session=');
+
+    // 1. Pending session renders bridge page with Obsidian link
+    $resPending = $this->get("/pair?session={$sessionId}&vault={$vault->slug}");
+    $resPending->assertOk()
+        ->assertSee('Connecting to Obsidian...')
+        ->assertSee('obsidian://synkk-pair', false)
+        ->assertSee('Open in Obsidian App');
+
+    // 2. Claim session via exchange
+    $service->exchange($sessionId, 'Mobile Tester', 'ios');
+
+    // 3. Paired session renders paired state
+    $resPaired = $this->get("/pair?session={$sessionId}");
+    $resPaired->assertOk()
+        ->assertSee('Device Already Paired!')
+        ->assertSee('Mobile Tester');
+
+    // 4. Expired or non-existent session renders expired state
+    $resExpired = $this->get('/pair?session=synkk_pair_non_existent');
+    $resExpired->assertOk()
+        ->assertSee('Session Expired or Invalid');
+});
