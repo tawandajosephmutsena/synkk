@@ -1,7 +1,8 @@
 <div
     x-data="vaultGraph({
         nodes: {{ Js::from($this->interactiveGraph['nodes']) }},
-        edges: {{ Js::from($this->interactiveGraph['edges']) }}
+        edges: {{ Js::from($this->interactiveGraph['edges']) }},
+        theme: 'amber'
     })"
     wire:key="portal-vault-graph-{{ $portal->id }}"
     class="w-full overflow-hidden rounded-2xl border border-zinc-800 bg-[#0c0f12] shadow-2xl shadow-black/40"

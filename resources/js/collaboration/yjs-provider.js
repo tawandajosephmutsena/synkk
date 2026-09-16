@@ -108,6 +108,7 @@ export class SynkkYjsProvider {
     this.connected = false;
     this.synced = false;
     this.locked = false;
+    this._pollTimer = null;
     this.latestSequence = 0;
     this.appliedSequences = new Set();
     this.outbox = [];
@@ -424,6 +425,35 @@ export class SynkkYjsProvider {
     this.synced = true;
 
     await this.flushOutbox();
+
+    // 3. Fallback catch-up polling: ensure continuous convergence even if WebSockets are down or disconnected
+    if (this.transport && typeof this.transport.fetchUpdates === 'function') {
+      this._startPolling();
+    }
+  }
+
+  _startPolling(intervalMs = 1500) {
+    this._stopPolling();
+    this._pollTimer = setInterval(async () => {
+      if (!this.connected || this.locked || !this.transport?.fetchUpdates) return;
+      try {
+        const catchUpData = await this.transport.fetchUpdates(this.latestSequence);
+        if (catchUpData?.updates && Array.isArray(catchUpData.updates) && catchUpData.updates.length > 0) {
+          await this.applyCatchUp(catchUpData.updates);
+        }
+      } catch {}
+    }, intervalMs);
+
+    if (this._pollTimer && typeof this._pollTimer.unref === 'function') {
+      this._pollTimer.unref();
+    }
+  }
+
+  _stopPolling() {
+    if (this._pollTimer) {
+      clearInterval(this._pollTimer);
+      this._pollTimer = null;
+    }
   }
 
   async handleBroadcastEvent(event) {
@@ -459,6 +489,7 @@ export class SynkkYjsProvider {
   }
 
   disconnect() {
+    this._stopPolling();
     if (this._onAwarenessChange && this.awareness) {
       this.awareness.off('change', this._onAwarenessChange);
       this._onAwarenessChange = null;
@@ -480,6 +511,7 @@ export class SynkkYjsProvider {
   }
 
   destroy() {
+    this._stopPolling();
     this.disconnect();
     this.doc.off('update', this._onDocUpdate);
     this.outbox = [];

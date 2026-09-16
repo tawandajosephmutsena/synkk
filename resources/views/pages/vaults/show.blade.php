@@ -2195,7 +2195,8 @@ new #[Title('Vault Details')] class extends Component
         <div
             x-data="vaultGraph({
                 nodes: {{ Js::from($this->graphData['nodes']) }},
-                edges: {{ Js::from($this->graphData['edges']) }}
+                edges: {{ Js::from($this->graphData['edges']) }},
+                theme: 'emerald'
             })"
             wire:key="vault-graph-{{ $vault->id }}"
             class="w-full overflow-hidden rounded-[1.75rem] border border-zinc-800 bg-[#0c0f12] shadow-2xl shadow-black/20"

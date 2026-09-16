@@ -1,4 +1,4 @@
-import"./vault-graph-BEjUENTf.js";window.copyCode=function(e){if(!e)return;let t=e.closest(`.synkk-code-window`)||e.closest(`pre`),n=t?t.querySelector(`code`):null;if(!n)return;let r=n.innerText.trim();navigator.clipboard.writeText(r).then(()=>{let t=e.innerHTML;e.innerHTML=`
+import"./vault-graph-By_u7uJf.js";window.copyCode=function(e){if(!e)return;let t=e.closest(`.synkk-code-window`)||e.closest(`pre`),n=t?t.querySelector(`code`):null;if(!n)return;let r=n.innerText.trim();navigator.clipboard.writeText(r).then(()=>{let t=e.innerHTML;e.innerHTML=`
             <svg class="size-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
             </svg>

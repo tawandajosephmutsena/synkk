@@ -1,10 +1,45 @@
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
-const DEFAULT_SIMULATION_TICKS = 360;
-const INTERACTION_SIMULATION_TICKS = 120;
-const STABLE_SPEED_THRESHOLD = 0.025;
-const STABLE_FRAME_LIMIT = 24;
+const DEFAULT_SIMULATION_TICKS = 240;
+const INTERACTION_SIMULATION_TICKS = 90;
+const STABLE_SPEED_THRESHOLD = 0.035;
+const STABLE_FRAME_LIMIT = 20;
+
+export const THEMES = {
+    emerald: {
+        accent: '#10b981',
+        accentGlow: 'rgba(16, 185, 129, 0.45)',
+        accentHighlight: '#34d399',
+        accentText: '#6ee7b7',
+        hubColor: '#059669',
+        hubBorder: '#10b981',
+        nodeBase: 'rgba(148, 163, 184, 0.75)',
+        nodeDimmed: 'rgba(71, 85, 105, 0.22)',
+        edgeNormal: 'rgba(255, 255, 255, 0.12)',
+        edgeConnected: 'rgba(16, 185, 129, 0.85)',
+        edgeDimmed: 'rgba(255, 255, 255, 0.03)',
+    },
+    amber: {
+        accent: '#f59e0b',
+        accentGlow: 'rgba(245, 158, 11, 0.45)',
+        accentHighlight: '#fbbf24',
+        accentText: '#fde68a',
+        hubColor: '#d97706',
+        hubBorder: '#f59e0b',
+        nodeBase: 'rgba(148, 163, 184, 0.75)',
+        nodeDimmed: 'rgba(71, 85, 105, 0.22)',
+        edgeNormal: 'rgba(255, 255, 255, 0.12)',
+        edgeConnected: 'rgba(245, 158, 11, 0.85)',
+        edgeDimmed: 'rgba(255, 255, 255, 0.03)',
+    },
+};
 
 export function createVaultGraph(data = {}) {
+    const themeName = data.theme === 'amber' ? 'amber' : 'emerald';
+    const activeTheme = {
+        ...THEMES[themeName],
+        ...(data.accentColor ? { accent: data.accentColor, accentHighlight: data.accentColor } : {}),
+    };
+
     return {
         nodes: (data.nodes || []).map((node) => ({
             ...node,
@@ -15,6 +50,7 @@ export function createVaultGraph(data = {}) {
             radius: 4 + Math.min((node.linksCount || 0) * 2, 10),
         })),
         edges: data.edges || [],
+        theme: activeTheme,
         search: '',
         hoveredNode: null,
         tooltipX: 0,
@@ -37,6 +73,8 @@ export function createVaultGraph(data = {}) {
         lastMouseY: 0,
         hasDragged: false,
         dragThreshold: 5,
+        userHasAdjustedView: false,
+        hasInitialFitted: false,
         animId: null,
         resizeHandler: null,
         resizeObserver: null,
@@ -95,55 +133,166 @@ export function createVaultGraph(data = {}) {
                 ctx.scale(this.zoom, this.zoom);
 
                 const scaleFactor = Math.pow(this.zoom, 0.45);
+                const theme = this.theme;
 
-                for (const edge of this.edges) {
+                // 1. Hovered node & connected neighbors identification
+                const hoveredNode = this.hoveredNode;
+                const connectedNodeSet = new Set();
+                const connectedEdgeSet = new Set();
+
+                if (hoveredNode) {
+                    connectedNodeSet.add(hoveredNode);
+                    for (let edgeIndex = 0; edgeIndex < this.edges.length; edgeIndex++) {
+                        const edge = this.edges[edgeIndex];
+                        const source = this.nodes[edge.source];
+                        const target = this.nodes[edge.target];
+                        if (source === hoveredNode && target) {
+                            connectedNodeSet.add(target);
+                            connectedEdgeSet.add(edgeIndex);
+                        } else if (target === hoveredNode && source) {
+                            connectedNodeSet.add(source);
+                            connectedEdgeSet.add(edgeIndex);
+                        }
+                    }
+                }
+
+                const hasSearch = Boolean(this.search && this.search.trim().length > 0);
+                const searchLower = hasSearch ? this.search.trim().toLowerCase() : '';
+
+                // 2. Draw Edges
+                for (let edgeIndex = 0; edgeIndex < this.edges.length; edgeIndex++) {
+                    const edge = this.edges[edgeIndex];
                     const source = this.nodes[edge.source];
                     const target = this.nodes[edge.target];
                     if (!source || !target) {
                         continue;
                     }
 
-                    const isConnectedToHover = this.hoveredNode
-                        && (this.hoveredNode === source || this.hoveredNode === target);
+                    const isConnectedToHover = connectedEdgeSet.has(edgeIndex);
 
                     ctx.beginPath();
                     ctx.moveTo(source.x, source.y);
                     ctx.lineTo(target.x, target.y);
-                    ctx.strokeStyle = isConnectedToHover
-                        ? 'rgba(16, 185, 129, 0.8)'
-                        : 'rgba(255, 255, 255, 0.1)';
-                    ctx.lineWidth = (isConnectedToHover ? 2 : 1) / Math.pow(this.zoom, 0.4);
+
+                    if (hoveredNode) {
+                        if (isConnectedToHover) {
+                            ctx.strokeStyle = theme.edgeConnected;
+                            ctx.lineWidth = 2.2 / Math.pow(this.zoom, 0.4);
+                        } else {
+                            ctx.strokeStyle = theme.edgeDimmed;
+                            ctx.lineWidth = 0.8 / Math.pow(this.zoom, 0.4);
+                        }
+                    } else if (hasSearch) {
+                        const sourceMatches = source.name && source.name.toLowerCase().includes(searchLower);
+                        const targetMatches = target.name && target.name.toLowerCase().includes(searchLower);
+                        if (sourceMatches || targetMatches) {
+                            ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+                            ctx.lineWidth = 1.2 / Math.pow(this.zoom, 0.4);
+                        } else {
+                            ctx.strokeStyle = theme.edgeDimmed;
+                            ctx.lineWidth = 0.7 / Math.pow(this.zoom, 0.4);
+                        }
+                    } else {
+                        ctx.strokeStyle = theme.edgeNormal;
+                        ctx.lineWidth = 1 / Math.pow(this.zoom, 0.4);
+                    }
+
                     ctx.stroke();
                 }
 
+                // 3. Draw Nodes (Nodes styled with authentic Obsidian depth)
                 for (const node of this.nodes) {
-                    const isMatch = !this.search
-                        || (node.name && node.name.toLowerCase().includes(this.search.toLowerCase()));
-                    const isHovered = this.hoveredNode === node;
-                    const visualRadius = (node.radius * (isHovered ? 1.3 : 1)) / scaleFactor;
+                    const isHovered = hoveredNode === node;
+                    const isNeighbor = connectedNodeSet.has(node) && !isHovered;
+                    const isMatch = !hasSearch || (node.name && node.name.toLowerCase().includes(searchLower));
+                    const isHub = (node.linksCount || 0) >= 4;
+
+                    const visualRadius = (node.radius * (isHovered ? 1.4 : isNeighbor ? 1.15 : 1)) / scaleFactor;
 
                     ctx.beginPath();
                     ctx.arc(node.x, node.y, visualRadius, 0, Math.PI * 2);
 
                     if (isHovered) {
-                        ctx.fillStyle = '#10B981';
-                        ctx.shadowColor = '#10B981';
-                        ctx.shadowBlur = 10 / scaleFactor;
-                    } else if (isMatch) {
-                        ctx.fillStyle = (node.linksCount || 0) > 2 ? '#059669' : '#4B5563';
+                        ctx.fillStyle = theme.accentHighlight;
+                        ctx.shadowColor = theme.accent;
+                        ctx.shadowBlur = 14 / scaleFactor;
+                        ctx.fill();
+                        ctx.lineWidth = 2 / scaleFactor;
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.stroke();
                         ctx.shadowBlur = 0;
+                    } else if (hoveredNode) {
+                        if (isNeighbor) {
+                            ctx.fillStyle = theme.accent;
+                            ctx.shadowBlur = 0;
+                            ctx.fill();
+                            ctx.lineWidth = 1.5 / scaleFactor;
+                            ctx.strokeStyle = theme.accentHighlight;
+                            ctx.stroke();
+                        } else {
+                            ctx.fillStyle = theme.nodeDimmed;
+                            ctx.shadowBlur = 0;
+                            ctx.fill();
+                        }
+                    } else if (hasSearch) {
+                        if (isMatch) {
+                            ctx.fillStyle = theme.accent;
+                            ctx.shadowBlur = 8 / scaleFactor;
+                            ctx.shadowColor = theme.accent;
+                            ctx.fill();
+                            ctx.shadowBlur = 0;
+                        } else {
+                            ctx.fillStyle = theme.nodeDimmed;
+                            ctx.shadowBlur = 0;
+                            ctx.fill();
+                        }
                     } else {
-                        ctx.fillStyle = 'rgba(75, 85, 99, 0.2)';
                         ctx.shadowBlur = 0;
+                        if (isHub) {
+                            ctx.fillStyle = theme.hubColor;
+                            ctx.fill();
+                            ctx.lineWidth = 1.2 / scaleFactor;
+                            ctx.strokeStyle = theme.hubBorder;
+                            ctx.stroke();
+                        } else {
+                            ctx.fillStyle = theme.nodeBase;
+                            ctx.fill();
+                        }
                     }
-                    ctx.fill();
 
-                    if (isMatch || isHovered) {
-                        const fontSize = Math.max(7, Math.min(13, (isHovered ? 11 : 9.5) / Math.pow(this.zoom, 0.5)));
+                    // 4. Selective, Crisp Label Rendering (Prevents Overlapping Text Clutter)
+                    const shouldDrawLabel = isHovered
+                        || isNeighbor
+                        || (hasSearch && isMatch)
+                        || (this.zoom >= 1.3 && isHub)
+                        || (this.zoom >= 2.0);
+
+                    if (shouldDrawLabel) {
+                        const fontSize = Math.max(8, Math.min(13, (isHovered ? 12 : 9.5) / Math.pow(this.zoom, 0.45)));
                         ctx.font = isHovered ? `bold ${fontSize}px sans-serif` : `${fontSize}px sans-serif`;
-                        ctx.fillStyle = isHovered ? '#FFFFFF' : 'rgba(209, 213, 219, 0.8)';
                         ctx.textAlign = 'center';
-                        ctx.fillText(node.name || '', node.x, node.y + visualRadius + (10 / scaleFactor));
+                        ctx.textBaseline = 'top';
+
+                        const labelY = node.y + visualRadius + (4 / scaleFactor);
+                        const labelText = node.name || '';
+                        const displayLabel = labelText.length > 28 && !isHovered && !hasSearch
+                            ? labelText.slice(0, 26) + '…'
+                            : labelText;
+
+                        // Dark outline halo so text is always crisp and readable across links
+                        ctx.lineJoin = 'round';
+                        ctx.lineWidth = 3.5 / scaleFactor;
+                        ctx.strokeStyle = 'rgba(12, 15, 18, 0.92)';
+                        ctx.strokeText(displayLabel, node.x, labelY);
+
+                        if (isHovered) {
+                            ctx.fillStyle = '#ffffff';
+                        } else if (isNeighbor || (hasSearch && isMatch)) {
+                            ctx.fillStyle = theme.accentText;
+                        } else {
+                            ctx.fillStyle = 'rgba(226, 232, 240, 0.85)';
+                        }
+                        ctx.fillText(displayLabel, node.x, labelY);
                     }
                 }
 
@@ -151,7 +300,11 @@ export function createVaultGraph(data = {}) {
             };
 
             this.simulationStepHandler = () => {
-                const repulsion = 1200;
+                const nodeCount = Math.max(1, this.nodes.length);
+                const repulsion = 2400;
+                const maxRepulsionDistance = Math.max(300, Math.min(600, Math.sqrt(nodeCount) * 35));
+
+                // 1. Pairwise repulsion & hard collision separation
                 for (let firstIndex = 0; firstIndex < this.nodes.length; firstIndex++) {
                     for (let secondIndex = firstIndex + 1; secondIndex < this.nodes.length; secondIndex++) {
                         const firstNode = this.nodes[firstIndex];
@@ -160,13 +313,24 @@ export function createVaultGraph(data = {}) {
                         const deltaY = secondNode.y - firstNode.y;
                         const distance = Math.hypot(deltaX, deltaY) || 1;
 
-                        if (distance >= 300) {
+                        if (distance >= maxRepulsionDistance) {
                             continue;
                         }
 
+                        // Inverse-square repulsion
                         const force = repulsion / (distance * distance);
-                        const forceX = (deltaX / distance) * force;
-                        const forceY = (deltaY / distance) * force;
+                        let forceX = (deltaX / distance) * force;
+                        let forceY = (deltaY / distance) * force;
+
+                        // Hard collision separation constraint: prevents circles from ever crushing together
+                        const minSpacing = firstNode.radius + secondNode.radius + 16;
+                        if (distance < minSpacing) {
+                            const overlapRatio = (minSpacing - distance) / minSpacing;
+                            const push = overlapRatio * 2.2;
+                            forceX += (deltaX / distance) * push;
+                            forceY += (deltaY / distance) * push;
+                        }
+
                         firstNode.vx -= forceX;
                         firstNode.vy -= forceY;
                         secondNode.vx += forceX;
@@ -174,8 +338,9 @@ export function createVaultGraph(data = {}) {
                     }
                 }
 
-                const springStrength = 0.04;
-                const restLength = 80;
+                // 2. Link spring forces
+                const restLength = Math.max(75, Math.min(150, 70 + Math.sqrt(nodeCount) * 3));
+                const springStrength = 0.032;
                 for (const edge of this.edges) {
                     const source = this.nodes[edge.source];
                     const target = this.nodes[edge.target];
@@ -195,7 +360,10 @@ export function createVaultGraph(data = {}) {
                     target.vy -= forceY;
                 }
 
+                // 3. Gentle center gravity scaled inversely with graph size
+                const centerGravity = Math.max(0.0003, 0.0018 / Math.sqrt(nodeCount));
                 let fastestNodeSpeed = 0;
+
                 for (const node of this.nodes) {
                     if (node === this.dragNode) {
                         node.vx = 0;
@@ -203,13 +371,20 @@ export function createVaultGraph(data = {}) {
                         continue;
                     }
 
-                    node.vx -= node.x * 0.005;
-                    node.vy -= node.y * 0.005;
-                    node.vx *= 0.88;
-                    node.vy *= 0.88;
+                    node.vx -= node.x * centerGravity;
+                    node.vy -= node.y * centerGravity;
+                    node.vx *= 0.86;
+                    node.vy *= 0.86;
+
+                    const speed = Math.hypot(node.vx, node.vy);
+                    if (speed > 20) {
+                        node.vx = (node.vx / speed) * 20;
+                        node.vy = (node.vy / speed) * 20;
+                    }
+
                     node.x += node.vx;
                     node.y += node.vy;
-                    fastestNodeSpeed = Math.max(fastestNodeSpeed, Math.hypot(node.vx, node.vy));
+                    fastestNodeSpeed = Math.max(fastestNodeSpeed, speed);
                 }
 
                 return fastestNodeSpeed;
@@ -231,6 +406,10 @@ export function createVaultGraph(data = {}) {
                     if (this.simulationTicks >= this.simulationTickLimit
                         || this.stableFrameCount >= STABLE_FRAME_LIMIT) {
                         this.simulationActive = false;
+                        if (!this.userHasAdjustedView && !this.hasInitialFitted) {
+                            this.hasInitialFitted = true;
+                            this.fitToViewport();
+                        }
                     }
                 } else {
                     this.simulationActive = false;
@@ -288,7 +467,8 @@ export function createVaultGraph(data = {}) {
 
             this.resizeHandler();
 
-            const layoutRadius = Math.min(this.viewportWidth, this.viewportHeight) * 0.34;
+            const nodeCount = Math.max(1, this.nodes.length);
+            const layoutRadius = Math.max(220, Math.sqrt(nodeCount) * 46);
             const orderedNodes = this.nodes
                 .map((node, index) => ({ node, index }))
                 .sort((first, second) => {
@@ -316,6 +496,9 @@ export function createVaultGraph(data = {}) {
                 node.vy = 0;
             });
 
+            // Initial auto-fit to comfortably frame the graph
+            this.fitToViewport();
+
             const canvasPoint = (event) => {
                 const rect = canvas.getBoundingClientRect();
 
@@ -332,7 +515,7 @@ export function createVaultGraph(data = {}) {
 
                 return this.nodes.find((node) => {
                     const visualRadius = node.radius / scaleFactor;
-                    return Math.hypot(node.x - worldX, node.y - worldY) < visualRadius + (6 / this.zoom);
+                    return Math.hypot(node.x - worldX, node.y - worldY) < visualRadius + (8 / this.zoom);
                 }) ?? null;
             };
 
@@ -384,6 +567,7 @@ export function createVaultGraph(data = {}) {
                             || Math.hypot(totalDeltaX, totalDeltaY) >= this.dragThreshold;
 
                         if (this.hasDragged) {
+                            this.userHasAdjustedView = true;
                             if (this.dragNode) {
                                 this.dragNode.x = this.dragOriginX + totalDeltaX / this.zoom;
                                 this.dragNode.y = this.dragOriginY + totalDeltaY / this.zoom;
@@ -455,8 +639,9 @@ export function createVaultGraph(data = {}) {
                     event.preventDefault();
                     const point = canvasPoint(event);
                     const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
-                    const newZoom = Math.max(0.3, Math.min(3, this.zoom * zoomFactor));
+                    const newZoom = Math.max(0.2, Math.min(4, this.zoom * zoomFactor));
                     if (newZoom !== this.zoom) {
+                        this.userHasAdjustedView = true;
                         this.panX = point.x - (point.x - this.panX) * (newZoom / this.zoom);
                         this.panY = point.y - (point.y - this.panY) * (newZoom / this.zoom);
                         this.zoom = newZoom;
@@ -652,11 +837,50 @@ export function createVaultGraph(data = {}) {
             return this.selectNode(nodeOrId);
         },
 
+        fitToViewport(paddingRatio = 0.85) {
+            if (this.nodes.length === 0) {
+                this.zoom = 1;
+                this.panX = (this.viewportWidth || 600) / 2;
+                this.panY = (this.viewportHeight || 600) / 2;
+                return;
+            }
+
+            let minX = Infinity;
+            let maxX = -Infinity;
+            let minY = Infinity;
+            let maxY = -Infinity;
+
+            for (const node of this.nodes) {
+                const r = node.radius || 8;
+                if (node.x - r < minX) minX = node.x - r;
+                if (node.x + r > maxX) maxX = node.x + r;
+                if (node.y - r < minY) minY = node.y - r;
+                if (node.y + r > maxY) maxY = node.y + r;
+            }
+
+            const width = this.viewportWidth || 600;
+            const height = this.viewportHeight || 600;
+            const graphWidth = Math.max(100, maxX - minX);
+            const graphHeight = Math.max(100, maxY - minY);
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+
+            const scaleX = (width * paddingRatio) / graphWidth;
+            const scaleY = (height * paddingRatio) / graphHeight;
+            const fitZoom = Math.max(0.2, Math.min(1.25, Math.min(scaleX, scaleY)));
+
+            this.zoom = Number(fitZoom.toFixed(3));
+            this.panX = Math.round((width / 2) - (centerX * this.zoom));
+            this.panY = Math.round((height / 2) - (centerY * this.zoom));
+            this.requestRender();
+        },
+
         zoomIn() {
             const centerX = this.viewportWidth > 0 ? this.viewportWidth / 2 : this.panX;
             const centerY = this.viewportHeight > 0 ? this.viewportHeight / 2 : this.panY;
-            const newZoom = Math.min(3, this.zoom * 1.2);
+            const newZoom = Math.min(4, this.zoom * 1.25);
             if (newZoom !== this.zoom) {
+                this.userHasAdjustedView = true;
                 this.panX = centerX - (centerX - this.panX) * (newZoom / this.zoom);
                 this.panY = centerY - (centerY - this.panY) * (newZoom / this.zoom);
                 this.zoom = newZoom;
@@ -667,8 +891,9 @@ export function createVaultGraph(data = {}) {
         zoomOut() {
             const centerX = this.viewportWidth > 0 ? this.viewportWidth / 2 : this.panX;
             const centerY = this.viewportHeight > 0 ? this.viewportHeight / 2 : this.panY;
-            const newZoom = Math.max(0.3, this.zoom * 0.8);
+            const newZoom = Math.max(0.2, this.zoom * 0.8);
             if (newZoom !== this.zoom) {
+                this.userHasAdjustedView = true;
                 this.panX = centerX - (centerX - this.panX) * (newZoom / this.zoom);
                 this.panY = centerY - (centerY - this.panY) * (newZoom / this.zoom);
                 this.zoom = newZoom;
@@ -677,21 +902,17 @@ export function createVaultGraph(data = {}) {
         },
 
         resetView() {
-            const canvas = this.$refs?.graphCanvas;
-            this.zoom = 1;
-            if (canvas) {
-                const width = this.viewportWidth || canvas.width / this.pixelRatio;
-                const height = this.viewportHeight || canvas.height / this.pixelRatio;
-                this.panX = width / 2;
-                this.panY = height / 2;
-                this.hasCenteredView = true;
-            } else {
-                this.panX = 0;
-                this.panY = 0;
-                this.hasCenteredView = false;
-            }
             this.search = '';
-            this.requestRender();
+            this.userHasAdjustedView = false;
+            if (this.viewportWidth > 0 && this.nodes.length > 0) {
+                this.fitToViewport();
+            } else {
+                this.zoom = 1;
+                this.panX = (this.viewportWidth || 0) / 2;
+                this.panY = (this.viewportHeight || 0) / 2;
+                this.hasCenteredView = false;
+                this.requestRender();
+            }
         },
     };
 }

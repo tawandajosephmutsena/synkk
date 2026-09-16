@@ -400,7 +400,12 @@ export function createMarkdownEditor(options = {}) {
 
             this.$watch('content', (value) => {
                 this.updateMetrics();
-                this.isDirty = this.initialContent === null || value !== this.initialContent;
+                if (this.isApplyingRemote) {
+                    this.initialContent = value;
+                    this.isDirty = false;
+                } else {
+                    this.isDirty = this.initialContent === null || value !== this.initialContent;
+                }
 
                 // CRITICAL E2EE SECURITY: Never assign plaintext to Livewire for encrypted notes!
                 if (this.$wire) {
@@ -422,7 +427,7 @@ export function createMarkdownEditor(options = {}) {
                     this.editorInstance.setContent(value);
                 }
 
-                if (this.canEdit && this.isDirty) {
+                if (this.canEdit && this.isDirty && !this.isApplyingRemote) {
                     this.scheduleSnapshotFlush();
                 }
             });
@@ -529,9 +534,11 @@ export function createMarkdownEditor(options = {}) {
                     try {
                         const incoming = this.ytext.toString();
                         this.content = incoming;
+                        this.initialContent = incoming;
+                        this.isDirty = false;
                         this.updateMetrics();
-                        if (this.canEdit) {
-                            this.scheduleSnapshotFlush();
+                        if (this.editorInstance && this.editorInstance.getContent() !== incoming) {
+                            this.editorInstance.setContent(incoming);
                         }
                     } finally {
                         this.isApplyingRemote = false;
