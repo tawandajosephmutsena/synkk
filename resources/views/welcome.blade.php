@@ -35,14 +35,17 @@
         @php
             $pluginUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin';
             $pluginReleaseUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/latest';
+            $pluginObsidianUri = 'obsidian://show-plugin?id=synkk-sync';
             $storeUrl = config('synkk.lemon_squeezy.store_url');
             $storeReady = filled($storeUrl)
                 && filled(config('synkk.lemon_squeezy.store_id'))
                 && filled(config('synkk.lemon_squeezy.product_id'));
             $proPricing = config('synkk.pricing.pro_ltd', []);
-            $cloudPricing = config('synkk.pricing.cloud', []);
+            $cloudProPricing = config('synkk.pricing.cloud_pro', []);
+            $cloudBusinessPricing = config('synkk.pricing.cloud_business', []);
             $proPrice = ($proPricing['currency_symbol'] ?? '$').number_format((float) ($proPricing['amount'] ?? 79), 0);
-            $cloudPrice = ($cloudPricing['currency_symbol'] ?? '$').number_format((float) ($cloudPricing['amount'] ?? 12), 0);
+            $cloudProPrice = ($cloudProPricing['currency_symbol'] ?? '$').number_format((float) ($cloudProPricing['amount'] ?? 12), 0);
+            $cloudBusinessPrice = ($cloudBusinessPricing['currency_symbol'] ?? '$').number_format((float) ($cloudBusinessPricing['amount'] ?? 25), 0);
             $dodoReady = filled(config('services.dodo.api_key'))
                 && filled(config('services.dodo.cloud_product_id'));
             $dodoTestMode = config('services.dodo.environment') === 'test_mode';
@@ -118,8 +121,8 @@
 
         <div class="synkk-announcement">
             <div class="synkk-shell synkk-announcement__inner">
-                <p><span class="synkk-status-dot" aria-hidden="true"></span> Obsidian plugin v1.0.0 is live on GitHub</p>
-                <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer">View the release <span aria-hidden="true">↗</span></a>
+                <p><span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span> Obsidian plugin v1.0.7 is live in the Obsidian Community Plugins directory</p>
+                <a href="{{ $pluginObsidianUri }}">Install Plugin <span aria-hidden="true">→</span></a>
             </div>
         </div>
 
@@ -391,7 +394,7 @@
                                     <li><strong>Cryptographic fingerprinting:</strong> Every revision is verified using full SHA-256 content hashes.</li>
                                 </ul>
                                 <div class="synkk-feature-card__actions">
-                                    <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Download Plugin v1.0.0 <span aria-hidden="true">↗</span></a>
+                                    <a href="{{ $pluginObsidianUri }}" class="synkk-button synkk-button--ink">Install Plugin in Obsidian <span aria-hidden="true">↗</span></a>
                                     <a href="{{ route('public.docs') }}#safety-shield" class="synkk-button synkk-button--quiet">Safety documentation <span aria-hidden="true">→</span></a>
                                 </div>
                             </div>
@@ -579,7 +582,7 @@
                             <li><strong>CodeMirror 6 live carets:</strong> Color-coded collaborator presence avatars directly inside Obsidian.</li>
                         </ul>
                         <div class="synkk-spotlight__actions">
-                            <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Download Plugin v1.0.0 <span aria-hidden="true">↗</span></a>
+                            <a href="{{ $pluginObsidianUri }}" class="synkk-button synkk-button--accent">Install Plugin in Obsidian <span aria-hidden="true">↗</span></a>
                             <a href="{{ route('public.docs') }}#safety-shield" class="synkk-button synkk-button--paper">Conflict Sandbox Guide <span aria-hidden="true">→</span></a>
                         </div>
                     </div>
@@ -1274,8 +1277,8 @@
                                     </th>
                                     <td class="synkk-col-featured">
                                         <div class="synkk-cell-check">
-                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> $0 Free / {{ $proPrice }} LTD / {{ $cloudPrice }} Cloud</strong>
-                                            <span class="synkk-cell-sub">100% free open-source, {{ $proPrice }} lifetime self-hosted license, or {{ $cloudPrice }} managed workspace subscription. No per-seat tax.</span>
+                                            <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> $0 CE / {{ $cloudProPrice }} Pro / {{ $cloudBusinessPrice }} Biz / {{ $proPrice }} LTD</strong>
+                                            <span class="synkk-cell-sub">100% free open-source, {{ $cloudProPrice }}/mo Pro Cloud, or {{ $proPrice }} lifetime self-hosted license. No recurring per-seat tax.</span>
                                         </div>
                                     </td>
                                     <td>
@@ -1328,7 +1331,7 @@
                                     <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
                                     <span>REAL-TIME MULTIPLAYER CRDT (Yjs)</span>
                                 </div>
-                                <span class="synkk-moonshot-phase synkk-moonshot-phase--live">LIVE IN V1.0</span>
+                                <span class="synkk-moonshot-phase synkk-moonshot-phase--live">LIVE IN V1.0.7</span>
                             </div>
                             <div class="synkk-moonshot-card__body">
                                 <div class="synkk-moonshot-card__content">
@@ -1371,7 +1374,7 @@
                                     <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
                                     <span>INSTANT ZERO-CONFIG MOBILE ONBOARDING</span>
                                 </div>
-                                <span class="synkk-moonshot-phase synkk-moonshot-phase--live">LIVE IN V1.0</span>
+                                <span class="synkk-moonshot-phase synkk-moonshot-phase--live">LIVE IN V1.0.7</span>
                             </div>
                             <div class="synkk-moonshot-card__body">
                                 <div class="synkk-moonshot-card__content">
@@ -1484,7 +1487,7 @@
                                     <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
                                     <span>ZERO-KNOWLEDGE TEAM E2EE (CLIENT-SIDE ENCRYPTION)</span>
                                 </div>
-                                <span class="synkk-moonshot-phase synkk-moonshot-phase--live">LIVE IN V1.0</span>
+                                <span class="synkk-moonshot-phase synkk-moonshot-phase--live">LIVE IN V1.0.7</span>
                             </div>
                             <div class="synkk-moonshot-card__body">
                                 <div class="synkk-moonshot-card__content">
@@ -1595,96 +1598,126 @@
                 <div class="synkk-shell">
                     <header class="synkk-section-heading">
                         <div>
-                            <p class="synkk-eyebrow">05 / Simple pricing</p>
-                            <h2 id="pricing-heading">Simple, transparent pricing. No recurring trap.</h2>
+                            <p class="synkk-eyebrow">07 / Packaging &amp; Pricing Architecture</p>
+                            <h2 id="pricing-heading">Choose how your team runs Synkk.</h2>
                         </div>
-                        <p>Own the self-hosted server on your terms. The Obsidian plugin is free, while commercial licenses give you software updates and direct support.</p>
+                        <p>Self-host Synkk for free, choose a paid zero-config Cloud workspace with a 30-day card-verified trial, or unlock the commercial self-hosted engine.</p>
                     </header>
 
                     <div class="synkk-pricing-grid">
                         <article>
                             <div class="synkk-price-heading">
-                                <span>1-YEAR UPDATE LICENSE</span>
-                                <p><strong>$45</strong><small>1-year update license</small></p>
+                                <span>FREE &amp; OPEN SOURCE · SELF-HOSTED</span>
+                                <p><strong>$0</strong><small>free forever · full source code</small></p>
                             </div>
-                            <h3>Self-host with one full year of updates.</h3>
+                            <h3>Synkk Community</h3>
+                            <p class="synkk-price-subtitle">Full source code for developers, homelabs &amp; independent creators.</p>
                             <ul>
-                                <li>1 year of software updates &amp; new feature releases</li>
-                                <li>Perpetual access to the purchased version forever</li>
-                                <li>Self-host on your own infrastructure or Docker</li>
-                                <li>Unlimited vaults, notes, and local devices</li>
-                                <li>Obsidian plugin v1.0.0 integration included</li>
-                                <li>Community support &amp; documentation access</li>
+                                <li>Full source code (Laravel backend + Obsidian plugin)</li>
+                                <li>Whole-file sync &amp; cryptographic SHA-256 verification</li>
+                                <li>Note version history &amp; 1-click snapshot restore</li>
+                                <li>In-browser Markdown web editor &amp; document outline</li>
+                                <li>Basic folder scoping &amp; path exclusions</li>
+                                <li>Unlimited notes, unlimited vaults &amp; unlimited devices</li>
+                                <li>Public community support via GitHub Discussions</li>
                             </ul>
-                            @if ($storeReady)
-                                <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--ink">Get 1-Year License <span aria-hidden="true">↗</span></a>
-                            @else
-                                <button type="button" class="synkk-button synkk-button--pending" disabled>Checkout opens after launch checks</button>
-                            @endif
+                            <div class="synkk-pricing-actions">
+                                <a href="https://github.com/tawandajosephmutsena/synkk" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Clone on GitHub <span aria-hidden="true">↗</span></a>
+                                <a href="{{ route('public.docs') }}" class="synkk-button synkk-button--ink">Self-Hosting Docs <span aria-hidden="true">→</span></a>
+                            </div>
                         </article>
 
                         <article class="is-featured">
                             <div class="synkk-price-featured-badge">
                                 <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
-                                <span>LIFETIME LICENSE · BEST VALUE</span>
+                                <span>ZERO-CONFIG SAAS · 30-DAY TRIAL</span>
                             </div>
                             <div class="synkk-price-heading">
-                                <span>LIFETIME LICENSE</span>
-                                <p><strong>$65</strong><small>lifetime license · pay once, own forever</small></p>
+                                <span>SYNKK CLOUD PRO</span>
+                                <p><strong>{{ $cloudProPrice }}</strong><small>per workspace / month</small></p>
                             </div>
-                            <h3>Own Synkk forever. Every update included.</h3>
+                            <div class="synkk-price-commercial-toggle">
+                                30-Day Free Trial (Card Required) · <strong>5 GB</strong> storage · 5 vaults · 25 devices
+                            </div>
+                            <h3>Synkk Cloud Pro</h3>
+                            <p class="synkk-price-subtitle">For individuals and small teams that want managed sync without running servers.</p>
                             <ul>
-                                <li>Lifetime software updates — never pay a renewal fee</li>
-                                <li>All future v1.x, v2.x, and major milestone releases</li>
-                                <li>Self-host on unlimited servers you control</li>
-                                <li>Priority access to CRDT collaboration &amp; E2EE betas</li>
-                                <li>Direct priority support from core maintainers</li>
-                                <li>Full commercial and personal use rights</li>
+                                <li><strong>30-day free trial:</strong> Card required upfront to prevent abuse. Cancel anytime before day 30 with zero charge.</li>
+                                <li>5 GB managed cloud storage</li>
+                                <li>Up to 5 vaults and 25 connected devices</li>
+                                <li>Full sync, web editor, Graph View and version history</li>
+                                <li>DLP scanning, path ACLs and remote wipe</li>
+                                <li>Encrypted backups, automatic updates and priority support</li>
                             </ul>
-                            @if ($storeReady)
-                                <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Get Lifetime License <span aria-hidden="true">↗</span></a>
+                            @auth
+                                <a href="{{ route('subscription.checkout', ['plan' => 'cloud_pro']) }}" class="synkk-button synkk-button--accent">Choose Cloud Pro <span aria-hidden="true">→</span></a>
                             @else
-                                <button type="button" class="synkk-button synkk-button--pending" disabled>Checkout opens after launch checks</button>
-                            @endif
+                                <a href="{{ route('register') }}" class="synkk-button synkk-button--accent">Choose Cloud Pro <span aria-hidden="true">→</span></a>
+                            @endauth
                         </article>
 
                         <article class="synkk-pricing-grid__team">
                             <div class="synkk-price-heading">
-                                <span>ENTERPRISE &amp; TEAMS</span>
-                                <p><strong>Enterprise</strong><small>teams &amp; organizations</small></p>
+                                <span>ZERO-CONFIG SAAS FOR TEAMS</span>
+                                <p><strong>{{ $cloudBusinessPrice }}</strong><small>per workspace / month</small></p>
                             </div>
-                            <h3>Deploy Synkk across your team or company.</h3>
+                            <h3>Synkk Cloud Business</h3>
+                            <p class="synkk-price-subtitle">More room for growing teams that need higher storage, vault and device limits.</p>
                             <ul>
-                                <li>Custom deployment assistance (Docker, K8s, Bare Metal)</li>
-                                <li>Granular path permission &amp; team onboarding architecture</li>
-                                <li>Dedicated support channel with core maintainers</li>
-                                <li>Custom SLA, invoice billing, and security audit review</li>
-                                <li>Unlimited team members, devices, and enterprise vaults</li>
+                                <li>25 GB managed cloud storage</li>
+                                <li>Up to 25 vaults and 100 connected devices</li>
+                                <li>Up to 25 team members</li>
+                                <li>Everything in Cloud Pro, including DLP and path ACLs</li>
+                                <li>Encrypted backups, automatic updates and priority support</li>
                             </ul>
-                            <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Book a meeting <span aria-hidden="true">↗</span></a>
+                            @auth
+                                <a href="{{ route('subscription.checkout', ['plan' => 'cloud_business']) }}" class="synkk-button synkk-button--ink">Choose Business <span aria-hidden="true">→</span></a>
+                            @else
+                                <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Choose Business <span aria-hidden="true">→</span></a>
+                            @endauth
                         </article>
+                    </div>
+
+                    <div class="synkk-pricing-ltd">
+                        <div class="synkk-pricing-ltd__copy">
+                            <h4>Self-Host Pro Commercial License · {{ $proPrice }} Lifetime Deal</h4>
+                            <p>Demand complete data sovereignty with advanced enterprise controls? Back the launch promotion to unlock the private synkk-pro repository with unlimited self-hosted storage, Path-Level ACLs, Secret DLP, Remote Device Wipe, and Local RAG Copilot.</p>
+                        </div>
+                        @if ($storeReady)
+                            <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Get Pro LTD ({{ $proPrice }}) <span aria-hidden="true">→</span></a>
+                        @else
+                            <button type="button" class="synkk-button synkk-button--pending" disabled>Checkout opens after launch checks</button>
+                        @endif
+                    </div>
+
+                    <div class="synkk-pricing-enterprise">
+                        <div class="synkk-pricing-enterprise__copy">
+                            <strong>Need custom Kubernetes clusters, air-gapped deployments, or SOC2 compliance?</strong>
+                            <p>We provide dedicated support channels, IP subnet audit logging, and custom SLAs for enterprise organizations.</p>
+                        </div>
+                        <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--outline">Book a meeting <span aria-hidden="true">↗</span></a>
                     </div>
 
                     <div class="synkk-pricing-trust">
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
-                            <span>100% Self-Hosted &amp; Local-First</span>
+                            <span>100% Self-Hosted or Managed Cloud</span>
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
-                            <span>Instant Software License Activation</span>
+                            <span>Instant License &amp; Cloud Activation</span>
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
-                            <span>No Subscription Trap · Pay Once</span>
+                            <span>AppSumo Lifetime Deal · Zero Recurring Seat Tax</span>
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 16v-1a4.978 4.978 0 00-1.552-3.619A6.974 6.974 0 0118 15v1h-2zM4 16v-1c0-.853.21-1.657.58-2.368A4.978 4.978 0 003 15v1h1z"/></svg>
-                            <span>Commercial Use Rights Included</span>
+                            <span>Obsidian Plugin Always Free</span>
                         </div>
                     </div>
 
-                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public plugin. Lemon Squeezy manages license checkout. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline hover:text-zinc-900">book-it.ottomate.space</a>.</p>
+                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public open-source plugin and server code. Dodo Payments handles monthly Cloud subscriptions, while AppSumo manages the one-time Pro lifetime license. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline">book-it.ottomate.space</a>.</p>
                 </div>
             </section>
 
@@ -1702,11 +1735,11 @@
                                 <strong>RELEASE MONITOR</strong>
                             </div>
                             <div class="synkk-roadmap-monitor__grid">
-                                <div><small>STABLE PLUGIN</small><span>v1.0.0 Public</span></div>
+                                <div><small>STABLE PLUGIN</small><span>v1.0.7 Community</span></div>
                                 <div><small>SERVER ENGINE</small><span>SQLite WAL</span></div>
                                 <div><small>COLLAB SPEC</small><span>CRDT / Yjs</span></div>
                                 <div><small>INTEGRITY</small><span>SHA-256 Verified</span></div>
-                                <div><small>ACTIVE DEV</small><span>Webhooks &amp; CM6</span></div>
+                                <div><small>ACTIVE DEV</small><span>Webhooks &amp; Relays</span></div>
                             </div>
                         </div>
                     </header>
@@ -1715,9 +1748,10 @@
                         <li class="is-live">
                             <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>LIVE NOW</span>
                             <div>
-                                <strong>Obsidian plugin v1.0.0</strong>
-                                <p>The installable plugin release is public on GitHub now with hash-based sync, Safety Shield deletion protection, path exclusions, and automatic conflict forking.</p>
+                                <strong>Obsidian Community Plugin v1.0.7</strong>
+                                <p>Official community release directly installable from Obsidian's Community Plugin catalog. Features whole-file SHA-256 sync, Safety Shield deletion protection, path exclusions, and automatic conflict forking.</p>
                                 <div class="synkk-roadmap-chips">
+                                    <span>Obsidian Catalog</span>
                                     <span>SHA-256 Checksums</span>
                                     <span>Safety Shield 10%</span>
                                     <span>Conflict Forking</span>
@@ -1728,7 +1762,7 @@
                         <li class="is-live">
                             <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>LIVE NOW</span>
                             <div>
-                                <strong>Foundation server release</strong>
+                                <strong>Foundation Server Release</strong>
                                 <p>Self-hosted server with SQLite WAL, web Markdown workspace, 2D visual graph view, member path permissions matrix, note version rollback, and Docker orchestration.</p>
                                 <div class="synkk-roadmap-chips">
                                     <span>Docker Compose</span>
@@ -1742,47 +1776,8 @@
                         <li class="is-live">
                             <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
                             <div>
-                                <strong>Safety and collaboration</strong>
-                                <p>Character-level CRDT multiplayer editing directly inside the native Obsidian desktop plugin (y-codemirror.next), and an in-editor visual conflict sandbox for side-by-side 3-way note reconciliation.</p>
-                                <div class="synkk-roadmap-chips">
-                                    <span>Obsidian CRDT</span>
-                                    <span>3-Way Diff Sandbox</span>
-                                    <span>Side-by-Side Visuals</span>
-                                    <span>Presence Relays</span>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="is-live">
-                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
-                            <div>
-                                <strong>Selective and private transport</strong>
-                                <p>On-demand ghost files for large media attachments, client-side zero-knowledge End-to-End Encryption (E2EE), native mobile background sync relays, and 2-second QR pairing.</p>
-                                <div class="synkk-roadmap-chips">
-                                    <span>Zero-Knowledge E2EE</span>
-                                    <span>Mobile Ghost Files</span>
-                                    <span>2s QR Pairing</span>
-                                    <span>Background Sync</span>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="is-live">
-                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
-                            <div>
-                                <strong>Agentic Knowledge Graph &amp; RAG Server</strong>
-                                <p>Self-hosted vector embeddings, hybrid semantic search, [[wikilink]] graph traversal, and private local LLM copilots querying your vault with zero cloud leakage.</p>
-                                <div class="synkk-roadmap-chips">
-                                    <span>Vector Embeddings</span>
-                                    <span>Semantic Search</span>
-                                    <span>Local RAG</span>
-                                    <span>Private AI</span>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="is-live">
-                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
-                            <div>
                                 <strong>Interactive Livewire Vault Portals</strong>
-                                <p>Publish your team Obsidian vaults as interactive, beautifully rendered web portals at <code>/p/{slug}</code> with zero build steps, real-time sync, 4 design presets, Livewire fuzzy search, and interactive backlinks.</p>
+                                <p>Publish your team Obsidian vaults as interactive web portals at <code>/p/{slug}</code> with zero build steps, real-time sync, 4 design presets, instant search, and live backlinks.</p>
                                 <div class="synkk-roadmap-chips">
                                     <span>Vault Portals</span>
                                     <span>Livewire 3</span>
@@ -1796,7 +1791,7 @@
                             <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
                             <div>
                                 <strong>First-Sync Pre-Flight &amp; Migration Engine</strong>
-                                <p>Deterministic 4-phase local diagnostic scan, friction trap detection, 1-click cross-platform path sanitizer, dry-run simulation API, and 20% mass deletion atomic safety shield.</p>
+                                <p>Deterministic 4-phase local diagnostic scan, friction trap detection, 1-click path sanitizer, dry-run simulation API, and 20% mass deletion atomic safety shield.</p>
                                 <div class="synkk-roadmap-chips">
                                     <span>Pre-Flight Wizard</span>
                                     <span>Category Rollup</span>
@@ -1806,11 +1801,37 @@
                                 </div>
                             </div>
                         </li>
+                        <li class="is-live">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
+                            <div>
+                                <strong>Full CodeMirror 6 Web CRDT Collaborative Editor</strong>
+                                <p>Real-time collaborative Markdown editing powered by Yjs and CodeMirror 6 with live remote carets, operational transforms, and multi-client convergence.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>CodeMirror 6 Web</span>
+                                    <span>Live Remote Carets</span>
+                                    <span>Character-Level CRDT</span>
+                                    <span>Zero Caret Jumps</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="is-live">
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon" aria-hidden="true"><i></i></span>SHIPPED</span>
+                            <div>
+                                <strong>2-Second QR Mobile Handshake &amp; Pairing</strong>
+                                <p>Pair iPhone and Android devices in 2 seconds by scanning a secure cryptographic QR code displayed on the Synkk web dashboard.</p>
+                                <div class="synkk-roadmap-chips">
+                                    <span>2s QR Pairing</span>
+                                    <span>Instant Handshake</span>
+                                    <span>iOS &amp; Android</span>
+                                    <span>Zero-Config Token</span>
+                                </div>
+                            </div>
+                        </li>
                         <li class="is-next">
                             <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>IN PROGRESS · Q4</span>
                             <div>
                                 <strong>Enterprise Webhook Automation &amp; Event Relays</strong>
-                                <p>Signed HMAC-SHA256 webhooks dispatching instant notifications to Slack security channels on DLP secret violations, Discord team channels on vault syncs, and custom Zapier automation triggers on note updates.</p>
+                                <p>Signed HMAC-SHA256 webhooks dispatching instant notifications to Slack on DLP secret violations, Discord on vault syncs, and custom Zapier automation triggers on note updates.</p>
                                 <div class="synkk-roadmap-chips">
                                     <span>Slack DLP Relays</span>
                                     <span>Discord Sync Alerts</span>
@@ -1821,28 +1842,15 @@
                             </div>
                         </li>
                         <li class="is-next">
-                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>IN PROGRESS · Q4</span>
+                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>IN RESEARCH</span>
                             <div>
-                                <strong>Full CodeMirror 6 Web CRDT Collaborative Editor</strong>
-                                <p>Upgrading the web Markdown editor from basic form sync to a fully bound CodeMirror 6 collaborative canvas with live remote carets, operational transforms, and multiplayer undo/redo matching the Obsidian desktop plugin.</p>
+                                <strong>Autonomous Vault Copilot &amp; RAG</strong>
+                                <p>Local-first vector embeddings with Ollama (Llama 3.2 / Nomic) to converse with your vault and discover latent semantic associations across notes.</p>
                                 <div class="synkk-roadmap-chips">
-                                    <span>CodeMirror 6 Web</span>
-                                    <span>Live Remote Carets</span>
-                                    <span>Character-Level CRDT</span>
-                                    <span>Zero Caret Jumps</span>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="is-next">
-                            <span class="synkk-roadmap-status"><span class="synkk-beacon synkk-beacon--amber" aria-hidden="true"><i></i></span>NEXT UP</span>
-                            <div>
-                                <strong>Autonomous Note Agents &amp; Visual Canvas</strong>
-                                <p>Autonomous background research agents synthesizing new notes, periodic health audits, and visual Obsidian .canvas synthesis.</p>
-                                <div class="synkk-roadmap-chips">
-                                    <span>Note Agents</span>
-                                    <span>Visual Canvas</span>
-                                    <span>Health Audits</span>
-                                    <span>Autonomous AI</span>
+                                    <span>Vector Embeddings</span>
+                                    <span>Semantic Search</span>
+                                    <span>Local RAG</span>
+                                    <span>Private AI</span>
                                 </div>
                             </div>
                         </li>
@@ -1866,7 +1874,7 @@
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>The Obsidian plugin v1.0.0 is public on GitHub. The Synkk web product currently provides authenticated sync, the editor, Graph View, member path permissions, versions, and restores.</p>
+                            <p>You can install the official Synkk Obsidian plugin (<code>v1.0.7</code>) directly from Obsidian's Community Plugins catalog on macOS, Windows, Linux, iOS, and Android right now. You can also self-host the Synkk server using Docker or sign up for a 30-day card-verified trial on Synkk Cloud Pro.</p>
                         </div>
                     </details>
                     <details>
@@ -1889,11 +1897,11 @@
                     </details>
                     <details>
                         <summary>
-                            <span>04</span>When does the {{ $proPrice }} commercial license checkout open?
+                            <span>04</span>How do the pricing and commercial licenses work?
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>The {{ $proPrice }} Pro lifetime license uses the AppSumo launch flow. Synkk Cloud subscriptions use Dodo Payments at {{ $cloudPrice }} {{ $cloudPricing['billing_label'] ?? 'per workspace / month' }}. Each checkout is shown only when its required payment configuration is ready.</p>
+                            <p>Synkk Community is 100% free and open-source. Synkk Cloud Pro ({{ $cloudProPrice }}/mo) and Cloud Business ({{ $cloudBusinessPrice }}/mo) offer managed, zero-config workspaces powered by Dodo Payments with a 30-day trial (card required upfront to prevent server abuse). For self-hosters wanting enterprise controls, the {{ $proPrice }} Pro Lifetime Deal (LTD) is available through AppSumo and Lemon Squeezy.</p>
                         </div>
                     </details>
                     <details>
@@ -1941,13 +1949,13 @@
                     <div class="synkk-final-cta__copy">
                         <div class="synkk-cta-badge">
                             <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
-                            <span>v1.0.0 Public Release · GitHub Ready</span>
+                            <span>v1.0.7 Community Release · Obsidian Directory Ready</span>
                         </div>
                         <p class="synkk-eyebrow">Your next chapter</p>
                         <h2 id="final-heading">Install the Obsidian plugin.</h2>
-                        <p>Download v1.0.0 from GitHub, then follow the setup guide to connect it to Synkk.</p>
+                        <p>Install v1.0.7 directly inside Obsidian (Settings &gt; Community Plugins &gt; Browse &gt; Synkk), or launch your managed Cloud workspace.</p>
                         <div class="synkk-final-cta__actions">
-                            <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Download Latest Release <span aria-hidden="true">↗</span></a>
+                            <a href="{{ $pluginObsidianUri }}" class="synkk-button synkk-button--accent">Install in Obsidian <span aria-hidden="true">↗</span></a>
                             <a href="{{ route('public.docs') }}" class="synkk-button synkk-button--paper">Read the docs <span aria-hidden="true">→</span></a>
                         </div>
                         <div class="synkk-cta-guarantees">
@@ -1984,7 +1992,7 @@
                     <div class="synkk-footer-telemetry__status">
                         <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
                         <strong>SYSTEM STATUS:</strong>
-                        <span>Sync Engine v1.0.0 · Local-First Architecture · Systems Operational</span>
+                        <span>Sync Engine v1.0.7 · Local-First Architecture · Systems Operational</span>
                     </div>
                     <a href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin" target="_blank" rel="noopener noreferrer" class="synkk-footer-telemetry__link">Public Repository ↗</a>
                 </div>

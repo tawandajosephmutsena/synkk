@@ -80,14 +80,17 @@ test('the landing page presents the transparent pricing architecture', function 
     $response = $this->get(route('home'));
 
     $response
-        ->assertSee('Simple, transparent pricing. No recurring trap.')
-        ->assertSee('1-YEAR UPDATE LICENSE')
-        ->assertSee('$45')
-        ->assertSee('LIFETIME LICENSE')
-        ->assertSee('$65')
-        ->assertSee('BEST VALUE')
-        ->assertSee('ENTERPRISE &amp; TEAMS', escape: false)
-        ->assertSee('No Subscription Trap · Pay Once')
+        ->assertSee('Choose how your team runs Synkk.')
+        ->assertSee('FREE &amp; OPEN SOURCE · SELF-HOSTED', escape: false)
+        ->assertSee('Synkk Community')
+        ->assertSee('$0')
+        ->assertSee('SYNKK CLOUD PRO')
+        ->assertSee('$12')
+        ->assertSee('ZERO-CONFIG SAAS FOR TEAMS')
+        ->assertSee('Synkk Cloud Business')
+        ->assertSee('$25')
+        ->assertSee('Self-Host Pro Commercial License · $79 Lifetime Deal')
+        ->assertSee('AppSumo Lifetime Deal · Zero Recurring Seat Tax')
         ->assertSee('book-it.ottomate.space', escape: false)
         ->assertSee('Book a meeting');
 });
@@ -111,11 +114,12 @@ test('the landing page clearly separates the public plugin from the server launc
     $response = $this->get(route('home'));
 
     $response
-        ->assertSee('Obsidian plugin v1.0.0 is live on GitHub')
+        ->assertSee('Obsidian plugin v1.0.7 is live in the Obsidian Community Plugins directory')
         ->assertSee('Plugin now. Server release next.')
-        ->assertSee('Foundation server release')
-        ->assertSee('Safety and collaboration')
-        ->assertSee('Selective and private transport')
+        ->assertSee('Foundation Server Release')
+        ->assertSee('Interactive Livewire Vault Portals')
+        ->assertSee('First-Sync Pre-Flight &amp; Migration Engine', escape: false)
+        ->assertSee('Full CodeMirror 6 Web CRDT Collaborative Editor')
         ->assertSee('What can I install today?')
         ->assertSee('Is character-level CRDT sync available?')
         ->assertSee('synkk-reveal--two', escape: false)
@@ -124,8 +128,7 @@ test('the landing page clearly separates the public plugin from the server launc
         ->assertDontSee('Per device')
         ->assertDontSee('A calm control room for the whole vault.')
         ->assertDontSee('Foundation now. The hard sync problems next.')
-        ->assertDontSee('Write the note. See the connections.')
-        ->assertDontSee('official Community Plugins listing', escape: false);
+        ->assertDontSee('Write the note. See the connections.');
 });
 
 test('the landing page withholds checkout until Lemon Squeezy is fully configured', function () {
@@ -137,7 +140,7 @@ test('the landing page withholds checkout until Lemon Squeezy is fully configure
         ->assertOk()
         ->assertSee('Checkout opens after launch checks')
         ->assertDontSee('href="https://synkk.lemonsqueezy.com"', escape: false)
-        ->assertDontSee('Get Lifetime License');
+        ->assertDontSee('Get Pro LTD ($79)');
 });
 
 test('the landing page links to checkout only when every Lemon Squeezy value is configured', function () {
@@ -148,7 +151,7 @@ test('the landing page links to checkout only when every Lemon Squeezy value is 
     $this->get(route('home'))
         ->assertOk()
         ->assertSee('href="https://store.example.test/synkk-pro"', escape: false)
-        ->assertSee('Get Lifetime License')
+        ->assertSee('Get Pro LTD ($79)')
         ->assertDontSee('Checkout opens after launch checks');
 });
 

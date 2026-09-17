@@ -104,7 +104,7 @@
                 <div class="synkk-docs-hero__meta">
                     <p class="synkk-eyebrow">Technical Reference &amp; Setup Guide</p>
                     <span class="px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-950 font-mono text-xs font-semibold">v1.1 Foundation Release</span>
-                    <span class="px-2.5 py-0.5 rounded-full bg-zinc-200 text-zinc-800 font-mono text-xs font-medium">Obsidian Plugin v1.0.0</span>
+                    <span class="px-2.5 py-0.5 rounded-full bg-zinc-200 text-zinc-800 font-mono text-xs font-medium">Obsidian Plugin v1.0.7</span>
                 </div>
                 <div>
                     <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 mb-3">
@@ -912,7 +912,7 @@ volumes:
                     <div class="synkk-footer-telemetry__status">
                         <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
                         <strong>SYSTEM STATUS:</strong>
-                        <span>Sync Engine v1.0.0 · Local-First Architecture · Systems Operational</span>
+                        <span>Sync Engine v1.0.7 · Local-First Architecture · Systems Operational</span>
                     </div>
                     <a href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin" target="_blank" rel="noopener noreferrer" class="synkk-footer-telemetry__link">Public Repository ↗</a>
                 </div>

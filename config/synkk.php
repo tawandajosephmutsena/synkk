@@ -58,15 +58,25 @@ return [
     |
     */
     'pricing' => [
-        '1_year' => [
-            'amount' => 45,
+        'community' => [
+            'amount' => 0,
             'currency_symbol' => '$',
-            'billing_label' => '1-year update license',
+            'billing_label' => 'free forever · full source code',
         ],
-        'lifetime' => [
-            'amount' => 65,
+        'cloud_pro' => [
+            'amount' => 12,
             'currency_symbol' => '$',
-            'billing_label' => 'lifetime license · pay once, own forever',
+            'billing_label' => 'per workspace / month',
+        ],
+        'cloud_business' => [
+            'amount' => 25,
+            'currency_symbol' => '$',
+            'billing_label' => 'per workspace / month',
+        ],
+        'pro_ltd' => [
+            'amount' => 79,
+            'currency_symbol' => '$',
+            'billing_label' => 'lifetime deal · pay once, own forever',
         ],
     ],
 
@@ -113,6 +123,56 @@ return [
                 'read_only_tokens',
                 'plugin_suite_sync',
                 'rag_vector_search',
+            ],
+        ],
+        'cloud_pro' => [
+            'name' => 'Synkk Cloud Pro',
+            'badge' => 'Cloud Pro',
+            'max_devices' => env('SYNKK_CLOUD_PRO_MAX_DEVICES', 25),
+            'max_vaults' => env('SYNKK_CLOUD_PRO_MAX_VAULTS', 5),
+            'max_members' => env('SYNKK_CLOUD_PRO_MAX_MEMBERS', 5),
+            'storage_limit_mb' => env('SYNKK_CLOUD_PRO_STORAGE_LIMIT_MB', 5000), // 5 GB
+            'features' => [
+                'basic_sync',
+                'web_editor',
+                'interactive_graph',
+                'atomic_abort_guard',
+                'path_acls',
+                'dlp_scan',
+                'remote_wipe',
+                'ip_whitelisting',
+                'read_only_tokens',
+                'plugin_suite_sync',
+                'crdt_multiplayer',
+                'e2ee_team',
+                'rag_vector_search',
+                'cloud_backup',
+                'priority_support',
+            ],
+        ],
+        'cloud_business' => [
+            'name' => 'Synkk Cloud Business',
+            'badge' => 'Cloud Business',
+            'max_devices' => env('SYNKK_CLOUD_BIZ_MAX_DEVICES', 100),
+            'max_vaults' => env('SYNKK_CLOUD_BIZ_MAX_VAULTS', 25),
+            'max_members' => env('SYNKK_CLOUD_BIZ_MAX_MEMBERS', 25),
+            'storage_limit_mb' => env('SYNKK_CLOUD_BIZ_STORAGE_LIMIT_MB', 25000), // 25 GB
+            'features' => [
+                'basic_sync',
+                'web_editor',
+                'interactive_graph',
+                'atomic_abort_guard',
+                'path_acls',
+                'dlp_scan',
+                'remote_wipe',
+                'ip_whitelisting',
+                'read_only_tokens',
+                'plugin_suite_sync',
+                'crdt_multiplayer',
+                'e2ee_team',
+                'rag_vector_search',
+                'cloud_backup',
+                'priority_support',
             ],
         ],
         'cloud' => [

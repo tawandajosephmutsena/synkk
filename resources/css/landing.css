@@ -2003,12 +2003,55 @@ summary:focus-visible,
 }
 .synkk-price-commercial-toggle {
     margin-bottom: 1.25rem;
-    padding: 0.45rem 0.75rem;
-    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    border-radius: 8px;
     background: rgba(255, 255, 255, 0.08);
     font-size: 0.72rem;
     color: #d9e8be;
-    line-height: 1.4;
+    line-height: 1.45;
+}
+.synkk-pricing-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: auto;
+}
+.synkk-pricing-actions .synkk-button {
+    width: 100%;
+    min-height: 3.3rem;
+    padding-inline: 0.6rem;
+    font-size: 0.72rem;
+    text-align: center;
+    justify-content: center;
+}
+.synkk-pricing-ltd {
+    margin-top: 2rem;
+    padding: 2rem 2.4rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 1.4rem;
+    background: #ffffff;
+    box-shadow: 0 4px 20px -2px rgba(41, 53, 37, 0.04);
+}
+.synkk-pricing-ltd__copy h4 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #059669;
+    letter-spacing: -0.02em;
+}
+.synkk-pricing-ltd__copy p {
+    margin: 0.65rem 0 1.35rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #646d5c;
+    max-width: 92ch;
+}
+.synkk-pricing-ltd .synkk-button {
+    display: inline-flex;
+    width: auto;
+    min-height: 3.1rem;
+    padding-inline: 1.8rem;
+    font-size: 0.82rem;
 }
 .synkk-pricing-enterprise {
     display: flex;
@@ -2016,23 +2059,40 @@ summary:focus-visible,
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 1.5rem;
-    margin-top: 2rem;
-    padding: 1.6rem 2rem;
-    border: 1px solid #dcd8cb;
-    border-radius: 1.2rem;
+    margin-top: 1.5rem;
+    padding: 1.8rem 2.4rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 1.4rem;
     background: #ffffff;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
 }
 .synkk-pricing-enterprise__copy strong {
     display: block;
-    font-size: 0.98rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: #172115;
 }
 .synkk-pricing-enterprise__copy p {
-    margin: 0.3rem 0 0;
-    font-size: 0.84rem;
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
     color: #646d5c;
+}
+.synkk-pricing-enterprise .synkk-button--outline,
+.synkk-pricing-enterprise .synkk-button--paper {
+    display: inline-flex;
+    width: auto;
+    min-height: 3.1rem;
+    padding-inline: 1.8rem;
+    font-size: 0.82rem;
+    border: 1px solid #d0d7de;
+    background: #ffffff;
+    color: #172115;
+    border-radius: 9999px;
+}
+.synkk-pricing-enterprise .synkk-button--outline:hover,
+.synkk-pricing-enterprise .synkk-button--paper:hover {
+    background: #f6f8fa;
+    border-color: #172115;
 }
 .synkk-pricing-grid h3 {
     max-width: 22ch;
@@ -3370,6 +3430,17 @@ summary:focus-visible,
     .synkk-pricing-grid__team ul {
         grid-template-columns: 1fr;
     }
+    .synkk-pricing-actions {
+        grid-template-columns: 1fr;
+    }
+    .synkk-pricing-ltd {
+        padding: 1.5rem 1.4rem;
+    }
+    .synkk-pricing-ltd .synkk-button {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
     .synkk-price-heading strong {
         font-size: 4rem;
     }
@@ -4572,6 +4643,16 @@ html.dark .synkk-trust-item svg {
 html.dark .synkk-launch-channels {
     color: #94a3b8;
 }
+html.dark .synkk-pricing-ltd {
+    background: #0d1527;
+    border-color: #1e293b;
+}
+html.dark .synkk-pricing-ltd__copy h4 {
+    color: #34d399;
+}
+html.dark .synkk-pricing-ltd__copy p {
+    color: #94a3b8;
+}
 html.dark .synkk-pricing-enterprise {
     background: #0d1527;
     border-color: #1e293b;
@@ -4581,6 +4662,17 @@ html.dark .synkk-pricing-enterprise__copy strong {
 }
 html.dark .synkk-pricing-enterprise__copy p {
     color: #94a3b8;
+}
+html.dark .synkk-pricing-enterprise .synkk-button--outline,
+html.dark .synkk-pricing-enterprise .synkk-button--paper {
+    border-color: #334155;
+    background: transparent;
+    color: #f8fafc;
+}
+html.dark .synkk-pricing-enterprise .synkk-button--outline:hover,
+html.dark .synkk-pricing-enterprise .synkk-button--paper:hover {
+    background: #1e293b;
+    border-color: #475569;
 }
 
 /* Roadmap Section */

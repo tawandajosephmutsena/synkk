@@ -605,7 +605,7 @@
                         <h3>Obsidian ViewPlugin &amp; Live Decorators</h3>
                         <p>Written in TypeScript with CodeMirror 6 ViewPlugins. Injects live presence carets, handles pre-sync backups, renders the visual 3-way diff sandbox, and supports instant 2-second QR pairing.</p>
                         <div class="synkk-rule-list">
-                            <p><span>Plugin Release</span><strong>v1.0.0 Public</strong></p>
+                            <p><span>Plugin Release</span><strong>v1.0.7 Community</strong></p>
                             <p><span>Pairing Latency</span><strong>&lt; 2.0s via QR</strong></p>
                             <p><span>Diff Engine</span><strong>3-Way Sandbox</strong></p>
                         </div>
@@ -663,13 +663,13 @@
                     <div class="synkk-final-cta__copy">
                         <div class="synkk-cta-badge">
                             <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
-                            <span>Join The Sovereign Sync Movement · v1.0.0 Live</span>
+                            <span>Join The Sovereign Sync Movement · v1.0.7 Live</span>
                         </div>
                         <p class="synkk-eyebrow">Your thoughts. Your rules.</p>
                         <h2 id="cta-heading">Own your team brain today.</h2>
                         <p>Deploy your private Synkk server with Docker in 30 seconds, install the open-source Obsidian plugin, and experience team collaboration without cloud compromise.</p>
                         <div class="synkk-final-cta__actions">
-                            <a href="{{ $pluginReleaseUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Download Plugin v1.0.0 <span aria-hidden="true">↗</span></a>
+                            <a href="obsidian://show-plugin?id=synkk-sync" class="synkk-button synkk-button--accent">Install Plugin in Obsidian <span aria-hidden="true">↗</span></a>
                             <a href="{{ route('public.docs') }}" class="synkk-button synkk-button--paper">Read Documentation <span aria-hidden="true">→</span></a>
                         </div>
                         <div class="synkk-cta-guarantees">
@@ -713,7 +713,7 @@
                     <div class="synkk-footer-telemetry__status">
                         <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
                         <strong>SYSTEM STATUS:</strong>
-                        <span>Sync Engine v1.0.0 · Local-First Architecture · Systems Operational</span>
+                        <span>Sync Engine v1.0.7 · Local-First Architecture · Systems Operational</span>
                     </div>
                     <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-footer-telemetry__link">Public Repository ↗</a>
                 </div>
