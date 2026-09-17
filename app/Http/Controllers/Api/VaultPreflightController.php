@@ -10,6 +10,7 @@ use App\Services\DeviceVaultAccess;
 use App\Services\PlanService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class VaultPreflightController extends Controller
@@ -88,7 +89,7 @@ class VaultPreflightController extends Controller
         $bandwidthSavedBytes = 0;
 
         if (! empty($validated['files']) && is_array($validated['files'])) {
-            /** @var \Illuminate\Support\Collection<int, array<string, mixed>> $clientFiles */
+            /** @var Collection<int, array<string, mixed>> $clientFiles */
             $clientFiles = collect($validated['files']);
             $clientPathMap = $clientFiles->keyBy('path');
 

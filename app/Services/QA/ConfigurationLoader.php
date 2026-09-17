@@ -63,6 +63,7 @@ class ConfigurationLoader
      * Validate configuration data and build QAAuditConfig object.
      *
      * @param  array<string, mixed>  $data
+     *
      * @throws ConfigurationException
      */
     private function validateAndBuild(array $data): QAAuditConfig

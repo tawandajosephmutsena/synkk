@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Team;
 use App\Models\TeamMessage;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,8 +20,8 @@ class TeamMessageFactory extends Factory
     public function definition(): array
     {
         return [
-            'team_id' => \App\Models\Team::factory(),
-            'user_id' => \App\Models\User::factory(),
+            'team_id' => Team::factory(),
+            'user_id' => User::factory(),
             'author_name' => fake()->name(),
             'body' => fake()->sentence(),
             'type' => 'chat',

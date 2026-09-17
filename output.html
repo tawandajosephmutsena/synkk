@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <title>Synkk Portal</title>
+ <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>
+ Synkk Portal - Synkk
+</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preload" as="font" href="http://localhost/build/assets/instrument-sans-400-normal-DRC__1Mx.woff2" type="font/woff2" crossorigin="anonymous" />
+<link rel="preload" as="font" href="http://localhost/build/assets/instrument-sans-500-normal-Dk9ku72i.woff2" type="font/woff2" crossorigin="anonymous" />
+<link rel="preload" as="font" href="http://localhost/build/assets/instrument-sans-600-normal-B7fBEWYG.woff2" type="font/woff2" crossorigin="anonymous" />
+<style>
+@font-face {
+ font-family: "Instrument Sans";
+ font-style: normal;
+ font-weight: 400;
+ font-display: swap;
+ src: url("/build/assets/instrument-sans-400-normal-DRC__1Mx.woff2") format("woff2");
+ unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+ font-family: "Instrument Sans";
+ font-style: normal;
+ font-weight: 400;
+ font-display: swap;
+ src: url("/build/assets/instrument-sans-400-normal-D1W7dsQl.woff") format("woff");
+ unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+ font-family: "Instrument Sans";
+ font-style: normal;
+ font-weight: 500;
+ font-display: swap;
+ src: url("/build/assets/instrument-sans-500-normal-Dk9ku72i.woff2") format("woff2");
+ unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+ font-family: "Instrument Sans";
+ font-style: normal;
+ font-weight: 500;
+ font-display: swap;
+ src: url("/build/assets/instrument-sans-500-normal-Z6ESRlEs.woff") format("woff");
+ unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+ font-family: "Instrument Sans";
+ font-style: normal;
+ font-weight: 600;
+ font-display: swap;
+ src: url("/build/assets/instrument-sans-600-normal-B7fBEWYG.woff2") format("woff2");
+ unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+ font-family: "Instrument Sans";
+ font-style: normal;
+ font-weight: 600;
+ font-display: swap;
+ src: url("/build/assets/instrument-sans-600-normal-B9e8oLYv.woff") format("woff");
+ unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+:root {
+ --font-instrument-sans: "Instrument Sans";
+}
+.font-instrument-sans {
+ font-family: var(--font-instrument-sans);
+}
+</style>
+<link rel="preload" as="style" href="http://localhost/build/assets/app-lZKJtYZ9.css" /><link rel="modulepreload" as="script" href="http://localhost/build/assets/app-BTUDQmpj.js" /><link rel="modulepreload" as="script" href="http://localhost/build/assets/vault-graph-By_u7uJf.js" /><link rel="stylesheet" href="http://localhost/build/assets/app-lZKJtYZ9.css" data-navigate-track="reload" /><script type="module" src="http://localhost/build/assets/app-BTUDQmpj.js" data-navigate-track="reload"></script><script>
+ if (! window.localStorage.getItem('flux.appearance')) {
+ window.localStorage.setItem('flux.appearance', 'dark');
+ }
+</script>
+<style>
+ :root.dark {
+ color-scheme: dark;
+ }
+</style>
+<script>
+ window.Flux = {
+ applyAppearance (appearance) {
+ let applyDark = () => document.documentElement.classList.add('dark')
+ let applyLight = () => document.documentElement.classList.remove('dark')
+ if (appearance === 'system') {
+ let media = window.matchMedia('(prefers-color-scheme: dark)')
+ window.localStorage.removeItem('flux.appearance')
+ media.matches ? applyDark() : applyLight()
+ } else if (appearance === 'dark') {
+ window.localStorage.setItem('flux.appearance', 'dark')
+ applyDark()
+ } else if (appearance === 'light') {
+ window.localStorage.setItem('flux.appearance', 'light')
+ applyLight()
+ }
+ }
+ }
+ window.Flux.applyAppearance(window.localStorage.getItem('flux.appearance') || 'system')
+</script>
+ <link rel="preload" as="style" href="http://localhost/build/assets/portal-DZ4p1CEi.css" /><link rel="modulepreload" as="script" href="http://localhost/build/assets/portal-D4oSFtLq.js" /><link rel="modulepreload" as="script" href="http://localhost/build/assets/vault-graph-By_u7uJf.js" /><link rel="stylesheet" href="http://localhost/build/assets/portal-DZ4p1CEi.css" data-navigate-track="reload" /><script type="module" src="http://localhost/build/assets/portal-D4oSFtLq.js" data-navigate-track="reload"></script> <style>
+ :root.dark {
+ color-scheme: dark;
+ }
+</style>
+<script>
+ window.Flux = {
+ applyAppearance (appearance) {
+ let applyDark = () => document.documentElement.classList.add('dark')
+ let applyLight = () => document.documentElement.classList.remove('dark')
+ if (appearance === 'system') {
+ let media = window.matchMedia('(prefers-color-scheme: dark)')
+ window.localStorage.removeItem('flux.appearance')
+ media.matches ? applyDark() : applyLight()
+ } else if (appearance === 'dark') {
+ window.localStorage.setItem('flux.appearance', 'dark')
+ applyDark()
+ } else if (appearance === 'light') {
+ window.localStorage.setItem('flux.appearance', 'light')
+ applyLight()
+ }
+ }
+ }
+ window.Flux.applyAppearance(window.localStorage.getItem('flux.appearance') || 'system')
+</script>
+<script id="browser-logger-active">
+(function() {
+ const ENDPOINT = 'http://localhost/_boost/browser-logs';
+ const logQueue = [];
+ let flushTimeout = null;
+ const captureTypes = ["error","warning","info","log","debug","table"];
+ console.log('🔍 Browser logger active (MCP server detected). Posting to: ' + ENDPOINT);
+ // Store original console methods
+ const originalConsole = {
+ log: console.log,
+ debug: console.debug,
+ info: console.info,
+ error: console.error,
+ warn: console.warn,
+ table: console.table
+ };
+ // Helper to safely stringify values
+ function safeStringify(obj) {
+ const seen = new WeakSet();
+ return JSON.stringify(obj, (key, value) => {
+ if (typeof value === 'object' && value !== null) {
+ if (seen.has(value)) return '[Circular]';
+ seen.add(value);
+ }
+ if (value instanceof Error) {
+ return {
+ name: value.name,
+ message: value.message,
+ stack: value.stack
+ };
+ }
+ return value;
+ });
+ }
+ // Normalize log type for consistency (e.g., 'warn' to 'warning')
+ function normalizeType(type) {
+ return type === 'warn' ? 'warning' : type;
+ }
+ // Determine if a log type should be captured based on configured levels
+ function shouldCapture(type) {
+ return captureTypes.includes(normalizeType(type));
+ }
+ // Batch and send logs
+ function flushLogs() {
+ if (logQueue.length === 0) return;
+ const batch = logQueue.splice(0, logQueue.length);
+ fetch(ENDPOINT, {
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json',
+ 'X-Requested-With': 'XMLHttpRequest'
+ },
+ body: JSON.stringify({ logs: batch })
+ }).catch(err => {
+ // Silently fail to avoid infinite loops
+ originalConsole.error('Failed to send logs:', err);
+ });
+ }
+ // Debounced flush (100ms)
+ function scheduleFlush() {
+ if (flushTimeout) clearTimeout(flushTimeout);
+ flushTimeout = setTimeout(flushLogs, 100);
+ }
+ // Intercept console methods
+ ['log', 'debug', 'info', 'error', 'warn', 'table'].forEach(method => {
+ console[method] = function(..args) {
+ // Call original method
+ originalConsole[method].apply(console, args);
+ // Capture log data
+ try {
+ if (!shouldCapture(method)) {
+ return;
+ }
+ logQueue.push({
+ type: method,
+ timestamp: new Date().toISOString(),
+ data: args.map(arg => {
+ try {
+ return typeof arg === 'object' ? JSON.parse(safeStringify(arg)) : arg;
+ } catch (e) {
+ return String(arg);
+ }
+ }),
+ url: window.location.href,
+ userAgent: navigator.userAgent
+ });
+ scheduleFlush();
+ } catch (e) {
+ // Fail silently
+ }
+ };
+ });
+ // Global error handlers for uncaught errors
+ const originalOnError = window.onerror;
+ window.onerror = function boostErrorHandler(errorMsg, url, lineNumber, colNumber, error) {
+ try {
+ if (shouldCapture('error')) {
+ logQueue.push({
+ type: 'uncaught_error',
+ timestamp: new Date().toISOString(),
+ data: [{
+ message: errorMsg,
+ filename: url,
+ lineno: lineNumber,
+ colno: colNumber,
+ error: error ? {
+ name: error.name,
+ message: error.message,
+ stack: error.stack
+ } : null
+ }],
+ url: window.location.href,
+ userAgent: navigator.userAgent
+ });
+ scheduleFlush();
+ }
+ } catch (e) {
+ // Fail silently
+ }
+ // Call original handler if it exists
+ if (originalOnError && typeof originalOnError === 'function') {
+ return originalOnError(errorMsg, url, lineNumber, colNumber, error);
+ }
+ // Let the error continue to propagate
+ return false;
+ }
+ window.addEventListener('error', (event) => {
+ try {
+ if (!shouldCapture('error')) {
+ return false;
+ }
+ logQueue.push({
+ type: 'window_error',
+ timestamp: new Date().toISOString(),
+ data: [{
+ message: event.message,
+ filename: event.filename,
+ lineno: event.lineno,
+ colno: event.colno,
+ error: event.error ? {
+ name: event.error.name,
+ message: event.error.message,
+ stack: event.error.stack
+ } : null
+ }],
+ url: window.location.href,
+ userAgent: navigator.userAgent
+ });
+ scheduleFlush();
+ } catch (e) {
+ // Fail silently
+ }
+ // Let the error continue to propagate
+ return false;
+ });
+ window.addEventListener('unhandledrejection', (event) => {
+ try {
+ if (!shouldCapture('error')) {
+ return false;
+ }
+ logQueue.push({
+ type: 'error',
+ timestamp: new Date().toISOString(),
+ data: [{
+ message: 'Unhandled Promise Rejection',
+ reason: event.reason instanceof Error ? {
+ name: event.reason.name,
+ message: event.reason.message,
+ stack: event.reason.stack
+ } : event.reason
+ }],
+ url: window.location.href,
+ userAgent: navigator.userAgent
+ });
+ scheduleFlush();
+ } catch (e) {
+ // Fail silently
+ }
+ // Let the rejection continue to propagate
+ return false;
+ });
+ // Flush on page unload
+ window.addEventListener('beforeunload', () => {
+ if (logQueue.length > 0) {
+ navigator.sendBeacon(ENDPOINT, JSON.stringify({ logs: logQueue }));
+ }
+ });
+})();
+</script>
+<!-- Livewire Styles --><style >[wire\:loading][wire\:loading], [wire\:loading\.delay][wire\:loading\.delay], [wire\:loading\.list-item][wire\:loading\.list-item], [wire\:loading\.inline-block][wire\:loading\.inline-block], [wire\:loading\.inline][wire\:loading\.inline], [wire\:loading\.block][wire\:loading\.block], [wire\:loading\.flex][wire\:loading\.flex], [wire\:loading\.table][wire\:loading\.table], [wire\:loading\.grid][wire\:loading\.grid], [wire\:loading\.inline-flex][wire\:loading\.inline-flex] {display: none;}[wire\:loading\.delay\.none][wire\:loading\.delay\.none], [wire\:loading\.delay\.shortest][wire\:loading\.delay\.shortest], [wire\:loading\.delay\.shorter][wire\:loading\.delay\.shorter], [wire\:loading\.delay\.short][wire\:loading\.delay\.short], [wire\:loading\.delay\.default][wire\:loading\.delay\.default], [wire\:loading\.delay\.long][wire\:loading\.delay\.long], [wire\:loading\.delay\.longer][wire\:loading\.delay\.longer], [wire\:loading\.delay\.longest][wire\:loading\.delay\.longest] {display: none;}[wire\:offline][wire\:offline] {display: none;}[wire\:dirty]:not(textarea):not(input):not(select) {display: none;}:root {--livewire-progress-bar-color: #2299dd;}[x-cloak] {display: none !important;}[wire\:cloak] {display: none !important;}dialog#livewire-error::backdrop {background-color: rgba(0, 0, 0, .6);}</style>
+</head>
+<body class="min-h-screen antialiased selection:bg-amber-500 selection:text-zinc-950 bg-[#09090b] text-[#f4f4f5] overflow-x-hidden">
+ <!-- Reading Progress Bar -->
+ <div id="synkk-reading-bar" class="synkk-reading-progress"></div>
+ <div wire:snapshot="{&quot;data&quot;:{&quot;portal&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\VaultPortal&quot;,&quot;key&quot;:1,&quot;s&quot;:&quot;mdl&quot;}],&quot;notePath&quot;:&quot;00-Overview\/Welcome to Synkk.md&quot;,&quot;searchQuery&quot;:&quot;&quot;,&quot;activeTag&quot;:&quot;&quot;,&quot;layoutOverride&quot;:null,&quot;themeOverride&quot;:null,&quot;sidebarFilter&quot;:&quot;&quot;,&quot;passwordInput&quot;:&quot;&quot;,&quot;mobileDrawerOpen&quot;:false,&quot;commandPaletteOpen&quot;:false,&quot;graphModalOpen&quot;:false},&quot;memo&quot;:{&quot;id&quot;:&quot;kukgywlk4z9CnbpSQaEW&quot;,&quot;name&quot;:&quot;pages::portals.show&quot;,&quot;path&quot;:&quot;p\/synkk-docs&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;en&quot;,&quot;islands&quot;:[]},&quot;checksum&quot;:&quot;bb08ddc8348070d042798fa9b988a768df1be81fd111e062dba8560bcc2071a8&quot;}" wire:effects="{&quot;url&quot;:{&quot;notePath&quot;:{&quot;as&quot;:&quot;note&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;searchQuery&quot;:{&quot;as&quot;:&quot;search&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;activeTag&quot;:{&quot;as&quot;:&quot;tag&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;layoutOverride&quot;:{&quot;as&quot;:&quot;layout&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;themeOverride&quot;:{&quot;as&quot;:&quot;theme&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null}}}" wire:id="kukgywlk4z9CnbpSQaEW" wire:name="pages::portals.show"
+ class="synkk-portal-wrapper min-h-screen relative overflow-hidden"
+ data-portal-theme="enterprise-docs"
+ x-data="{
+ scrollProgress: 0,
+ previewVisible: false,
+ previewTitle: '',
+ previewExcerpt: '',
+ previewX: 0,
+ previewY: 0,
+ showPreview(e, title, excerpt) {
+ const el = e?.currentTarget || e?.target?.closest('[data-preview-title]');
+ const previewTitle = title || el?.dataset?.previewTitle || '';
+ const previewExcerpt = excerpt || el?.dataset?.previewExcerpt || '';
+ const targetEl = el || e?.target;
+ const rect = targetEl?.getBoundingClientRect ? targetEl.getBoundingClientRect() : { left: 16, bottom: 0 };
+ this.previewTitle = previewTitle;
+ this.previewExcerpt = previewExcerpt;
+ this.previewX = Math.min(window.innerWidth - 320, Math.max(16, rect.left));
+ this.previewY = rect.bottom + 8;
+ this.previewVisible = true;
+ },
+ hidePreview() {
+ this.previewVisible = false;
+ },
+ initScrollTracker() {
+ window.addEventListener('scroll', () => {
+ const total = document.documentElement.scrollHeight - window.innerHeight;
+ this.scrollProgress = total > 0 ? (window.scrollY / total) * 100 : 0;
+ const readingBar = document.getElementById('synkk-reading-bar');
+ if (readingBar) {
+ readingBar.style.width = this.scrollProgress + '%';
+ }
+ }, { passive: true });
+ },
+ openGraphModal() {
+ $wire.graphModalOpen = true;
+ }
+ }"
+ x-init="initScrollTracker()"
+ x-on:keydown.window.cmd.k.prevent="$wire.commandPaletteOpen = true"
+ x-on:keydown.window.ctrl.k.prevent="$wire.commandPaletteOpen = true"
+>
+ <!-- Background Dot Grid Atmosphere -->
+ <div class="synkk-portal-grid-bg"></div>
+ <!-- Ambient Floating Aurora Orbs -->
+ <div class="synkk-aurora-orb synkk-aurora-float-1"></div>
+ <div class="synkk-aurora-orb synkk-aurora-float-2"></div>
+ <!--[if BLOCK]><![endif]--> <!-- Global Portal Navigation Header -->
+ <header class="synkk-portal-header sticky top-0 z-40">
+ <div class="mx-auto flex h-16 max-w-[1600px] w-full items-center justify-between px-4 sm:px-6 lg:px-8">
+ <!-- Left: Logo & Portal Identity -->
+ <div class="flex items-center gap-3.5">
+ <a href="http://localhost/p/synkk-docs" wire:navigate class="group flex items-center gap-2.5 font-bold tracking-tight">
+ <div class="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-zinc-950 font-black shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform">
+ S
+ </div>
+ <div class="flex flex-col">
+ <span class="text-sm font-bold tracking-tight text-white group-hover:text-amber-400 transition-colors sm:text-base">
+ Synkk Documentation &amp; Systems Architecture
+ </span>
+ <span class="text-[10px] font-medium text-zinc-500 flex items-center gap-1">
+ <span class="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+ Obsidian Sync Active
+ </span>
+ </div>
+ </a>
+ <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--> </div>
+ <!-- Center: Command Palette Trigger & Layout Toggles -->
+ <div class="flex items-center gap-3">
+ <!-- Quick Search Pill -->
+ <button
+ type="button"
+ x-on:click="$wire.commandPaletteOpen = true"
+ class="hidden items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3.5 py-1.5 text-xs text-zinc-400 hover:border-zinc-700 hover:text-zinc-200 sm:flex transition-all cursor-pointer shadow-xs"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5 text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+</svg>
+ <span>Search notes…</span>
+ <kbd class="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400 border border-zinc-700/60">⌘K</kbd>
+ </button>
+ <!-- Layout Mode Switcher -->
+ <div class="flex items-center rounded-xl border border-zinc-800/80 bg-zinc-900/80 p-1 text-xs shadow-inner">
+ <button
+ type="button"
+ wire:click="switchLayout('docs')"
+ class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition-all bg-amber-500 text-zinc-950 font-bold shadow-xs"
+ title="Documentation tree layout"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/>
+</svg>
+ <span class="hidden md:inline">Docs</span>
+ </button>
+ <button
+ type="button"
+ wire:click="switchLayout('bento')"
+ class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition-all text-zinc-400 hover:text-white"
+ title="Bento Card Grid layout"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/>
+</svg>
+ <span class="hidden md:inline">Bento</span>
+ </button>
+ <button
+ type="button"
+ wire:click="switchLayout('dashboard')"
+ class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition-all text-zinc-400 hover:text-white"
+ title="Client Hub / Dashboard layout"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z"/>
+</svg>
+ <span class="hidden md:inline">Hub</span>
+ </button>
+ <button
+ type="button"
+ wire:click="switchLayout('graph')"
+ class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition-all text-zinc-400 hover:text-white"
+ title="Interactive Knowledge Graph layout"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/>
+</svg>
+ <span class="hidden md:inline">Graph</span>
+ </button>
+ </div>
+ <!-- Interactive Knowledge Graph Button -->
+ <button
+ type="button"
+ x-on:click="openGraphModal()"
+ class="hidden lg:inline-flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:border-amber-500/40 hover:text-amber-400 transition-all shadow-xs"
+ title="Open interactive knowledge graph canvas"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/>
+</svg>
+ <span>Graph</span>
+ <span class="rounded bg-zinc-800 px-1.5 py-0.2 text-[10px] text-zinc-400">
+ 13
+ </span>
+ </button>
+ <!-- Theme Switcher Dropdown Menu -->
+ <div class="relative" x-data="{ themeMenuOpen: false }">
+ <button
+ type="button"
+ x-on:click="themeMenuOpen = ! themeMenuOpen"
+ class="flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900/70 p-2 text-zinc-300 hover:border-zinc-700 hover:text-white transition-all shadow-xs"
+ title="Switch Theme"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"/>
+</svg>
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3 text-zinc-500" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+</svg>
+ </button>
+ <div
+ x-show="themeMenuOpen"
+ x-on:click.outside="themeMenuOpen = false"
+ x-transition:enter="transition ease-out duration-100"
+ x-transition:enter-start="opacity-0 scale-95"
+ x-transition:enter-end="opacity-100 scale-100"
+ class="absolute right-0 mt-2 w-48 rounded-2xl border border-zinc-800 bg-zinc-900/95 p-1.5 shadow-2xl backdrop-blur-xl z-50 space-y-1"
+ style="display: none;"
+ >
+ <div class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+ Color Themes
+ </div>
+ <!--[if BLOCK]><![endif]--> <button
+ type="button"
+ wire:click="switchTheme('obsidian-noir');"
+ x-on:click="window.setPortalTheme('obsidian-noir'); themeMenuOpen = false;"
+ data-theme-choice="obsidian-noir"
+ class="flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+ >
+ <span class="flex items-center gap-2">
+ <span class="size-2 rounded-full bg-amber-400"></span>
+ <span>Obsidian Noir</span>
+ </span>
+ <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--> </button>
+ <button
+ type="button"
+ wire:click="switchTheme('slate-luxe');"
+ x-on:click="window.setPortalTheme('slate-luxe'); themeMenuOpen = false;"
+ data-theme-choice="slate-luxe"
+ class="flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+ >
+ <span class="flex items-center gap-2">
+ <span class="size-2 rounded-full bg-indigo-400"></span>
+ <span>Slate Luxe</span>
+ </span>
+ <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--> </button>
+ <button
+ type="button"
+ wire:click="switchTheme('midnight-emerald');"
+ x-on:click="window.setPortalTheme('midnight-emerald'); themeMenuOpen = false;"
+ data-theme-choice="midnight-emerald"
+ class="flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+ >
+ <span class="flex items-center gap-2">
+ <span class="size-2 rounded-full bg-emerald-400"></span>
+ <span>Midnight Emerald</span>
+ </span>
+ <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--> </button>
+ <button
+ type="button"
+ wire:click="switchTheme('paper-craft');"
+ x-on:click="window.setPortalTheme('paper-craft'); themeMenuOpen = false;"
+ data-theme-choice="paper-craft"
+ class="flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+ >
+ <span class="flex items-center gap-2">
+ <span class="size-2 rounded-full bg-stone-300"></span>
+ <span>Paper Craft</span>
+ </span>
+ <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--> </button>
+ <button
+ type="button"
+ wire:click="switchTheme('amber-gold');"
+ x-on:click="window.setPortalTheme('amber-gold'); themeMenuOpen = false;"
+ data-theme-choice="amber-gold"
+ class="flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-left transition-colors text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+ >
+ <span class="flex items-center gap-2">
+ <span class="size-2 rounded-full bg-yellow-400"></span>
+ <span>Amber Gold</span>
+ </span>
+ <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--> </button>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ <!-- Mobile Drawer Toggle -->
+ <button
+ type="button"
+ x-on:click="$wire.mobileDrawerOpen = ! $wire.mobileDrawerOpen"
+ class="rounded-xl border border-zinc-800 p-2 text-zinc-400 hover:text-white md:hidden"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-5" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+</svg>
+ </button>
+ </div>
+ </div>
+ </header>
+ <!-- ======================================================================
+ LAYOUT 1: DOCS HUB & SOVEREIGN KNOWLEDGE ENGINE
+ ====================================================================== -->
+ <!--[if BLOCK]><![endif]--> <div class="relative z-10 mx-auto max-w-[1600px] w-full px-4 sm:px-6 lg:px-8">
+ <div class="flex gap-8 py-8">
+ <!-- Left Sidebar: Obsidian Vault Tree Explorer -->
+ <aside class="hidden w-72 shrink-0 md:block">
+ <div class="sticky top-24 space-y-4">
+ <!-- Sidebar Header with Filter -->
+ <div class="space-y-2">
+ <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-zinc-500">
+ <span>Vault Explorer</span>
+ <span class="rounded-full bg-zinc-800/80 px-2 py-0.5 text-[10px] text-zinc-400">
+ 13 notes
+ </span>
+ </div>
+ <div class="relative">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 absolute left-2.5 top-2 size-3.5 text-zinc-500" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+</svg>
+ <input
+ type="text"
+ wire:model.live.debounce.150ms="sidebarFilter"
+ placeholder="Filter documents…"
+ class="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 py-1.5 pl-8 pr-3 text-xs text-white placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+ />
+ </div>
+ </div>
+ <!-- Document Nav List -->
+ <nav class="max-h-[calc(100vh-280px)] overflow-y-auto space-y-1 text-xs pr-1">
+ <!--[if BLOCK]><![endif]--> <button
+ type="button"
+ wire:click="selectNote('00-Overview/Welcome to Synkk.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all bg-amber-500/10 text-amber-400 font-semibold border-l-2 border-amber-500 pl-2"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Welcome to Synkk</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">00-Overview</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('01-Quickstart/Installation &amp; Deployment.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Installation &amp; Deployment</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">01-Quickstart</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('01-Quickstart/Instant 3-Second QR Pairing.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Instant 3-Second QR Pairing</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">01-Quickstart</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('02-Core-Sync/First-Sync Pre-Flight &amp; Migration Engine.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">First-Sync Pre-Flight &amp; Migration Engine</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">02-Core-Sync</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('02-Core-Sync/Live Multiplayer CRDT &amp; Carets.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Live Multiplayer CRDT &amp; Carets</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">02-Core-Sync</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('02-Core-Sync/Mobile Ghost Files &amp; Streaming.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Mobile Ghost Files &amp; Streaming</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">02-Core-Sync</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('03-Security/Atomic Safety Shield &amp; Snapshots.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Atomic Safety Shield &amp; Snapshots</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">03-Security</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('03-Security/Role-Based Scoped Permissions.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Role-Based Scoped Permissions</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">03-Security</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('03-Security/Zero-Knowledge End-to-End Encryption.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Zero-Knowledge End-to-End Encryption</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">03-Security</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('04-Portals/Interactive Livewire Vault Portals.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Interactive Livewire Vault Portals</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">04-Portals</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('05-AI-Copilot/Vault Copilot &amp; Vector RAG Server.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Vault Copilot &amp; Vector RAG Server</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">05-AI-Copilot</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('06-Self-Hosting/Docker &amp; Turnkey Setup.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">Docker &amp; Turnkey Setup</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">06-Self-Hosting</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('07-API-Reference/REST API Protocol v2.md')"
+ class="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left font-medium transition-all text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200"
+ >
+ <div class="flex items-center gap-2 truncate">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-zinc-500 group-hover:text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <div class="truncate">
+ <div class="truncate">REST API Protocol v2</div>
+ <!--[if BLOCK]><![endif]--> <div class="text-[10px] text-zinc-500 truncate">07-API-Reference</div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </div>
+ </button>
+ <!--[if ENDBLOCK]><![endif]--> </nav>
+ <!-- Mini Graph Button in Sidebar -->
+ <!--[if BLOCK]><![endif]--> <div class="pt-3 border-t border-zinc-800/80">
+ <button
+ type="button"
+ x-on:click="openGraphModal()"
+ class="synkk-glass-card flex w-full items-center justify-between p-3 text-xs font-semibold text-zinc-300 hover:border-amber-500/40 hover:text-white transition-all cursor-pointer"
+ >
+ <span class="flex items-center gap-2">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/>
+</svg>
+ <span>Graph View</span>
+ </span>
+ <span class="rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] text-amber-400 font-bold">
+ 13
+ </span>
+ </button>
+ </div>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ </aside>
+ <!-- Center Content: Rendered Article & Backlinks -->
+ <main class="min-w-0 flex-1 max-w-5xl">
+ <!--[if BLOCK]><![endif]--> <article class="space-y-6">
+ <!-- Top Breadcrumb Trail -->
+ <div class="flex items-center gap-2 text-xs text-zinc-500">
+ <a href="http://localhost/p/synkk-docs" wire:navigate class="hover:text-zinc-300">Vault</a>
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3 text-zinc-600" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+</svg>
+ <!--[if BLOCK]><![endif]--> <span>00-Overview</span>
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3 text-zinc-600" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+</svg>
+ <!--[if ENDBLOCK]><![endif]--> <span class="text-amber-400 font-semibold truncate">Welcome to Synkk.md</span>
+ </div>
+ <!-- Article Header & Metadata -->
+ <div class="space-y-4 pb-6 border-b border-zinc-800/80">
+ <!--[if BLOCK]><![endif]--> <div class="flex flex-wrap gap-1.5">
+ <!--[if BLOCK]><![endif]--> <span class="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400">
+ #synkk
+ </span>
+ <span class="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400">
+ #documentation
+ </span>
+ <span class="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400">
+ #overview
+ </span>
+ <span class="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400">
+ #obsidian
+ </span>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ <!--[if ENDBLOCK]><![endif]-->
+ <h1 class="text-3xl font-black tracking-tight text-white sm:text-4xl">
+ Welcome to Synkk
+ </h1>
+ <div class="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+ <span class="flex items-center gap-1.5">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5 text-zinc-500" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+</svg>
+ 2 min read
+ </span>
+ <span>•</span>
+ <span class="flex items-center gap-1.5">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5 text-zinc-500" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ 393 words
+ </span>
+ <span>•</span>
+ <span>Synced 13 hours ago</span>
+ <span>•</span>
+ <span class="flex items-center gap-1 text-emerald-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/>
+</svg>
+ <span>Sovereign Verified</span>
+ </span>
+ </div>
+ </div>
+ <!-- Markdown Body with .synkk-prose engine -->
+ <div class="synkk-prose mt-6">
+ <h1>⚡ Welcome to Synkk</h1>
+<p><img src="logo.png" alt="Alt logo" /></p>
+<div class="synkk-callout synkk-callout--note"><div class="synkk-callout-header"><svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg><span>Synkk Philosophy</span></div><div class="synkk-callout-body"><p><strong>Keep Markdown, permissions, versions, and trusted devices together on infrastructure you control.</strong>
+Synkk is a self-hosted team vault synchronization server, multi-user CRDT collaboration engine, and interactive publishing portal designed specifically for Obsidian.</p>
+</div></div>
+<hr />
+<h2>🧭 Why Synkk?</h2>
+<p>Obsidian users and research teams frequently face a painful dilemma:</p>
+<ul>
+<li><strong>Cloud proprietary silos</strong> (Notion, Google Docs) force you to give up local plaintext files.</li>
+<li><strong>Generic cloud sync</strong> (iCloud, Dropbox, OneDrive) causes silent file corruption, merge collisions, and lacks granular team path permissions.</li>
+<li><strong>Git setups</strong> are clunky on mobile devices and intimidating for non-technical team members.</li>
+</ul>
+<p><strong>Synkk solves this completely:</strong></p>
+<ol>
+<li><strong>Local-First Plaintext</strong>: Your notes remain standard Markdown (<code>.md</code>) files on your filesystem.</li>
+<li><strong>Instant QR Pairing</strong>: Pair any iPhone, Android, Mac, or Windows device in under 3 seconds using <a href="?note=01-Quickstart%2FInstant+3-Second+QR+Pairing.md" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="Instant 3-Second QR Pairing" data-preview-excerpt="⚡ Instant 3-Second QR Pairing (Milestone A) Connecting mobile devices to self-hosted software is traditionally painful—typing complex serve.." data-preview-path="01-Quickstart%2FInstant+3-Second+QR+Pairing.md" x-on:mouseenter="showPreview($event)" x-on:mouseleave="hidePreview()"><span>Instant QR Pairing</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>.</li>
+<li><strong>Pre-Flight Migration Engine</strong>: Simulate your first sync and catch friction traps before sending a single byte via <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[[Pre-Flight Engine]]</span>.</li>
+<li><strong>Zero-Knowledge E2EE</strong>: Secure notes with client-side WebCrypto AES-256-GCM encryption with <a href="?note=03-Security%2FZero-Knowledge+End-to-End+Encryption.md" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="Zero-Knowledge End-to-End Encryption" data-preview-excerpt="🔒 Zero-Knowledge End-to-End Encryption For corporate IP, personal medical records, investigative journalism, and sensitive research, trust.." data-preview-path="03-Security%2FZero-Knowledge+End-to-End+Encryption.md" x-on:mouseenter="showPreview($event)" x-on:mouseleave="hidePreview()"><span>E2EE</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>.</li>
+<li><strong>Interactive Livewire Portals</strong>: Publish your vaults as high-end websites in 1-click via <a href="?note=04-Portals%2FInteractive+Livewire+Vault+Portals.md" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="Interactive Livewire Vault Portals" data-preview-excerpt="🌐 Interactive Livewire Vault Portals (Milestone B) Obsidian Publish is convenient but rigid—it locks you into a fixed theme, lacks custom i.." data-preview-path="04-Portals%2FInteractive+Livewire+Vault+Portals.md" x-on:mouseenter="showPreview($event)" x-on:mouseleave="hidePreview()"><span>Livewire Portals</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>.</li>
+<li><strong>Live Multiplayer CRDT</strong>: Co-author notes with team carets and presence using <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[[Multiplayer CRDT]]</span>.</li>
+<li><strong>Vector RAG Copilot</strong>: Query your notes semantically with citations via <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[[Vault Copilot]]</span>.</li>
+</ol>
+<hr />
+<h2>🗺️ Documentation Map</h2>
+<ul>
+<li><strong>Getting Started</strong>:
+<ul>
+<li><span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[[Installation &amp;amp; Deployment Guide]]</span></li>
+<li><a href="?note=01-Quickstart%2FInstant+3-Second+QR+Pairing.md" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="Instant 3-Second QR Pairing" data-preview-excerpt="⚡ Instant 3-Second QR Pairing (Milestone A) Connecting mobile devices to self-hosted software is traditionally painful—typing complex serve.." data-preview-path="01-Quickstart%2FInstant+3-Second+QR+Pairing.md" x-on:mouseenter="showPreview($event)" x-on:mouseleave="hidePreview()"><span>3-Second Instant QR Pairing</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a></li>
+</ul>
+</li>
+<li><strong>Core Sync Architecture</strong>:
+<ul>
+<li><span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[[First-Sync Pre-Flight &amp;amp; Migration Engine]]</span></li>
+<li><span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[[Live Multiplayer CRDT &amp;amp; Carets]]</span></li>
+<li><span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[[Mobile Ghost Files &amp;amp; Attachment Streaming]]</span></li>
+</ul>
+</li>
+<li><strong>Security &amp; Permissions</strong>:
+<ul>
+<li><a href="?note=03-Security%2FZero-Knowledge+End-to-End+Encryption.md" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="Zero-Knowledge End-to-End Encryption" data-preview-excerpt="🔒 Zero-Knowledge End-to-End Encryption For corporate IP, personal medical records, investigative journalism, and sensitive research, trust.." data-preview-path="03-Security%2FZero-Knowledge+End-to-End+Encryption.md" x-on:mouseenter="showPreview($event)" x-on:mouseleave="hidePreview()"><span>Zero-Knowledge End-to-End Encryption</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a></li>
+<li><a href="?note=03-Security%2FRole-Based+Scoped+Permissions.md" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="Role-Based Scoped Permissions" data-preview-excerpt="🛡️ Role-Based Scoped Path Permissions Obsidian Sync and cloud folders traditionally apply permissions on an &quot;all-or-nothing&quot; basis—either a.." data-preview-path="03-Security%2FRole-Based+Scoped+Permissions.md" x-on:mouseenter="showPreview($event)" x-on:mouseleave="hidePreview()"><span>Role-Based Scoped Path Permissions</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a></li>
+<li><span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[[Atomic Safety Shield &amp;amp; Snapshots]]</span></li>
+</ul>
+</li>
+<li><strong>Publishing &amp; Portals</strong>:
+<ul>
+<li><a href="?note=04-Portals%2FInteractive+Livewire+Vault+Portals.md" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="Interactive Livewire Vault Portals" data-preview-excerpt="🌐 Interactive Livewire Vault Portals (Milestone B) Obsidian Publish is convenient but rigid—it locks you into a fixed theme, lacks custom i.." data-preview-path="04-Portals%2FInteractive+Livewire+Vault+Portals.md" x-on:mouseenter="showPreview($event)" x-on:mouseleave="hidePreview()"><span>Interactive Livewire Vault Portals</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a></li>
+</ul>
+</li>
+<li><strong>AI &amp; Knowledge Systems</strong>:
+<ul>
+<li><span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[[Vault Copilot &amp;amp; Vector RAG Server]]</span></li>
+</ul>
+</li>
+<li><strong>Operations &amp; Self-Hosting</strong>:
+<ul>
+<li><span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[[Docker, Turnkey Installer &amp;amp; Production Setup]]</span></li>
+<li><a href="?note=07-API-Reference%2FREST+API+Protocol+v2.md" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="REST API Protocol v2" data-preview-excerpt="🔌 REST API Protocol v2 Reference All requests to the Synkk Sync API must include: 🛫 Pre-Flight Simulation API (Option C) Simulates sync de.." data-preview-path="07-API-Reference%2FREST+API+Protocol+v2.md" x-on:mouseenter="showPreview($event)" x-on:mouseleave="hidePreview()"><span>REST API Reference (Protocol v2)</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>
+[📎 [📎 [📎 [📎 [📎 <a href="attachment.pdf">📎 Document</a>](attachment.pdf)](attachment.pdf)](attachment.pdf)](attachment.pdf)](attachment.pdf)</li>
+</ul>
+</li>
+</ul>
+ </div>
+ <!-- Backlinks / Mentions -->
+ <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--> </article>
+ <!--[if ENDBLOCK]><![endif]--> </main>
+ <!-- Right Sidebar: Scrollspy Table of Contents -->
+ <aside class="hidden w-60 shrink-0 xl:block">
+ <div class="sticky top-24 space-y-6">
+ <!--[if BLOCK]><![endif]--> <div class="space-y-2">
+ <div class="text-xs font-bold uppercase tracking-wider text-zinc-500">
+ On This Page
+ </div>
+ <nav class="space-y-0.5 text-xs max-h-[calc(100vh-320px)] overflow-y-auto">
+ <!--[if BLOCK]><![endif]--> <a
+ href="#welcome-to-synkk"
+ class="synkk-toc-link "
+ >
+ ⚡ Welcome to Synkk
+ </a>
+ <a
+ href="#why-synkk"
+ class="synkk-toc-link "
+ >
+ 🧭 Why Synkk?
+ </a>
+ <a
+ href="#documentation-map"
+ class="synkk-toc-link "
+ >
+ 🗺️ Documentation Map
+ </a>
+ <!--[if ENDBLOCK]><![endif]--> </nav>
+ </div>
+ <!--[if ENDBLOCK]><![endif]-->
+ <div class="synkk-glass-card p-4 text-[11px] text-zinc-400 space-y-2">
+ <div class="flex items-center gap-2 font-bold text-zinc-200">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/>
+</svg>
+ <span>Local-First Sovereign</span>
+ </div>
+ <p class="leading-relaxed text-zinc-500">
+ Content synced directly from local Obsidian vault via cryptographic verification.
+ </p>
+ </div>
+ </div>
+ </aside>
+ </div>
+ </div>
+ <!-- ======================================================================
+ LAYOUT 2: BENTO SHOWCASE GRID
+ ====================================================================== -->
+ <!--[if ENDBLOCK]><![endif]-->
+ <!-- ======================================================================
+ GLOBAL MODALS & INTERACTIVE OVERLAYS
+ ====================================================================== -->
+ <!-- Wikilink Hover Preview Popover -->
+ <div
+ x-show="previewVisible"
+ x-transition
+ class="synkk-wikilink-preview-card"
+ :style="`left: ${previewX}px; top: ${previewY}px;`"
+ style="display: none;"
+ >
+ <div class="space-y-1.5">
+ <div class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/>
+</svg>
+ <span>Connected Note</span>
+ </div>
+ <h4 class="text-xs font-bold text-white" x-text="previewTitle"></h4>
+ <p class="text-[11px] text-zinc-400 leading-relaxed line-clamp-3" x-text="previewExcerpt"></p>
+ </div>
+ </div>
+ <!-- Command Palette Modal (Cmd+K) -->
+ <div
+ x-show="$wire.commandPaletteOpen"
+ x-transition:enter="transition ease-out duration-150"
+ x-transition:enter-start="opacity-0 scale-95"
+ x-transition:enter-end="opacity-100 scale-100"
+ x-transition:leave="transition ease-in duration-100"
+ x-transition:leave-start="opacity-100 scale-100"
+ x-transition:leave-end="opacity-0 scale-95"
+ class="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6 md:p-20 bg-black/75 backdrop-blur-md"
+ style="display: none;"
+ x-on:keydown.escape.window="$wire.commandPaletteOpen = false"
+ >
+ <div
+ x-on:click.outside="$wire.commandPaletteOpen = false"
+ class="synkk-glass-card w-full max-w-xl p-4 shadow-2xl space-y-4"
+ >
+ <div class="relative flex items-center">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 absolute left-3.5 size-4 text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+</svg>
+ <input
+ type="text"
+ wire:model.live.debounce.150ms="searchQuery"
+ placeholder="Search all notes by title or content…"
+ class="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+ autofocus
+ />
+ </div>
+ <div class="max-h-72 overflow-y-auto space-y-1 pr-1">
+ <!--[if BLOCK]><![endif]--> <button
+ type="button"
+ wire:click="selectNote('00-Overview/Welcome to Synkk.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Welcome to Synkk</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">2 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('01-Quickstart/Installation &amp; Deployment.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Installation &amp; Deployment</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">2 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('01-Quickstart/Instant 3-Second QR Pairing.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Instant 3-Second QR Pairing</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">2 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('02-Core-Sync/First-Sync Pre-Flight &amp; Migration Engine.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">First-Sync Pre-Flight &amp; Migration Engine</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">2 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('02-Core-Sync/Live Multiplayer CRDT &amp; Carets.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Live Multiplayer CRDT &amp; Carets</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">2 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('02-Core-Sync/Mobile Ghost Files &amp; Streaming.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Mobile Ghost Files &amp; Streaming</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">1 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('03-Security/Atomic Safety Shield &amp; Snapshots.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Atomic Safety Shield &amp; Snapshots</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">1 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('03-Security/Role-Based Scoped Permissions.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Role-Based Scoped Permissions</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">1 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('03-Security/Zero-Knowledge End-to-End Encryption.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Zero-Knowledge End-to-End Encryption</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">1 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('04-Portals/Interactive Livewire Vault Portals.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Interactive Livewire Vault Portals</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">2 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('05-AI-Copilot/Vault Copilot &amp; Vector RAG Server.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Vault Copilot &amp; Vector RAG Server</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">1 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('06-Self-Hosting/Docker &amp; Turnkey Setup.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Docker &amp; Turnkey Setup</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">1 min read</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('07-API-Reference/REST API Protocol v2.md'); switchLayout('docs');"
+ class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs hover:bg-zinc-800/80 transition-colors group cursor-pointer"
+ >
+ <span class="flex items-center gap-2.5 truncate font-semibold text-zinc-200 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 text-amber-400 shrink-0" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">REST API Protocol v2</span>
+ </span>
+ <span class="text-[10px] text-zinc-500 shrink-0">2 min read</span>
+ </button>
+ <!--[if ENDBLOCK]><![endif]--> </div>
+ <div class="flex items-center justify-between border-t border-zinc-800/80 pt-3 text-[11px] text-zinc-500">
+ <span>Navigate with mouse or click note</span>
+ <span><kbd class="rounded bg-zinc-800 px-1.5 py-0.5 font-mono">ESC</kbd> to close</span>
+ </div>
+ </div>
+ </div>
+ <!-- Interactive 2D Knowledge Graph Modal -->
+ <div
+ x-show="$wire.graphModalOpen"
+ x-transition:enter="transition ease-out duration-200"
+ x-transition:enter-start="opacity-0"
+ x-transition:enter-end="opacity-100"
+ x-transition:leave="transition ease-in duration-150"
+ x-transition:leave-start="opacity-100"
+ x-transition:leave-end="opacity-0"
+ class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-xl"
+ style="display: none;"
+ x-on:keydown.escape.window="$wire.graphModalOpen = false"
+ >
+ <div
+ x-on:click.outside="$wire.graphModalOpen = false"
+ class="relative w-full max-w-6xl shadow-2xl overflow-hidden rounded-[1.75rem] border border-zinc-700/60 bg-[#0c0f12]"
+ >
+ <div class="absolute top-4 right-4 z-30">
+ <button
+ type="button"
+ x-on:click="$wire.graphModalOpen = false"
+ class="rounded-xl border border-zinc-700/80 bg-zinc-900/90 p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer shadow-lg"
+ title="Close Graph"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-5" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+</svg>
+ </button>
+ </div>
+ <div
+ x-data="vaultGraph({
+ nodes: JSON.parse('[{\u0022id\u0022:836,\u0022name\u0022:\u0022Welcome to Synkk\u0022,\u0022path\u0022:\u002200-Overview\\\/Welcome to Synkk.md\u0022,\u0022size\u0022:3489,\u0022version\u0022:6,\u0022updated_at\u0022:\u002213 hours ago\u0022,\u0022linksCount\u0022:12},{\u0022id\u0022:837,\u0022name\u0022:\u0022Installation \\u0026 Deployment\u0022,\u0022path\u0022:\u002201-Quickstart\\\/Installation \\u0026 Deployment.md\u0022,\u0022size\u0022:2268,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:2},{\u0022id\u0022:838,\u0022name\u0022:\u0022Instant 3-Second QR Pairing\u0022,\u0022path\u0022:\u002201-Quickstart\\\/Instant 3-Second QR Pairing.md\u0022,\u0022size\u0022:2068,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:3},{\u0022id\u0022:839,\u0022name\u0022:\u0022First-Sync Pre-Flight \\u0026 Migration Engine\u0022,\u0022path\u0022:\u002202-Core-Sync\\\/First-Sync Pre-Flight \\u0026 Migration Engine.md\u0022,\u0022size\u0022:3039,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:3},{\u0022id\u0022:840,\u0022name\u0022:\u0022Live Multiplayer CRDT \\u0026 Carets\u0022,\u0022path\u0022:\u002202-Core-Sync\\\/Live Multiplayer CRDT \\u0026 Carets.md\u0022,\u0022size\u0022:1881,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:3},{\u0022id\u0022:841,\u0022name\u0022:\u0022Mobile Ghost Files \\u0026 Streaming\u0022,\u0022path\u0022:\u002202-Core-Sync\\\/Mobile Ghost Files \\u0026 Streaming.md\u0022,\u0022size\u0022:1475,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:3},{\u0022id\u0022:842,\u0022name\u0022:\u0022Atomic Safety Shield \\u0026 Snapshots\u0022,\u0022path\u0022:\u002203-Security\\\/Atomic Safety Shield \\u0026 Snapshots.md\u0022,\u0022size\u0022:1467,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:2},{\u0022id\u0022:843,\u0022name\u0022:\u0022Role-Based Scoped Permissions\u0022,\u0022path\u0022:\u002203-Security\\\/Role-Based Scoped Permissions.md\u0022,\u0022size\u0022:1664,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:3},{\u0022id\u0022:844,\u0022name\u0022:\u0022Zero-Knowledge End-to-End Encryption\u0022,\u0022path\u0022:\u002203-Security\\\/Zero-Knowledge End-to-End Encryption.md\u0022,\u0022size\u0022:1594,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:3},{\u0022id\u0022:845,\u0022name\u0022:\u0022Interactive Livewire Vault Portals\u0022,\u0022path\u0022:\u002204-Portals\\\/Interactive Livewire Vault Portals.md\u0022,\u0022size\u0022:2132,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:4},{\u0022id\u0022:846,\u0022name\u0022:\u0022Vault Copilot \\u0026 Vector RAG Server\u0022,\u0022path\u0022:\u002205-AI-Copilot\\\/Vault Copilot \\u0026 Vector RAG Server.md\u0022,\u0022size\u0022:1318,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:3},{\u0022id\u0022:847,\u0022name\u0022:\u0022Docker \\u0026 Turnkey Setup\u0022,\u0022path\u0022:\u002206-Self-Hosting\\\/Docker \\u0026 Turnkey Setup.md\u0022,\u0022size\u0022:2689,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:3},{\u0022id\u0022:848,\u0022name\u0022:\u0022REST API Protocol v2\u0022,\u0022path\u0022:\u002207-API-Reference\\\/REST API Protocol v2.md\u0022,\u0022size\u0022:2742,\u0022version\u0022:1,\u0022updated_at\u0022:\u002216 hours ago\u0022,\u0022linksCount\u0022:2}]'),
+ edges: JSON.parse('[{\u0022source\u0022:0,\u0022target\u0022:2},{\u0022source\u0022:0,\u0022target\u0022:3},{\u0022source\u0022:0,\u0022target\u0022:8},{\u0022source\u0022:0,\u0022target\u0022:9},{\u0022source\u0022:0,\u0022target\u0022:4},{\u0022source\u0022:0,\u0022target\u0022:10},{\u0022source\u0022:0,\u0022target\u0022:1},{\u0022source\u0022:0,\u0022target\u0022:5},{\u0022source\u0022:0,\u0022target\u0022:7},{\u0022source\u0022:0,\u0022target\u0022:6},{\u0022source\u0022:0,\u0022target\u0022:11},{\u0022source\u0022:0,\u0022target\u0022:12},{\u0022source\u0022:1,\u0022target\u0022:2},{\u0022source\u0022:2,\u0022target\u0022:3},{\u0022source\u0022:3,\u0022target\u0022:4},{\u0022source\u0022:4,\u0022target\u0022:5},{\u0022source\u0022:5,\u0022target\u0022:8},{\u0022source\u0022:6,\u0022target\u0022:9},{\u0022source\u0022:7,\u0022target\u0022:9},{\u0022source\u0022:8,\u0022target\u0022:7},{\u0022source\u0022:9,\u0022target\u0022:10},{\u0022source\u0022:10,\u0022target\u0022:11},{\u0022source\u0022:11,\u0022target\u0022:12}]'),
+ theme: 'amber'
+ })"
+ wire:key="portal-vault-graph-1"
+ class="w-full overflow-hidden rounded-2xl border border-zinc-800 bg-[#0c0f12] shadow-2xl shadow-black/40"
+ aria-labelledby="portal-graph-title"
+>
+ <!-- Header -->
+ <header class="border-b border-white/10 bg-gradient-to-r from-amber-500/[0.08] via-transparent to-amber-500/[0.03] px-5 py-4 sm:px-6 sm:py-5">
+ <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+ <div>
+ <div class="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-400">
+ <span class="size-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+ Vault Knowledge Map
+ </div>
+ <h3 id="portal-graph-title" class="text-lg font-bold tracking-tight text-white sm:text-xl">
+ Interactive Document Graph
+ </h3>
+ <p id="portal-graph-instructions" class="mt-1 max-w-xl text-xs text-zinc-400">
+ Physics-based bidirectional links between notes. Drag nodes, scroll to zoom, or select any note from the index.
+ </p>
+ </div>
+ <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-300" aria-live="polite">
+ <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs">
+ <span class="size-1.5 rounded-full bg-amber-400"></span>
+ <span x-text="`${nodes.length} notes`"></span>
+ </span>
+ <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/>
+</svg>
+ <span x-text="`${edges.length} connections`"></span>
+ </span>
+ </div>
+ </div>
+ </header>
+ <!-- Canvas + Note Index Split Pane -->
+ <div class="grid h-[580px] lg:h-[660px] grid-cols-1 xl:grid-cols-[minmax(0,1fr)_19rem]">
+ <!-- Left: Interactive Canvas -->
+ <div class="relative size-full overflow-hidden bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.06),transparent_55%)]">
+ <canvas
+ x-ref="graphCanvas"
+ role="img"
+ aria-label="Interactive vault graph showing notes as nodes and wiki links as connections."
+ aria-describedby="portal-graph-instructions"
+ class="absolute inset-0 size-full cursor-grab active:cursor-grabbing"
+ >
+ Your browser cannot render canvas. Use the note index to navigate.
+ </canvas>
+ <!-- Search and Status Bar -->
+ <div class="absolute inset-x-3 top-3 z-20 flex flex-col gap-2 sm:inset-x-4 sm:top-4 sm:flex-row sm:items-center sm:justify-between">
+ <label class="flex min-h-9 items-center rounded-xl border border-white/10 bg-zinc-950/90 px-3 shadow-xl shadow-black/20 backdrop-blur-md sm:w-64">
+ <span class="sr-only">Filter graph nodes</span>
+ <svg class="shrink-0 [:where(&amp;)]:size-6 mr-2 size-3.5 shrink-0 text-zinc-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+</svg>
+ <input
+ x-model="search"
+ type="search"
+ autocomplete="off"
+ placeholder="Filter graph nodes.."
+ class="min-w-0 flex-1 bg-transparent text-xs text-white placeholder:text-zinc-500 focus:outline-none"
+ />
+ <button
+ x-show="search"
+ x-cloak
+ @click="search = ''"
+ type="button"
+ class="ml-2 rounded-md px-1 py-0.5 text-xs text-zinc-400 transition hover:bg-white/10 hover:text-white"
+ aria-label="Clear graph filter"
+ >
+ ×
+ </button>
+ </label>
+ <div class="self-start rounded-xl border border-white/10 bg-zinc-950/85 px-3 py-1.5 text-[11px] text-zinc-400 shadow-lg backdrop-blur-md sm:self-auto">
+ Click a node or note to read document
+ </div>
+ </div>
+ <!-- Empty State -->
+ <div
+ x-show="nodes.length === 0"
+ x-cloak
+ class="absolute inset-0 z-10 grid place-items-center px-6 text-center"
+ >
+ <div class="max-w-sm rounded-2xl border border-white/10 bg-zinc-950/90 p-6 shadow-2xl backdrop-blur-md">
+ <div class="mx-auto grid size-11 place-items-center rounded-full bg-amber-400/10 text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-5" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ </div>
+ <h4 class="mt-3 font-semibold text-white">No connected notes found</h4>
+ <p class="mt-1 text-xs text-zinc-400">Add markdown files to your Obsidian vault to generate the knowledge graph.</p>
+ </div>
+ </div>
+ <!-- Floating Hover Tooltip -->
+ <div
+ x-show="hoveredNode"
+ x-cloak
+ :style="`left: ${tooltipX + 15}px; top: ${tooltipY + 15}px;`"
+ class="pointer-events-none absolute z-30 hidden max-w-xs rounded-2xl border border-zinc-700/80 bg-zinc-950/95 p-3.5 text-xs text-white shadow-2xl backdrop-blur-md sm:block"
+ >
+ <div class="text-sm font-extrabold text-amber-400" x-text="hoveredNode?.name"></div>
+ <div class="mt-0.5 truncate font-mono text-[10px] text-zinc-400" x-text="hoveredNode?.path"></div>
+ <div class="mt-2 flex items-center gap-3 text-[11px] text-zinc-300">
+ <span>Connections: <strong class="font-bold text-white" x-text="hoveredNode?.linksCount"></strong></span>
+ <span>Size: <strong class="font-bold text-white" x-text="`${Math.round((hoveredNode?.size || 0)/1024)} KB`"></strong></span>
+ </div>
+ <div class="mt-2 text-[10px] font-semibold text-amber-400/90">
+ Click to open note 
+ </div>
+ </div>
+ <!-- Zoom & Pan Navigation Controls -->
+ <div class="absolute bottom-4 right-4 z-20 flex items-center gap-1 rounded-xl border border-white/10 bg-zinc-950/90 p-1.5 shadow-xl shadow-black/20 backdrop-blur-md">
+ <button
+ @click="zoomIn()"
+ type="button"
+ class="rounded-lg p-2 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 cursor-pointer"
+ title="Zoom In"
+ aria-label="Zoom in graph"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+</svg>
+ </button>
+ <button
+ @click="zoomOut()"
+ type="button"
+ class="rounded-lg p-2 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 cursor-pointer"
+ title="Zoom Out"
+ aria-label="Zoom out graph"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/>
+</svg>
+ </button>
+ <button
+ @click="resetView()"
+ type="button"
+ class="rounded-lg p-2 text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 cursor-pointer"
+ title="Reset View"
+ aria-label="Reset graph view"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+</svg>
+ </button>
+ </div>
+ </div>
+ <!-- Right: Connected Note Index -->
+ <aside class="flex min-h-0 flex-col border-t border-white/10 bg-zinc-950/80 xl:h-full xl:border-l xl:border-t-0" aria-labelledby="portal-graph-index-title">
+ <div class="border-b border-white/10 px-4 py-3.5">
+ <div class="flex items-center justify-between gap-3">
+ <div>
+ <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Connected Note Index</p>
+ <h4 id="portal-graph-index-title" class="mt-0.5 text-xs font-semibold text-white">Open any document</h4>
+ </div>
+ <kbd class="hidden rounded-md border border-white/10 bg-white/5 px-2 py-0.5 font-mono text-[10px] text-zinc-400 sm:inline">Enter</kbd>
+ </div>
+ </div>
+ <div class="max-h-64 min-h-0 overflow-y-auto p-2.5 xl:max-h-none xl:flex-1" role="region" aria-label="Graph notes" tabindex="0">
+ <ul class="space-y-1" role="list">
+ <template
+ x-for="node in nodes.filter((candidate) => !search || (candidate.name || '').toLowerCase().includes(search.toLowerCase()))"
+ :key="node.id"
+ >
+ <li>
+ <button
+ type="button"
+ @click="selectNode(node)"
+ @keydown="handleNodeKeydown($event, node)"
+ class="group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 cursor-pointer"
+ :aria-label="`Open ${node.name} in the document reader`"
+ >
+ <span class="relative flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-400 transition group-hover:border-amber-400/30 group-hover:bg-amber-400/10 group-hover:text-amber-400">
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-3.5" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span
+ class="absolute -right-0.5 -top-0.5 size-1.5 rounded-full border border-zinc-950"
+ :class="(node.linksCount || 0) > 0 ? 'bg-amber-400' : 'bg-zinc-600'"
+ ></span>
+ </span>
+ <span class="min-w-0 flex-1">
+ <span class="block truncate text-xs font-medium text-zinc-200 group-hover:text-white" x-text="node.name"></span>
+ <span class="mt-0.5 block truncate font-mono text-[10px] text-zinc-500" x-text="node.path"></span>
+ </span>
+ <span class="shrink-0 rounded-full bg-white/5 px-2 py-0.5 text-[9px] font-medium text-zinc-400" x-text="`${node.linksCount || 0} links`"></span>
+ </button>
+ </li>
+ </template>
+ </ul>
+ <div
+ x-show="nodes.length > 0 && nodes.filter((candidate) => !search || (candidate.name || '').toLowerCase().includes(search.toLowerCase())).length === 0"
+ x-cloak
+ class="px-4 py-8 text-center"
+ role="status"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 mx-auto size-5 text-zinc-600" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+</svg>
+ <p class="mt-2 text-xs font-medium text-zinc-300">No notes match this filter</p>
+ <button @click="search = ''" type="button" class="mt-2 text-[11px] font-medium text-amber-400 hover:text-amber-300 focus-visible:outline-none focus-visible:underline cursor-pointer">
+ Clear filter
+ </button>
+ </div>
+ </div>
+ </aside>
+ </div>
+</div>
+ </div>
+ </div>
+ <!-- Mobile Drawer -->
+ <div
+ x-show="$wire.mobileDrawerOpen"
+ class="fixed inset-0 z-50 flex md:hidden bg-black/80 backdrop-blur-md"
+ style="display: none;"
+ >
+ <div
+ x-on:click.outside="$wire.mobileDrawerOpen = false"
+ class="w-4/5 max-w-sm bg-zinc-950 border-r border-zinc-800 p-6 flex flex-col justify-between"
+ >
+ <div class="space-y-6">
+ <div class="flex items-center justify-between">
+ <span class="text-sm font-bold text-white">Vault Notes</span>
+ <button
+ type="button"
+ x-on:click="$wire.mobileDrawerOpen = false"
+ class="text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-5" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+</svg>
+ </button>
+ </div>
+ <nav class="space-y-1 text-xs max-h-[70vh] overflow-y-auto pr-1">
+ <!--[if BLOCK]><![endif]--> <button
+ type="button"
+ wire:click="selectNote('00-Overview/Welcome to Synkk.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left bg-amber-500/10 text-amber-400 font-bold"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Welcome to Synkk</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('01-Quickstart/Installation &amp; Deployment.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Installation &amp; Deployment</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('01-Quickstart/Instant 3-Second QR Pairing.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Instant 3-Second QR Pairing</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('02-Core-Sync/First-Sync Pre-Flight &amp; Migration Engine.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">First-Sync Pre-Flight &amp; Migration Engine</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('02-Core-Sync/Live Multiplayer CRDT &amp; Carets.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Live Multiplayer CRDT &amp; Carets</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('02-Core-Sync/Mobile Ghost Files &amp; Streaming.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Mobile Ghost Files &amp; Streaming</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('03-Security/Atomic Safety Shield &amp; Snapshots.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Atomic Safety Shield &amp; Snapshots</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('03-Security/Role-Based Scoped Permissions.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Role-Based Scoped Permissions</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('03-Security/Zero-Knowledge End-to-End Encryption.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Zero-Knowledge End-to-End Encryption</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('04-Portals/Interactive Livewire Vault Portals.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Interactive Livewire Vault Portals</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('05-AI-Copilot/Vault Copilot &amp; Vector RAG Server.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Vault Copilot &amp; Vector RAG Server</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('06-Self-Hosting/Docker &amp; Turnkey Setup.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">Docker &amp; Turnkey Setup</span>
+ </button>
+ <button
+ type="button"
+ wire:click="selectNote('07-API-Reference/REST API Protocol v2.md')"
+ class="flex w-full items-center gap-2 rounded-xl p-2.5 text-left text-zinc-400 hover:text-white"
+ >
+ <svg class="shrink-0 [:where(&amp;)]:size-6 size-4 shrink-0 text-amber-400" data-flux-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+ <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+</svg>
+ <span class="truncate">REST API Protocol v2</span>
+ </button>
+ <!--[if ENDBLOCK]><![endif]--> </nav>
+ </div>
+ </div>
+ </div>
+ <!--[if ENDBLOCK]><![endif]--></div>
+ <script src="http://localhost/flux/flux.js?id=47e638a1" data-navigate-once></script>
+<!-- Livewire Scripts -->
+<script src="http://localhost/livewire-98bed71a/livewire.js?id=8642c1d5" data-csrf="xVrK8KGsDuCK4YsLAPwRHWyrfBFVOIWP6ydzQtiK" data-module-url="http://localhost/livewire-98bed71a" data-update-uri="http://localhost/livewire-98bed71a/update" data-navigate-once="true"></script>
+</body>
+</html>

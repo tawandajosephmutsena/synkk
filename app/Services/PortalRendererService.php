@@ -130,6 +130,9 @@ class PortalRendererService
         // 8. Resolve [[Wikilinks]] with interactive previews (runs on HTML, skipping <pre> and <code> blocks)
         $html = $this->renderWikilinks($html, $portal, $allFiles);
 
+        // 8.5. Process standard Markdown links to prevent webserver static file intercept
+        $html = $this->renderStandardLinks($html);
+
         // 9. Compute Backlinks for current note
         $backlinks = [];
         if ($currentFile) {
@@ -327,6 +330,26 @@ HTML;
 
             return '<span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[['.$safeLabel.']]</span>';
         }, $text) ?? $text;
+    }
+
+    /**
+     * Rewrite standard standard markdown links targeting .md files to use Livewire's ?note= parameter.
+     * Prevents Nginx/static servers from intercepting valid markdown file routes.
+     */
+    protected function renderStandardLinks(string $html): string
+    {
+        return preg_replace_callback('/<a\s+(?:[^>]*?\s+)?href="([^"]+\.md)"(.*?)>/i', function ($matches) {
+            $href = $matches[1];
+            // Don't intercept absolute URLs
+            if (str_starts_with($href, 'http://') || str_starts_with($href, 'https://')) {
+                return $matches[0];
+            }
+
+            // Re-encode to ensure safe query parameter injection
+            $targetPath = urlencode(urldecode($href));
+
+            return '<a href="?note='.$targetPath.'" wire:navigate'.$matches[2].'>';
+        }, $html) ?? $html;
     }
 
     /**

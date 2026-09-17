@@ -5,12 +5,12 @@ namespace App\Services\QA\DTOs;
 class QAAuditConfig
 {
     /**
-     * @param array<int, string> $browsers
-     * @param array<int, int> $viewports
-     * @param array<int, string> $enabledCategories
-     * @param array<string, int> $timeouts
-     * @param array<int, array<string, string>> $testUsers
-     * @param array<int, string> $excludedTests
+     * @param  array<int, string>  $browsers
+     * @param  array<int, int>  $viewports
+     * @param  array<int, string>  $enabledCategories
+     * @param  array<string, int>  $timeouts
+     * @param  array<int, array<string, string>>  $testUsers
+     * @param  array<int, string>  $excludedTests
      */
     public function __construct(
         public string $baseUrl = 'http://localhost:8000',
