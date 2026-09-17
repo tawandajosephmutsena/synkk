@@ -316,20 +316,22 @@ new #[Title('Vault Details')] class extends Component
             return;
         }
 
-        $rawCiphertext = (string) base64_decode($ciphertextBase64);
-        $effectivePlaintextSize = $plaintextSize > 0 ? $plaintextSize : strlen($rawCiphertext);
-
-        $envelope = new VaultContentEnvelope(
-            payload: $rawCiphertext,
-            payloadSha256: hash('sha256', $rawCiphertext),
-            plaintextSize: $effectivePlaintextSize,
-            encrypted: true,
-            iv: $ivHex,
-            tag: $tagHex,
-            ghost: false,
-            mimeType: 'text/markdown',
-            formatVersion: 2,
+        // Use the validated envelope factory to enforce strict Base64 decoding,
+        // IV/tag hex length rules, and format version requirements (P1-04).
+        $envelope = VaultContentEnvelope::fromValidated(
+            data: [
+                'content_base64' => $ciphertextBase64,
+                'encrypted' => true,
+                'iv' => $ivHex,
+                'tag' => $tagHex,
+                'plaintext_size' => $plaintextSize,
+                'mime_type' => 'text/markdown',
+                'format_version' => 2,
+            ],
+            vault: $this->vault,
         );
+
+        $rawCiphertext = $envelope->payload;
 
         $result = $uploader->execute(
             vault: $this->vault,

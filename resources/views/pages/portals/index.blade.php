@@ -7,6 +7,7 @@ use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -72,7 +73,7 @@ new #[Title('Synkk Portals')] class extends Component {
         $team = $this->team;
 
         $this->validate([
-            'vault_id' => ['required', 'exists:vaults,id'],
+            'vault_id' => ['required', Rule::exists('vaults', 'id')->where('team_id', $team->id)],
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],

@@ -110,9 +110,11 @@ class PortalRendererService
         $callouts = [];
         $processedBody = $this->extractCallouts($processedBody, $callouts);
 
-        // 4. Convert Markdown to HTML via Laravel CommonMark engine
+        // 4. Convert Markdown to HTML via Laravel CommonMark engine.
+        // html_input: 'strip' removes raw HTML blocks before processing,
+        // eliminating the stored XSS vector while preserving all Markdown syntax (P0-04).
         $html = Str::markdown($processedBody, [
-            'html_input' => 'allow',
+            'html_input' => 'strip',
             'allow_unsafe_links' => false,
         ]);
 
@@ -238,7 +240,7 @@ HTML;
 
             $safeTitle = e($title);
             $parsedInner = Str::markdown($innerContent, [
-                'html_input' => 'allow',
+                'html_input' => 'strip', // 'strip' prevents XSS in callout bodies (P0-04)
                 'allow_unsafe_links' => false,
             ]);
 

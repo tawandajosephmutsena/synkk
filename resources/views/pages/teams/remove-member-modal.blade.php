@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\DeviceToken;
 use App\Models\Team;
 use App\Models\User;
 use Flux\Flux;
@@ -40,6 +41,12 @@ new class extends Component {
 
         $this->team->memberships()
             ->where('user_id', $user->id)
+            ->delete();
+
+        // Revoke all device tokens for this user+team pair so removed
+        // members lose sync access immediately (P0-03).
+        DeviceToken::where('user_id', $user->id)
+            ->where('team_id', $this->team->id)
             ->delete();
 
         if ($user->isCurrentTeam($this->team)) {

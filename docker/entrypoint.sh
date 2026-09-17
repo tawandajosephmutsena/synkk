@@ -7,13 +7,14 @@ if [ -n "$PORT" ] && [ "$PORT" != "80" ]; then
     sed -i "s/listen 80;/listen $PORT;/g" /etc/nginx/nginx.conf
 fi
 
-# Ensure APP_KEY exists; auto-generate if empty or unpopulated
+# Require APP_KEY to be set externally — never auto-generate in production.
+# A container-generated key is lost on restart, invalidating sessions and
+# encrypted data. Set APP_KEY in your deployment environment.
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ]; then
-    echo "Generating application encryption key..."
-    if [ ! -f /var/www/html/.env ]; then
-        touch /var/www/html/.env
-    fi
-    php artisan key:generate --force --no-interaction
+    echo "FATAL: APP_KEY environment variable is not set or is empty." >&2
+    echo "Generate a stable key with: php artisan key:generate --show" >&2
+    echo "Then set APP_KEY in your deployment environment or secrets manager." >&2
+    exit 1
 fi
 
 # Ensure SQLite database directory and file exist

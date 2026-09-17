@@ -45,8 +45,21 @@ class extends Component {
             ->where('slug', $slug)
             ->firstOrFail();
 
-        if (! $this->portal->is_public && ! auth()->check()) {
-            abort(403, 'This portal is private.');
+        if (! $this->portal->is_public) {
+            if (! auth()->check()) {
+                abort(403, 'This portal is private.');
+            }
+
+            /** @var \App\Models\User $viewer */
+            $viewer = auth()->user();
+            $isMember = $this->portal->team
+                ->members()
+                ->where('users.id', $viewer->id)
+                ->exists();
+
+            if (! $isMember) {
+                abort(404); // 404 hides portal existence from non-members
+            }
         }
 
         // Check password protection session

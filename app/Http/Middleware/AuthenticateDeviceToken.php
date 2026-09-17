@@ -69,6 +69,20 @@ class AuthenticateDeviceToken
             ], 401);
         }
 
+        // Defense-in-depth: verify the user is still an active member of the token's team.
+        // This catches tokens that were not cleaned up during member removal (P0-03).
+        $isActiveMember = $deviceToken->team
+            ->members()
+            ->where('users.id', $deviceToken->user_id)
+            ->exists();
+
+        if (! $isActiveMember) {
+            return response()->json([
+                'error' => 'Token Revoked',
+                'message' => 'Your team membership has ended. This device token is no longer valid.',
+            ], 401);
+        }
+
         // Remote Device Wipe Check
         if ($deviceToken->is_wiped) {
             return response()->json([
