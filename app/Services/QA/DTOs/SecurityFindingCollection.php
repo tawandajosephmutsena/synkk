@@ -12,7 +12,7 @@ class SecurityFindingCollection
     /**
      * Create a new SecurityFindingCollection instance.
      *
-     * @param  array  $findings  Array of SecurityFinding objects
+     * @param  array<int, SecurityFinding>  $findings  Array of SecurityFinding objects
      */
     public function __construct(array $findings = [])
     {
@@ -30,7 +30,7 @@ class SecurityFindingCollection
     /**
      * Count findings by severity level.
      *
-     * @return array Associative array with severity levels as keys and counts as values
+     * @return array<string, int> Associative array with severity levels as keys and counts as values
      */
     public function countBySeverity(): array
     {
@@ -68,6 +68,8 @@ class SecurityFindingCollection
 
     /**
      * Get all findings as an array.
+     *
+     * @return array<int, array<string, mixed>>
      */
     public function toArray(): array
     {

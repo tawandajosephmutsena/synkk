@@ -11,7 +11,7 @@ class PerformanceMetrics
      * @param  float  $lcp  Largest Contentful Paint in milliseconds
      * @param  float  $tti  Time to Interactive in milliseconds
      * @param  float  $pageLoadTime  Total page load time in milliseconds
-     * @param  array  $resourceTimings  Array of resource timing entries for network requests
+     * @param  array<array-key, mixed>  $resourceTimings  Array of resource timing entries for network requests
      */
     public function __construct(
         public float $fcp,
@@ -35,6 +35,8 @@ class PerformanceMetrics
 
     /**
      * Convert the PerformanceMetrics to an array.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(): array
     {

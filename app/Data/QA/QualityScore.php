@@ -32,6 +32,9 @@ readonly class QualityScore
         };
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         return [

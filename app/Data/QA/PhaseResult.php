@@ -4,6 +4,9 @@ namespace App\Data\QA;
 
 readonly class PhaseResult
 {
+    /**
+     * @param  array<string, mixed>|null  $data
+     */
     public function __construct(
         public string $phase,
         public string $status,
@@ -14,6 +17,9 @@ readonly class PhaseResult
         //
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public static function success(string $phase, array $data = [], ?float $duration = null): self
     {
         return new self(
@@ -46,6 +52,9 @@ readonly class PhaseResult
         return $this->status === 'failed';
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         return [

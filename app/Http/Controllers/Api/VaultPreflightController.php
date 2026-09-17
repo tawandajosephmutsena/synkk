@@ -87,7 +87,8 @@ class VaultPreflightController extends Controller
         $identicalCount = 0;
         $bandwidthSavedBytes = 0;
 
-        if (! empty($validated['files'])) {
+        if (! empty($validated['files']) && is_array($validated['files'])) {
+            /** @var \Illuminate\Support\Collection<int, array<string, mixed>> $clientFiles */
             $clientFiles = collect($validated['files']);
             $clientPathMap = $clientFiles->keyBy('path');
 

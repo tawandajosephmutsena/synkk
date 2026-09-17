@@ -588,7 +588,7 @@ class VaultRagService
         }
 
         // 2. Try OpenAI if configured
-        $openaiKey = config('synkk.rag.openai_api_key') ?: env('OPENAI_API_KEY');
+        $openaiKey = config('synkk.rag.openai_api_key');
         if (! empty($openaiKey)) {
             $openaiModel = (string) config('synkk.rag.openai_model', 'gpt-4o-mini');
             try {

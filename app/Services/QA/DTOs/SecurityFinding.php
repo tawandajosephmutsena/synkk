@@ -13,7 +13,7 @@ class SecurityFinding
      * @param  string  $location  URL, file path, or storage key where the issue was found
      * @param  string  $evidence  The actual data or code snippet demonstrating the issue
      * @param  string  $recommendation  Suggested fix or remediation steps
-     * @param  array  $references  Links to relevant documentation (CWE, OWASP, etc.)
+     * @param  array<int, string>  $references  Links to relevant documentation (CWE, OWASP, etc.)
      */
     public function __construct(
         public string $type,
@@ -27,6 +27,8 @@ class SecurityFinding
 
     /**
      * Convert the SecurityFinding to an array.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(): array
     {

@@ -14,7 +14,8 @@ class PairingBridgeController extends Controller
     public function show(Request $request, QrPairingService $pairingService): View
     {
         $sessionId = (string) $request->query('session', '');
-        $serverUrl = (string) ($request->query('server') ?: url('/api/v1'));
+        $rawServer = $request->query('server');
+        $serverUrl = is_string($rawServer) && $rawServer !== '' ? $rawServer : url('/api/v1');
         $vaultSlug = (string) $request->query('vault', '');
         $version = (string) $request->query('v', '2');
 

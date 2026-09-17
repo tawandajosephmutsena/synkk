@@ -44,9 +44,9 @@ class AppServiceProvider extends ServiceProvider
                     ->first();
             }
 
-            $user = $request->user() ?? $deviceToken?->user;
-            $team = $deviceToken?->team ?? $user?->currentTeam ?? $user?->teams()->first();
-            $userId = $deviceToken?->user_id ?? $user?->id;
+            $user = $request->user() ?? ($deviceToken !== null ? $deviceToken->user : null);
+            $team = ($deviceToken !== null ? $deviceToken->team : null) ?? ($user !== null ? $user->currentTeam : null) ?? $user?->teams()->first();
+            $userId = ($deviceToken !== null ? $deviceToken->user_id : null) ?? ($user !== null ? $user->id : null);
 
             // First: If vault slug exists anywhere in database, return it (controllers enforce team_id matching)
             $existingVault = Vault::where('slug', $value)->first();

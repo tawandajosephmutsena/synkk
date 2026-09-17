@@ -211,7 +211,7 @@ HTML;
 
         return preg_replace_callback($pattern, function ($matches) use (&$callouts) {
             $type = strtoupper(trim($matches[1]));
-            $title = ! empty(trim($matches[3] ?? '')) ? trim($matches[3]) : ucfirst(strtolower($type));
+            $title = trim($matches[3]) !== '' ? trim($matches[3]) : ucfirst(strtolower($type));
             $rawBodyLines = explode("\n", $matches[4]);
 
             $cleanBody = [];

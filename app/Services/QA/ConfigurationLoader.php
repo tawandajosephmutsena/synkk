@@ -52,6 +52,9 @@ class ConfigurationLoader
         $template = QAAuditConfig::getDefaultStructure();
 
         $json = json_encode($template, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            $json = '{}';
+        }
 
         File::put($path, $json);
     }
@@ -59,6 +62,7 @@ class ConfigurationLoader
     /**
      * Validate configuration data and build QAAuditConfig object.
      *
+     * @param  array<string, mixed>  $data
      * @throws ConfigurationException
      */
     private function validateAndBuild(array $data): QAAuditConfig

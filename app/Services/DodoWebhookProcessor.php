@@ -34,13 +34,13 @@ class DodoWebhookProcessor
             throw new InvalidArgumentException('Dodo webhook signature is invalid.');
         }
 
-        /** @var array{type?: string, timestamp?: string, data?: array<string, mixed>} $payload */
         $payload = json_decode($rawBody, true, 512, JSON_THROW_ON_ERROR);
 
         if (! is_array($payload) || ! is_string($payload['type'] ?? null) || ! is_array($payload['data'] ?? null)) {
             throw new UnexpectedValueException('Dodo webhook payload is invalid.');
         }
 
+        /** @var array{type: string, timestamp?: string, data: array<string, mixed>} $payload */
         $eventType = $payload['type'];
         $eventAt = $this->parseDate($payload['timestamp'] ?? null) ?? CarbonImmutable::now();
 
@@ -201,7 +201,7 @@ class DodoWebhookProcessor
         if ($keepCloud) {
             $updates['plan'] = 'cloud';
             $updates['license_status'] = 'active';
-            $updates['license_activated_at'] ??= $team->license_activated_at ?? CarbonImmutable::now();
+            $updates['license_activated_at'] = $team->license_activated_at ?? CarbonImmutable::now();
             $updates['billing_previous_plan'] = $team->billing_previous_plan
                 ?? ($team->plan !== 'cloud' ? $team->plan : null);
         } else {

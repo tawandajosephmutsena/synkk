@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\TeamMessageFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,7 @@ use Illuminate\Support\Carbon;
  */
 class TeamMessage extends Model
 {
+    /** @use HasFactory<TeamMessageFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -41,21 +43,35 @@ class TeamMessage extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Team, $this>
+     */
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @param  Builder<TeamMessage>  $query
+     * @return Builder<TeamMessage>
+     */
     public function scopeUnread(Builder $query): Builder
     {
         return $query->whereNull('read_at');
     }
 
+    /**
+     * @param  Builder<TeamMessage>  $query
+     * @return Builder<TeamMessage>
+     */
     public function scopeForTeam(Builder $query, int $teamId): Builder
     {
         return $query->where('team_id', $teamId);
