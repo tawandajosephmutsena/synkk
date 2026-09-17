@@ -76,8 +76,8 @@
                     <h2 class="text-xl font-bold text-zinc-900 dark:text-white">2. Licensing and Software Editions</h2>
                     <ul class="space-y-3">
                         <li><strong>Synkk Obsidian Plugin:</strong> Distributed under the open-source MIT License. It is free forever and can be used on unlimited devices.</li>
-                        <li><strong>Synkk Community Server (Free &amp; Open Source):</strong> Available under the open-source AGPL-3.0 license for non-commercial and community self-hosting.</li>
-                        <li><strong>Self-Host Pro Commercial License ($79 LTD):</strong> Grants a perpetual, non-exclusive commercial license to run the Synkk server for your business without open-source copyleft restrictions. Includes 1 year of software updates and support.</li>
+                        <li><strong>Synkk Community Server (Free &amp; Open Source):</strong> Distributed under the MIT License included with the source code.</li>
+                        <li><strong>Self-Host Pro Commercial License ($79 LTD):</strong> Grants a perpetual, non-exclusive license to the separately distributed Pro software for internal business use. Includes 1 year of software updates and support, subject to the commercial license supplied at purchase.</li>
                         <li><strong>Synkk Cloud Workspaces ($12/mo Pro / $25/mo Business):</strong> A managed SaaS subscription providing fully hosted, backed-up sync infrastructure with zero server maintenance. A valid payment card is required upfront to initiate the 30-day trial to protect server pools from abuse.</li>
                     </ul>
                 </section>

@@ -392,11 +392,11 @@
                                 <span class="synkk-status-dot" aria-hidden="true"></span> Pillar 04 · Private Intelligence
                             </div>
                             <h3>Intelligent &amp; Agentic on Your Hardware.</h3>
-                            <p>Turn your personal knowledge base into a private AI assistant. Synkk combines sublinear character TF-IDF vector embeddings and local Ollama LLMs with bidirectional wikilink graph traversal. Ask questions of your vault with verified line citations without leaking a single byte to third-party AI APIs.</p>
+                            <p>Turn your personal knowledge base into a private AI assistant. Synkk combines sublinear character TF-IDF vector embeddings and local Ollama LLMs with bidirectional wikilink graph traversal. Local processing is the default; operators can optionally configure OpenAI for answer generation.</p>
                             <ul class="synkk-feature-card__list">
                                 <li><strong>Local Ollama Integration:</strong> Run Llama 3.2 or Nomic Embeddings directly on your machine.</li>
                                 <li><strong>Graph-Augmented RAG:</strong> Traverses backlink connections (<code>[[wikilinks]]</code>) for deep contextual answers.</li>
-                                <li><strong>Zero Cloud Leakage:</strong> 100% private intelligence operating strictly on your hardware.</li>
+                                <li><strong>Local-First Processing:</strong> Deterministic retrieval and Ollama stay on operator-controlled infrastructure unless an external AI provider is explicitly configured.</li>
                             </ul>
                         </div>
                         <div class="synkk-feature-card__media">
@@ -418,10 +418,10 @@
                                 <span class="synkk-status-dot" aria-hidden="true"></span> Pillar 05 · Cryptography
                             </div>
                             <h3>Zero-Knowledge Cryptography &amp; Fleet DLP.</h3>
-                            <p>For organizations with strict compliance requirements, Synkk provides client-side AES-256-GCM encryption with PBKDF2 key derivation. The server stores strictly opaque ciphertext blobs. Leaked credentials (AWS keys, OpenAI tokens, private SSH keys) are caught in real time by the automated DLP scanner before they leave the device.</p>
+                            <p>For organizations with strict security requirements, Synkk provides client-side AES-256-GCM encryption with PBKDF2 key derivation. The server stores opaque ciphertext for encrypted vaults. The server-side DLP scanner can inspect plaintext uploads, but cannot inspect end-to-end encrypted content.</p>
                             <ul class="synkk-feature-card__list">
                                 <li><strong>Client-Side AES-256-GCM:</strong> Keys are derived locally with 100,000 PBKDF2 iterations.</li>
-                                <li><strong>In-App DLP Secret Scanner:</strong> Intercepts high-entropy credential leaks automatically.</li>
+                                <li><strong>Plaintext DLP Secret Scanner:</strong> Flags supported credential patterns when the server can inspect note content.</li>
                                 <li><strong>1-Click Remote Device Wipe:</strong> Revoke compromised device tokens instantly (HTTP 410 purge).</li>
                             </ul>
                         </div>
@@ -592,7 +592,7 @@
                     <article class="synkk-safety-card synkk-safety-card--primary">
                         <div class="synkk-safety-card__top"><span>CORE SERVER</span><strong>PHP 8.5 / LARAVEL 12</strong></div>
                         <h3>High-Throughput Sync API &amp; Web Workspace</h3>
-                        <p>Powered by Laravel 12 on PHP 8.5 with high-concurrency SQLite WAL engine. Delivers sub-15ms sync responses, atomic cache locks for multiplayer carets, and soft-delete tombstone tracking.</p>
+                        <p>Powered by Laravel 13 on PHP 8.5 with a SQLite WAL engine. Uses atomic cache locks for multiplayer coordination and soft-delete tombstones for synchronization history.</p>
                         <div class="synkk-hash-readout">
                             <span>STORAGE ENGINE</span>
                             <code>SQLite WAL / Postgres 15+</code>

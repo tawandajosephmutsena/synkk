@@ -27,3 +27,4 @@ Archive.zip
 # Cookie files must never be committed — they contain session credentials
 cookies.txt
 *.cookies.txt
+graphify-out/

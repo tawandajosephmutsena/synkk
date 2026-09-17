@@ -679,9 +679,9 @@
                         </div>
                         <p class="synkk-eyebrow">Ghost File Dehydration</p>
                         <h2 id="spotlight-ghost-heading">Sync massive archives without filling your phone.</h2>
-                        <p>Large team vaults packed with PDFs, audio recordings, and visual canvas boards shouldn't overwhelm your mobile storage. Synkk replaces heavy attachments with lightweight ghost stubs and hydrates full binary content on demand in under 0.4 seconds upon tap.</p>
+                        <p>Large team vaults packed with PDFs, audio recordings, and visual canvas boards shouldn't overwhelm your mobile storage. Synkk replaces heavy attachments with lightweight metadata stubs and hydrates full binary content on demand.</p>
                         <ul class="synkk-feature-card__list">
-                            <li><strong>Lightweight ghost stubs:</strong> Replaces heavy attachments with 180-byte metadata placeholders.</li>
+                            <li><strong>Lightweight ghost stubs:</strong> Replaces heavy attachments with small metadata placeholders.</li>
                             <li><strong>Sub-second hydration:</strong> Tap any note or trigger ribbon command to pull full content via API.</li>
                             <li><strong>Zero broken links:</strong> Preserves wikilinks, file names, and frontmatter across the entire vault.</li>
                         </ul>
@@ -770,7 +770,7 @@
                     <div class="synkk-spotlight__copy">
                         <div class="synkk-spotlight-badge">
                             <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
-                            <span>Zero Cloud Leakage · Local Ollama &amp; Graph Traversal</span>
+                            <span>Local-First RAG · Ollama &amp; Graph Traversal</span>
                         </div>
                         <p class="synkk-eyebrow">Vault Copilot &amp; Graph RAG</p>
                         <h2 id="spotlight-rag-heading">Ask your vault anything. Keep thoughts confidential.</h2>
@@ -873,7 +873,7 @@
                                     <td class="synkk-col-featured">
                                         <div class="synkk-cell-check">
                                             <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> 100% Local-First</strong>
-                                            <span class="synkk-cell-sub">Private SQLite WAL engine. Your data never touches third-party clouds.</span>
+                                            <span class="synkk-cell-sub">Private SQLite WAL engine. External processing occurs only for services your operator configures.</span>
                                         </div>
                                     </td>
                                     <td>
@@ -1167,7 +1167,7 @@
                                     <td class="synkk-col-featured">
                                         <div class="synkk-cell-check">
                                             <strong><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Ghost Hydration</strong>
-                                            <span class="synkk-cell-sub">180B lightweight stubs; full content hydrates in 380ms upon tap.</span>
+                                            <span class="synkk-cell-sub">Lightweight metadata stubs; full content hydrates on demand.</span>
                                         </div>
                                     </td>
                                     <td>
@@ -1445,7 +1445,7 @@
                                     <p>Transform your static notes into an active reasoning engine. Synkk pairs your 2D <code>[[wikilink]]</code> knowledge graph with local vector embeddings. Run private LLM queries with Ollama or vLLM directly over your notes without exposing proprietary knowledge to third-party AI APIs.</p>
                                     <ul class="synkk-moonshot-features">
                                         <li><strong>Graph-Augmented RAG:</strong> Traverses note backlinks to retrieve deeply connected contextual memory.</li>
-                                        <li><strong>100% Private Embeddings:</strong> Local vector generation ensures zero confidential vault leaks.</li>
+                                        <li><strong>Local Embeddings:</strong> Deterministic vector generation runs on the Synkk server without an external embedding API.</li>
                                         <li><strong>Agentic Retrieval:</strong> Synthesizes verified answers with exact line and note citations.</li>
                                     </ul>
                                 </div>
@@ -1491,11 +1491,11 @@
                             </div>
                             <div class="synkk-moonshot-card__body">
                                 <div class="synkk-moonshot-card__content">
-                                    <h3>Server stores encrypted blobs; web viewer decrypts via WebAssembly/WebCrypto.</h3>
-                                    <p>Maximum cryptographic privacy for regulated and security-sensitive teams. Files are encrypted on your device using AES-256-GCM before transmission. The Synkk server only ever sees opaque ciphertext blobs, while the web workspace decrypts files locally in your browser memory via WebAssembly.</p>
+                                    <h3>Server stores encrypted blobs; supported clients decrypt with WebCrypto.</h3>
+                                    <p>Files are encrypted on supported client devices using AES-256-GCM before transmission. The Synkk server stores and relays opaque ciphertext; encrypted vault content is not available to server-side search, previews, DLP scanning, or RAG.</p>
                                     <ul class="synkk-moonshot-features">
                                         <li><strong>Zero Server Knowledge:</strong> Plaintext notes and encryption keys never touch server disks.</li>
-                                        <li><strong>WebAssembly Decryptor:</strong> High-performance client-side decryption right in your browser.</li>
+                                        <li><strong>WebCrypto Encryption:</strong> Standards-based client-side encryption in supported clients.</li>
                                         <li><strong>Team Key Governance:</strong> Asymmetric key exchange protocols for secure multi-seat sharing.</li>
                                     </ul>
                                 </div>
@@ -1544,14 +1544,14 @@
                     <div class="synkk-spotlight__copy">
                         <div class="synkk-spotlight-badge">
                             <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
-                            <span>Military-Grade Security · Zero-Knowledge E2EE</span>
+                            <span>Client-Side Encryption · AES-256-GCM</span>
                         </div>
                         <p class="synkk-eyebrow">Enterprise Vault Protection</p>
                         <h2 id="spotlight-e2ee-heading">Enterprise privacy on infrastructure you own.</h2>
-                        <p>Every note and attachment is encrypted on your client device using 256-bit AES-GCM with PBKDF2 key derivation before transmission. The Synkk server only ever sees opaque ciphertext blobs. In-app DLP scanning intercepts leaked OpenAI tokens or AWS credentials in real time before they leave your machine.</p>
+                        <p>When E2EE is enabled, notes and attachments are encrypted on the supported client using AES-256-GCM with PBKDF2 key derivation before transmission. The Synkk server stores opaque ciphertext. DLP scanning applies to plaintext uploads and cannot inspect encrypted vault content.</p>
                         <ul class="synkk-feature-card__list">
                             <li><strong>Client-Side AES-256-GCM:</strong> 100,000 PBKDF2 iterations ensure master keys never touch server disks.</li>
-                            <li><strong>High-Entropy DLP Secret Scanner:</strong> Catches leaked AWS, GitHub, Slack, and OpenAI keys instantly.</li>
+                            <li><strong>Plaintext DLP Secret Scanner:</strong> Flags supported AWS, GitHub, Slack, and OpenAI key patterns when content is inspectable.</li>
                             <li><strong>1-Click Fleet Remote Wipe:</strong> Revoke compromised device tokens and trigger automatic local vault purge.</li>
                         </ul>
                         <div class="synkk-spotlight__actions">
@@ -1692,7 +1692,7 @@
 
                     <div class="synkk-pricing-enterprise">
                         <div class="synkk-pricing-enterprise__copy">
-                            <strong>Need custom Kubernetes clusters, air-gapped deployments, or SOC2 compliance?</strong>
+                            <strong>Need custom Kubernetes clusters, air-gapped deployments, or support for your compliance program?</strong>
                             <p>We provide dedicated support channels, IP subnet audit logging, and custom SLAs for enterprise organizations.</p>
                         </div>
                         <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--outline">Book a meeting <span aria-hidden="true">↗</span></a>

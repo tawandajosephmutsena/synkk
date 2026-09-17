@@ -107,7 +107,7 @@ test('the landing page presents the synkk moonshot engine with its 4 core pillar
         ->assertSee('AGENTIC KNOWLEDGE GRAPH &amp; RAG SERVER', escape: false)
         ->assertSee('Self-hosted vector embeddings &amp; local LLM chat answering questions from your vault', escape: false)
         ->assertSee('ZERO-KNOWLEDGE TEAM E2EE (CLIENT-SIDE ENCRYPTION)')
-        ->assertSee('Server stores encrypted blobs; web viewer decrypts via WebAssembly/WebCrypto');
+        ->assertSee('Server stores encrypted blobs; supported clients decrypt with WebCrypto');
 });
 
 test('the landing page clearly separates the public plugin from the server launch roadmap', function () {

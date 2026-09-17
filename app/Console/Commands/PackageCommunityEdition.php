@@ -13,24 +13,39 @@ use ZipArchive;
 #[Description('Build, sanitize, and package the open-source Community Edition (CE) distribution')]
 class PackageCommunityEdition extends Command
 {
-    /**
-     * Files and patterns strictly excluded from the Community Edition.
-     *
-     * @var array<int, string>
-     */
-    protected array $excludedFromCommunity = [
+    /** @var array<int, string> */
+    protected array $sourceDirectories = [
+        'app',
+        'config',
+        'database/factories',
+        'database/migrations',
+        'database/seeders',
+        'public',
+        'resources',
+        'routes',
+    ];
+
+    /** @var array<int, string> */
+    protected array $excludedPaths = [
         'resources/views/pages/admin',
         'app/Http/Controllers/Admin',
         'app/Http/Middleware/EnsureSuperAdmin.php',
-        '.env',
-        '.git',
-        'node_modules',
-        'vendor',
-        'storage/app',
-        'storage/framework/cache',
-        'storage/framework/sessions',
-        'storage/framework/views',
-        'storage/logs',
+        'public/hot',
+        'public/storage',
+    ];
+
+    /** @var array<int, string> */
+    protected array $forbiddenArchivePatterns = [
+        '#(^|/)\.env(?:$|\.(?!example$))#i',
+        '#(^|/)\.git(?:/|$)#i',
+        '#(^|/)\.DS_Store$#i',
+        '#(^|/)cookies(?:\.[^/]+)?\.txt$#i',
+        '#(^|/)database/.*\.(?:sqlite|sqlite3|db)(?:[-.].*)?$#i',
+        '#(^|/)database/.*\.backup(?:[-.].*)?$#i',
+        '#(^|/)bootstrap/cache/#i',
+        '#(^|/)storage/#i',
+        '#(^|/)node_modules/#i',
+        '#(^|/)vendor/#i',
     ];
 
     /**
@@ -60,27 +75,19 @@ class PackageCommunityEdition extends Command
         $totalFiles = 0;
         $excludedCount = 0;
 
-        $directoriesToScan = [
-            'app',
-            'bootstrap',
-            'config',
-            'database',
-            'public',
-            'resources',
-            'routes',
-            'tests',
-        ];
-
         $rootFiles = [
             'artisan',
+            'bootstrap/app.php',
+            'bootstrap/providers.php',
             'composer.json',
             'composer.lock',
             'package.json',
             'package-lock.json',
             'vite.config.js',
-            'phpunit.xml',
             '.env.example',
             '.dockerignore',
+            '.gitignore',
+            'LICENSE',
             'README.md',
             'Dockerfile',
             'docker-compose.yml',
@@ -96,7 +103,7 @@ class PackageCommunityEdition extends Command
         }
 
         // Add scanned directories while omitting commercial files
-        foreach ($directoriesToScan as $dir) {
+        foreach ($this->sourceDirectories as $dir) {
             $fullDirPath = "{$basePath}/{$dir}";
             if (! is_dir($fullDirPath)) {
                 continue;
@@ -115,7 +122,7 @@ class PackageCommunityEdition extends Command
                 $filePath = $item->getRealPath();
                 $relativePath = substr($filePath, strlen($basePath) + 1);
 
-                if ($this->shouldExclude($relativePath)) {
+                if ($this->shouldExclude($relativePath) || $item->isLink()) {
                     $excludedCount++;
 
                     continue;
@@ -126,30 +133,16 @@ class PackageCommunityEdition extends Command
             }
         }
 
-        // Include Obsidian plugin if present
-        $obsidianPluginDir = "{$basePath}/obsidian-plugin";
-        if (is_dir($obsidianPluginDir)) {
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($obsidianPluginDir, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::SELF_FIRST
-            );
-
-            foreach ($iterator as $item) {
-                if ($item->isDir()) {
-                    continue;
-                }
-
-                $filePath = $item->getRealPath();
-                $relativePath = substr($filePath, strlen($basePath) + 1);
-
-                if (! str_contains($relativePath, 'node_modules')) {
-                    $zip->addFile($filePath, $relativePath);
-                    $totalFiles++;
-                }
-            }
-        }
+        $totalFiles += $this->addPluginSources($zip, $basePath);
 
         $zip->close();
+
+        if (! $this->archiveIsSafe($outputPath)) {
+            @unlink($outputPath);
+            $this->error('Package safety verification failed. The archive was deleted.');
+
+            return self::FAILURE;
+        }
 
         $sizeMb = round(filesize($outputPath) / (1024 * 1024), 2);
 
@@ -166,12 +159,90 @@ class PackageCommunityEdition extends Command
      */
     protected function shouldExclude(string $relativePath): bool
     {
-        foreach ($this->excludedFromCommunity as $excluded) {
+        foreach ($this->excludedPaths as $excluded) {
             if (str_starts_with($relativePath, $excluded) || str_contains($relativePath, "/{$excluded}/")) {
                 return true;
             }
         }
 
+        foreach ($this->forbiddenArchivePatterns as $pattern) {
+            if (preg_match($pattern, $relativePath) === 1) {
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    protected function addPluginSources(ZipArchive $zip, string $basePath): int
+    {
+        $pluginRoot = "{$basePath}/obsidian-plugin";
+        $pluginPaths = [
+            'src',
+            'esbuild.config.mjs',
+            'main.js',
+            'manifest.json',
+            'package.json',
+            'package-lock.json',
+            'styles.css',
+            'tsconfig.json',
+            'versions.json',
+        ];
+        $included = 0;
+
+        foreach ($pluginPaths as $pluginPath) {
+            $absolutePath = "{$pluginRoot}/{$pluginPath}";
+            if (is_file($absolutePath)) {
+                $zip->addFile($absolutePath, "obsidian-plugin/{$pluginPath}");
+                $included++;
+
+                continue;
+            }
+
+            if (! is_dir($absolutePath)) {
+                continue;
+            }
+
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($absolutePath, RecursiveDirectoryIterator::SKIP_DOTS),
+            );
+
+            foreach ($iterator as $item) {
+                if (! $item->isFile() || $item->isLink()) {
+                    continue;
+                }
+
+                $relativePath = substr($item->getRealPath(), strlen($basePath) + 1);
+                if ($this->shouldExclude($relativePath)) {
+                    continue;
+                }
+
+                $zip->addFile($item->getRealPath(), $relativePath);
+                $included++;
+            }
+        }
+
+        return $included;
+    }
+
+    protected function archiveIsSafe(string $outputPath): bool
+    {
+        $zip = new ZipArchive;
+        if ($zip->open($outputPath) !== true) {
+            return false;
+        }
+
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $entry = $zip->getNameIndex($index);
+            if ($entry === false || $this->shouldExclude($entry)) {
+                $zip->close();
+
+                return false;
+            }
+        }
+
+        $zip->close();
+
+        return true;
     }
 }

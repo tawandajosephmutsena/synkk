@@ -69,19 +69,8 @@ class VaultSyncController extends Controller
     {
         /** @var DeviceToken $deviceToken */
         $deviceToken = $request->attributes->get('device_token');
-        $user = $deviceToken->user;
         $team = $deviceToken->team;
-
-        if ($team->vaults()->count() === 0) {
-            Vault::create([
-                'team_id' => $team->id,
-                'name' => 'Demo Vault',
-                'slug' => 'demo-vault',
-                'description' => 'Default vault for Obsidian sync',
-                'default_permission' => 'read_write',
-                'created_by' => $user->id,
-            ]);
-        }
+        $user = $deviceToken->user;
 
         $vaults = $team->vaults()
             ->withCount(['files' => fn ($q) => $q->where('is_deleted', false)])

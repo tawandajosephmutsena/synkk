@@ -78,7 +78,7 @@ test('portals studio index displays team portals and metrics', function () {
         ->assertSee('/p/public-docs');
 });
 
-test('team member can create a new portal via studio', function () {
+test('team owner can create a new portal via studio', function () {
     Livewire::test('pages::portals.index', ['current_team' => $this->team->slug])
         ->call('openCreateModal')
         ->assertDispatched('modal-show', name: 'portal-modal')
@@ -97,6 +97,17 @@ test('team member can create a new portal via studio', function () {
         ->and($portal->name)->toBe('Product Blueprint')
         ->and($portal->layout)->toBe('bento')
         ->and($portal->theme)->toBe('midnight-emerald');
+});
+
+test('regular team member cannot manage portals', function () {
+    $member = User::factory()->create();
+    $this->team->members()->attach($member, ['role' => 'member']);
+    $member->switchTeam($this->team);
+    $this->actingAs($member);
+
+    Livewire::test('pages::portals.index', ['current_team' => $this->team->slug])
+        ->call('openCreateModal')
+        ->assertForbidden();
 });
 
 test('editing a portal dispatches modal-show and populates state', function () {

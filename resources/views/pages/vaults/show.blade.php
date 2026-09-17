@@ -3659,7 +3659,7 @@ new #[Title('Vault Details')] class extends Component
 
                                     <!-- Markdown Answer -->
                                     <div class="prose prose-sm dark:prose-invert max-w-none text-zinc-800 dark:text-zinc-200 leading-relaxed">
-                                        {!! \Illuminate\Support\Str::markdown($msg['content']) !!}
+                                        {!! \Illuminate\Support\Str::markdown($msg['content'], ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                                     </div>
 
                                     <!-- Verified Citations -->

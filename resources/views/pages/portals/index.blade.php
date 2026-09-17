@@ -6,6 +6,7 @@ use App\Models\VaultPortal;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -36,6 +37,7 @@ new #[Title('Synkk Portals')] class extends Component {
 
     public function openCreateModal(): void
     {
+        Gate::authorize('update', $this->team);
         $this->resetForm();
         if ($this->vaults->isNotEmpty()) {
             $this->vault_id = $this->vaults->first()->id;
@@ -46,6 +48,7 @@ new #[Title('Synkk Portals')] class extends Component {
 
     public function editPortal(int $id): void
     {
+        Gate::authorize('update', $this->team);
         $portal = $this->team->portals()->findOrFail($id);
 
         $this->editingPortalId = $portal->id;
@@ -71,6 +74,7 @@ new #[Title('Synkk Portals')] class extends Component {
     public function savePortal(): void
     {
         $team = $this->team;
+        Gate::authorize('update', $team);
 
         $this->validate([
             'vault_id' => ['required', Rule::exists('vaults', 'id')->where('team_id', $team->id)],
@@ -142,6 +146,7 @@ new #[Title('Synkk Portals')] class extends Component {
 
     public function deletePortal(int $id): void
     {
+        Gate::authorize('update', $this->team);
         $portal = $this->team->portals()->findOrFail($id);
         $name = $portal->name;
         $portal->delete();

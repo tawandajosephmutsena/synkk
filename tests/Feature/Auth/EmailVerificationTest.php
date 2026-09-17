@@ -13,6 +13,24 @@ test('email verification screen can be rendered', function () {
     $response->assertOk();
 });
 
+test('unverified users cannot access team application routes', function () {
+    $user = User::factory()->unverified()->create();
+    $team = $user->personalTeam();
+
+    $this->actingAs($user)
+        ->get(route('dashboard', ['current_team' => $team->slug]))
+        ->assertRedirect(route('verification.notice'));
+});
+
+test('verified users can access team application routes', function () {
+    $user = User::factory()->create();
+    $team = $user->personalTeam();
+
+    $this->actingAs($user)
+        ->get(route('dashboard', ['current_team' => $team->slug]))
+        ->assertOk();
+});
+
 test('email can be verified', function () {
     $user = User::factory()->unverified()->create();
     $team = $user->personalTeam();

@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use App\Models\Vault;
+use App\Models\VaultPortal;
 use Livewire\Livewire;
 
 test('profile page is displayed', function () {
@@ -58,6 +60,40 @@ test('user can delete their account', function () {
 
     expect($user->fresh())->toBeNull();
     expect(auth()->check())->toBeFalse();
+});
+
+test('deleting an account preserves shared team vault data', function () {
+    $user = User::factory()->create();
+    $remainingMember = User::factory()->create();
+    $team = $user->personalTeam();
+    $team->members()->attach($remainingMember, ['role' => 'admin']);
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Shared Knowledge',
+        'slug' => 'shared-knowledge',
+        'created_by' => $user->id,
+    ]);
+    $portal = VaultPortal::create([
+        'team_id' => $team->id,
+        'vault_id' => $vault->id,
+        'created_by' => $user->id,
+        'name' => 'Shared Portal',
+        'slug' => 'shared-portal',
+    ]);
+
+    $this->actingAs($user);
+
+    Livewire::test('pages::settings.delete-user-modal')
+        ->set('password', 'password')
+        ->call('deleteUser')
+        ->assertHasNoErrors();
+
+    expect($user->fresh())->toBeNull()
+        ->and($vault->fresh())->not->toBeNull()
+        ->and($vault->fresh()->created_by)->toBeNull()
+        ->and($portal->fresh())->not->toBeNull()
+        ->and($portal->fresh()->created_by)->toBeNull()
+        ->and($remainingMember->belongsToTeam($team))->toBeTrue();
 });
 
 test('correct password must be provided to delete account', function () {

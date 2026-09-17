@@ -42,5 +42,14 @@ jobs:
           npx --prefix obsidian-plugin tsc --project obsidian-plugin/tsconfig.json --noEmit --skipLibCheck
           npm run test:js
 
+      - name: Audit production dependencies
+        run: |
+          composer audit --locked --no-interaction
+          npm audit --omit=dev --audit-level=high
+          npm audit --prefix obsidian-plugin --omit=dev --audit-level=high
+
       - name: Run CI Checks
         run: composer ci:check
+
+      - name: Build production container
+        run: docker build --tag synkk-ci:${{ github.sha }} .

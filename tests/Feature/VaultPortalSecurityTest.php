@@ -306,6 +306,64 @@ test('model prevents saving a portal with a primary file belonging to a differen
     })->toThrow(InvalidArgumentException::class, 'Vault integrity violation: Primary file does not belong to the portal vault.');
 });
 
+test('model revalidates tenant isolation after a vault relation was loaded', function () {
+    $portal = VaultPortal::create([
+        'team_id' => $this->team->id,
+        'vault_id' => $this->vault->id,
+        'name' => 'Loaded Relation Portal',
+        'slug' => 'loaded-relation-portal',
+        'layout' => 'docs',
+        'theme' => 'obsidian-noir',
+        'created_by' => $this->user->id,
+    ]);
+    $portal->load('vault');
+
+    $foreignTeam = Team::factory()->create();
+    $foreignVault = Vault::create([
+        'team_id' => $foreignTeam->id,
+        'name' => 'Foreign Vault',
+        'slug' => 'foreign-loaded-vault',
+        'created_by' => User::factory()->create()->id,
+    ]);
+
+    expect(fn () => $portal->forceFill(['vault_id' => $foreignVault->id])->save())
+        ->toThrow(InvalidArgumentException::class, 'Cross-tenant violation');
+});
+
+test('model revalidates file integrity after a primary file relation was loaded', function () {
+    $portal = VaultPortal::create([
+        'team_id' => $this->team->id,
+        'vault_id' => $this->vault->id,
+        'primary_file_id' => $this->file1->id,
+        'name' => 'Loaded File Portal',
+        'slug' => 'loaded-file-portal',
+        'layout' => 'docs',
+        'theme' => 'obsidian-noir',
+        'created_by' => $this->user->id,
+    ]);
+    $portal->load('primaryFile');
+
+    $otherVault = Vault::create([
+        'team_id' => $this->team->id,
+        'name' => 'Other Vault',
+        'slug' => 'other-loaded-vault',
+        'created_by' => $this->user->id,
+    ]);
+    $foreignFile = VaultFile::create([
+        'vault_id' => $otherVault->id,
+        'path' => 'Foreign.md',
+        'storage_path' => 'vaults/'.$otherVault->id.'/Foreign.md',
+        'sha256' => hash('sha256', 'foreign'),
+        'size' => 7,
+        'mime_type' => 'text/markdown',
+        'version' => 1,
+        'is_deleted' => false,
+    ]);
+
+    expect(fn () => $portal->forceFill(['primary_file_id' => $foreignFile->id])->save())
+        ->toThrow(InvalidArgumentException::class, 'Vault integrity violation');
+});
+
 // =========================================================================
 // P1-08: Customer Legal & Privacy Surface Endpoints
 // =========================================================================

@@ -31,7 +31,7 @@ new class extends Component {
             <flux:heading size="lg">{{ __('Are you sure you want to delete your account?') }}</flux:heading>
 
             <flux:subheading>
-                {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
+                {{ __('Your account, credentials, and device tokens will be permanently deleted. Content in shared team workspaces remains available to other members. Please enter your password to confirm.') }}
             </flux:subheading>
         </div>
 

@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\DeviceToken;
+use App\Models\Team;
+use App\Models\User;
 use App\Models\Vault;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -13,7 +15,6 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
@@ -37,50 +38,34 @@ class AppServiceProvider extends ServiceProvider
             $request = request();
             /** @var DeviceToken|null $deviceToken */
             $deviceToken = $request->attributes->get('device_token');
+            $bearerToken = $request->bearerToken();
 
-            if (! $deviceToken && $request->bearerToken()) {
-                $deviceToken = DeviceToken::with(['user', 'team'])
-                    ->where('token_hash', hash('sha256', $request->bearerToken()))
+            if (! $deviceToken instanceof DeviceToken && filled($bearerToken)) {
+                $deviceToken = DeviceToken::with('team')
+                    ->where('token_hash', hash('sha256', $bearerToken))
                     ->first();
+
+                abort_unless($deviceToken instanceof DeviceToken, 401, 'Unauthenticated.');
             }
 
-            $user = $request->user() ?? ($deviceToken !== null ? $deviceToken->user : null);
-            $team = ($deviceToken !== null ? $deviceToken->team : null) ?? ($user !== null ? $user->currentTeam : null) ?? $user?->teams()->first();
-            $userId = ($deviceToken !== null ? $deviceToken->user_id : null) ?? ($user !== null ? $user->id : null);
+            $user = $request->user();
+            $routeTeam = $request->route('current_team');
+            $team = match (true) {
+                $deviceToken instanceof DeviceToken => $deviceToken->team,
+                $routeTeam instanceof Team => $routeTeam,
+                is_string($routeTeam) => Team::where('slug', $routeTeam)->first(),
+                $user instanceof User => $user->currentTeam ?? $user->teams()->first(),
+                default => null,
+            };
 
-            // First: If vault slug exists anywhere in database, return it (controllers enforce team_id matching)
-            $existingVault = Vault::where('slug', $value)->first();
-            if ($existingVault) {
-                return $existingVault;
+            if ($team === null) {
+                return Vault::where('slug', $value)->firstOrFail();
             }
 
-            // Second: If slug does not exist anywhere and request is authenticated, auto-create for current team
-            if ($team) {
-                $slug = Str::slug($value);
-                if (empty($slug)) {
-                    $slug = 'vault-'.Str::random(6);
-                }
-
-                $name = Str::headline($value);
-                if (empty($name)) {
-                    $name = 'New Vault';
-                }
-
-                return Vault::firstOrCreate(
-                    [
-                        'team_id' => $team->id,
-                        'slug' => $slug,
-                    ],
-                    [
-                        'name' => $name,
-                        'description' => "Auto-created vault for {$name}",
-                        'default_permission' => 'read_write',
-                        'created_by' => $userId ?? 1,
-                    ]
-                );
-            }
-
-            abort(404, "Vault '{$value}' not found.");
+            return Vault::query()
+                ->where('team_id', $team->id)
+                ->where('slug', $value)
+                ->firstOrFail();
         });
     }
 

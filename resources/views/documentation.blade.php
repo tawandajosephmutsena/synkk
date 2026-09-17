@@ -322,7 +322,7 @@
 
                         <h3>Storage Directory Layout</h3>
                         <p>
-                            On the server side (Laravel 12 + SQLite WAL), files are organized by tenant, team, and vault:
+                            On the server side (Laravel 13 + SQLite WAL), files are organized by tenant, team, and vault:
                         </p>
                         <div class="synkk-code-box">
                             <div class="synkk-code-box__header">
@@ -887,7 +887,7 @@ volumes:
                                 <span class="px-2 py-0.5 rounded bg-emerald-700 text-white font-mono text-[10px] uppercase font-bold">Phase 3 · Live</span>
                                 <h4 class="font-bold text-base mt-2 mb-1">Agentic Knowledge &amp; RAG</h4>
                                 <p class="text-xs text-emerald-900 leading-relaxed">
-                                    Self-hosted vector embeddings, hybrid semantic search, [[wikilink]] graph traversal, and private local LLM copilots querying your vault with zero cloud leakage.
+                                    Self-hosted vector embeddings, hybrid semantic search, [[wikilink]] graph traversal, and local-first LLM copilots. Vault excerpts are sent externally only when an operator configures an external AI provider.
                                 </p>
                             </div>
                             <div class="p-4 rounded-xl border border-amber-500/30 bg-amber-50 text-amber-950">

@@ -78,17 +78,19 @@ Route::get('docs', function () {
     return redirect()->route('public.docs');
 })->name('docs.redirect');
 
-Route::prefix('admin')
-    ->middleware(['auth', 'verified', EnsureSuperAdmin::class])
-    ->group(function () {
-        Route::livewire('/', 'pages::admin.dashboard')->name('admin.dashboard');
-        Route::livewire('dashboard', 'pages::admin.dashboard');
-        Route::post('impersonate/{user}', [ImpersonationController::class, 'start'])->name('admin.impersonate');
-    });
+if (class_exists(EnsureSuperAdmin::class) && class_exists(ImpersonationController::class)) {
+    Route::prefix('admin')
+        ->middleware(['auth', 'verified', EnsureSuperAdmin::class])
+        ->group(function () {
+            Route::livewire('/', 'pages::admin.dashboard')->name('admin.dashboard');
+            Route::livewire('dashboard', 'pages::admin.dashboard');
+            Route::post('impersonate/{user}', [ImpersonationController::class, 'start'])->name('admin.impersonate');
+        });
 
-Route::post('admin/stop-impersonation', [ImpersonationController::class, 'stop'])
-    ->middleware(['auth'])
-    ->name('admin.stop-impersonation');
+    Route::post('admin/stop-impersonation', [ImpersonationController::class, 'stop'])
+        ->middleware(['auth'])
+        ->name('admin.stop-impersonation');
+}
 
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])

@@ -19,12 +19,12 @@ use Illuminate\Support\Str;
  * @property string $slug
  * @property string|null $description
  * @property string $default_permission
- * @property int $created_by
+ * @property int|null $created_by
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  * @property-read Team $team
- * @property-read User $creator
+ * @property-read User|null $creator
  * @property-read Collection<int, VaultFile> $files
  * @property-read Collection<int, VaultPermission> $permissions
  * @property-read Collection<int, VaultChangeLog> $changeLogs

@@ -75,7 +75,7 @@
                 <section class="space-y-4">
                     <h2 class="text-xl font-bold text-zinc-900 dark:text-white">2. Controller vs. Processor Roles</h2>
                     <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 space-y-2">
-                        <p><strong>Self-Hosted Deployments (Synkk Community &amp; Self-Host Pro LTD):</strong> When you self-host the Synkk server via Docker or on your own infrastructure, <strong>you are the sole Data Controller and Data Processor</strong>. Zero telemetry, vault content, tokens, or personal identifiers are transmitted to Ottomate servers.</p>
+                        <p><strong>Self-Hosted Deployments (Synkk Community &amp; Self-Host Pro LTD):</strong> When you self-host the Synkk server via Docker or on your own infrastructure, you control that deployment and its data-processing configuration. Synkk does not send product telemetry to Ottomate by default. Data can leave your infrastructure when you configure external services such as payment, licensing, email, edge-network, or AI providers.</p>
                         <p><strong>Synkk Cloud (Managed SaaS):</strong> When you use our hosted workspaces, you remain the Data Controller of your vault content. Ottomate acts as a <strong>Data Processor</strong> under GDPR Article 28, operating strictly on your documented instructions.</p>
                     </div>
                 </section>
@@ -91,7 +91,8 @@
                         <li><strong>Account Identification:</strong> Name, email address, and argon2id-hashed passwords for authentication and account recovery.</li>
                         <li><strong>Payment Information:</strong> Subscription and license transactions are processed through our Merchant of Record, <strong>Dodo Payments Inc.</strong> Ottomate does not collect, process, or store payment card numbers or banking credentials.</li>
                         <li><strong>Device Tokens &amp; Pairing Telemetry:</strong> Cryptographically generated high-entropy bearer tokens (`synkk_live_...`) to authorize individual Obsidian client devices and enforce team access permissions.</li>
-                        <li><strong>System Logs:</strong> Aggregated HTTP access logs (IP addresses, request timestamps, user-agent) retained for 14 days solely for rate limiting, DDoS defense, and malicious abuse prevention.</li>
+                        <li><strong>System Logs:</strong> HTTP access and security logs may include IP addresses, request timestamps, and user-agent information. Retention is limited according to the documented production policy and infrastructure configuration.</li>
+                        <li><strong>Optional AI Processing:</strong> Vault excerpts and prompts are sent to an external AI provider only when an operator configures that provider and enables the applicable RAG workflow. End-to-end encrypted vault content cannot be processed by server-side RAG while it remains encrypted.</li>
                     </ul>
                 </section>
 
@@ -119,6 +120,11 @@
                                     <td class="p-3 border border-zinc-200 dark:border-zinc-800">European Union (Germany)</td>
                                 </tr>
                                 <tr>
+                                    <td class="p-3 border border-zinc-200 dark:border-zinc-800 font-medium">OpenAI, L.L.C. (optional)</td>
+                                    <td class="p-3 border border-zinc-200 dark:border-zinc-800">AI response generation only when an operator configures an OpenAI API key</td>
+                                    <td class="p-3 border border-zinc-200 dark:border-zinc-800">United States / provider-selected processing regions</td>
+                                </tr>
+                                <tr>
                                     <td class="p-3 border border-zinc-200 dark:border-zinc-800 font-medium">Dodo Payments Inc.</td>
                                     <td class="p-3 border border-zinc-200 dark:border-zinc-800">Payment Processing &amp; Tax Compliance (Merchant of Record)</td>
                                     <td class="p-3 border border-zinc-200 dark:border-zinc-800">United States / Global</td>
@@ -135,7 +141,7 @@
 
                 <section class="space-y-4">
                     <h2 class="text-xl font-bold text-zinc-900 dark:text-white">7. Data Retention &amp; Deletion Rights</h2>
-                    <p>When you delete a vault or team workspace in Synkk, all associated files, snapshots, versions, and tokens are permanently removed from production databases and file storage within 24 hours. Under the GDPR, CCPA, and applicable laws, you retain the right to:</p>
+                    <p>Deletion removes or deactivates data from active production systems according to the product workflow and the documented retention schedule. Residual encrypted backups and security logs may persist for a limited period before scheduled expiry. Under the GDPR, CCPA, and applicable laws, you retain the right to:</p>
                     <ul class="list-disc pl-6 space-y-1.5">
                         <li>Request a portable export of your account and team data.</li>
                         <li>Request immediate and irreversible deletion of your account and personal identifiers.</li>
