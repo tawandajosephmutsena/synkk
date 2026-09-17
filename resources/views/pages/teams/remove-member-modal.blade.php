@@ -4,6 +4,7 @@ use App\Models\DeviceToken;
 use App\Models\Team;
 use App\Models\User;
 use Flux\Flux;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
@@ -26,7 +27,7 @@ new class extends Component {
         $this->team = $team;
         $this->memberId = $memberId;
         $this->memberName = $memberName ?? '';
-        $this->modalName = $modalName ?? ($memberId ? "remove-member-{$memberId}" : 'remove-member');
+        $this->modalName = $modalName ?? 'remove-member';
     }
 
     public function removeMember(): void
@@ -39,19 +40,21 @@ new class extends Component {
             $this->memberName = $user->name;
         }
 
-        $this->team->memberships()
-            ->where('user_id', $user->id)
-            ->delete();
+        DB::transaction(function () use ($user) {
+            $this->team->memberships()
+                ->where('user_id', $user->id)
+                ->delete();
 
-        // Revoke all device tokens for this user+team pair so removed
-        // members lose sync access immediately (P0-03).
-        DeviceToken::where('user_id', $user->id)
-            ->where('team_id', $this->team->id)
-            ->delete();
+            // Revoke all device tokens for this user+team pair so removed
+            // members lose sync access immediately (P0-03 & P2-02).
+            DeviceToken::where('user_id', $user->id)
+                ->where('team_id', $this->team->id)
+                ->delete();
 
-        if ($user->isCurrentTeam($this->team)) {
-            $user->switchTeam($user->personalTeam());
-        }
+            if ($user->isCurrentTeam($this->team)) {
+                $user->switchTeam($user->personalTeam());
+            }
+        });
 
         $this->dispatch('close-modal', name: $this->modalName);
 

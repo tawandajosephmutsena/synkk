@@ -80,7 +80,7 @@ new #[Title('Synkk Portals')] class extends Component {
             'layout' => ['required', 'in:docs,bento,dashboard,minimal'],
             'theme' => ['required', 'in:obsidian-noir,slate-luxe,midnight-emerald,paper-craft,amber-gold'],
             'root_path' => ['nullable', 'string', 'max:255'],
-            'password' => ['nullable', 'string', 'min:4'],
+            'password' => ['nullable', 'string', 'min:8'],
             'is_public' => ['boolean'],
         ]);
 

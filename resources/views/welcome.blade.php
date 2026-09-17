@@ -2013,6 +2013,9 @@
                         <a href="#faq">FAQ</a>
                         <a href="{{ route('about') }}">About</a>
                         <a href="{{ route('public.docs') }}">Documentation</a>
+                        <a href="{{ route('privacy') }}">Privacy</a>
+                        <a href="{{ route('terms') }}">Terms</a>
+                        <a href="{{ route('security') }}">Security</a>
                         <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
                     </nav>
                 </div>

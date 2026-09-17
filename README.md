@@ -93,14 +93,14 @@ docker compose up -d
 - Commercial license: Lemon Squeezy checkout is enabled only after the live product, checkout, and activation flow are verified end to end.
 - AppSumo: planned after the GitHub public release and production checkout are stable.
 
-## Current Limits & Planned Milestones
+## Current Architecture & Capabilities
 
-Synkk Foundation ships reliable whole-file sync, pre-flight migration safety, instant QR pairing, and livewire vault portals. Next milestones on our active development horizon:
+Synkk ships reliable whole-file sync, pre-flight migration safety, instant QR pairing, livewire vault portals, real-time CodeMirror 6 CRDT collaboration, client-side AES-256-GCM E2EE, and on-demand mobile ghost files. Next milestones on our active development horizon:
 
-- **Zero-Knowledge E2EE:** Client-side XChaCha20-Poly1305 encryption before network transport for compliance-regulated teams.
-- **Mobile Ghost Files:** Metadata-only stubs for large multimedia archives with sub-second on-demand binary streaming.
-- **Live Multiplayer CRDT:** Character-level real-time multiplayer editing via Yjs (`y-codemirror.next`) with active collaborator carets.
-- **Vault Copilot & Local RAG:** Self-hosted vector embeddings and private Ollama/vLLM LLM querying over your vault graph.
+- **Webhooks & Automated Relays:** Event-driven HTTP relays triggered on note lifecycle changes and sync completions.
+- **Federated Multi-Server Mesh:** Inter-cluster vault synchronization between self-hosted team servers.
+- **Vault Copilot & Local RAG:** Private Ollama/vLLM vector embeddings and neural graph querying.
+- **Enterprise SIEM Streaming:** Immutable structured audit log export to Datadog, Splunk, or OpenTelemetry.
 
 ## Install The Plugin
 
@@ -109,10 +109,10 @@ Build the plugin from `obsidian-plugin/`:
 ```bash
 cd obsidian-plugin
 npm ci
-npm run build
+npm run check
 ```
 
-Install `main.js`, `manifest.json`, and `styles.css` in `<vault>/.obsidian/plugins/synkk-sync/`, then configure an HTTPS Synkk API endpoint ending in `/api/v1` and a device token from the dashboard (or scan the Instant QR Code).
+Install `main.js`, `manifest.json`, and `styles.css` in `<vault>/.obsidian/plugins/synkk-sync/`, or install directly from Obsidian's official Community Plugins directory (`obsidian://show-plugin?id=synkk-sync`). Then configure an HTTPS Synkk API endpoint ending in `/api/v1` and a device token from the dashboard (or scan the Instant QR Code).
 
 ## Run The Server Locally
 
@@ -125,11 +125,13 @@ For production, provide a unique `APP_KEY`, set `APP_ENV=production`, turn `APP_
 
 ## Roadmap
 
-- **Foundation live:** GitHub plugin release, self-hosted Laravel server, dashboard, Markdown editor, Graph View, path permissions, version restore, selective sync rules, `.obsidian` controls, deletion safety, and snapshots.
-- **Milestone A (Shipped):** Instant 3-Second QR Mobile Pairing and deep linking protocol (`obsidian://synkk-pair`).
+- **Foundation live:** Obsidian Community Plugin directory listing, self-hosted Laravel server, dashboard, Markdown editor, Graph View, path permissions, version restore, selective sync rules, `.obsidian` controls, deletion safety, and snapshots.
+- **Milestone A (Shipped):** Instant 2-Second QR Mobile Pairing and deep linking protocol (`obsidian://synkk-pair`).
 - **Milestone B (Shipped):** Interactive Livewire Vault Portals at `/p/{slug}` with 4 themes, live search, and wikilink navigation.
 - **Milestone C (Shipped):** First-Sync Pre-Flight & Migration Engine, 4-phase local diagnostic rollup, 1-click path sanitizer, dry-run simulation API, and 20% mass deletion atomic safety shield.
-- **Next:** Client-side zero-knowledge E2EE, mobile ghost files with on-demand streaming, and live multiplayer CRDT.
+- **Milestone D (Shipped):** Full CodeMirror 6 Web CRDT Collaborative Editor with Livewire session convergence and real-time remote awareness carets.
+- **Milestone E (Shipped):** Zero-Knowledge Client-Side E2EE with WebCrypto AES-256-GCM authenticated envelopes and on-demand Mobile Ghost Files.
+- **Active Horizon:** Webhooks & automated HTTP relays, federated multi-server synchronization, and private local RAG indexing.
 
 ## Creators
 

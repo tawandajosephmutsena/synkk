@@ -1,253 +1,238 @@
-# Synkk Production Readiness Audit
+# Synkk Production Readiness Re-audit
 
-**Audit date:** 17 September 2026  
-**Target:** Synkk Laravel application at commit `79f07c9728ab2627508fd10fd1bb5afdd5ec66b5`, embedded Obsidian plugin at `dac75e22361c23300b715b91511f348a5b8a0a25`, and standalone plugin checkout  
-**Verdict:** **NOT READY FOR PRODUCTION**  
-**Release gate:** Block production and commercial launch until every P0 item and the P1 release controls are closed and independently retested.
+**Re-audit date:** 17 September 2026 10:42
 
-## Executive assessment
+**Application:** `/Users/mac/Herd/synkk` at `c608ce9`, including current uncommitted portal tests and 404 change
 
-Synkk has a strong technical base: Laravel 13, explicit team and vault policies, hashed device tokens, signed and replay bounded billing webhooks, passkeys and two factor support, E2EE transport envelopes, conflict preservation, dependency pinning, static analysis, and a substantial automated test suite.
+**Plugin:** embedded submodule and `/Users/mac/Herd/obsidian-synkk-sync` at `e91448a`
 
-The current build is not safe to market or operate as an enterprise service. The audit found direct cross tenant portal exposure paths, persistent device access after team membership removal, stored XSS in public portals, broken release gates, non durable key generation in the container entrypoint, and material discrepancies between product claims and verified behavior. Privacy, terms, data processing, retention, incident response, accessibility conformance, backup recovery, and enterprise assurance artifacts are also absent or unverified.
+**Verdict:** **NO GO FOR PUBLIC OR ENTERPRISE PRODUCTION**
 
-### Readiness scorecard
+**Overall readiness:** **62/100**
 
-| Area | Score | Status |
+## Executive decision
+
+The latest changes close most previously demonstrated direct vulnerabilities. Cross-tenant vault selection is team-scoped, initial private portal access checks membership, removed members' tokens are deleted and rejected, raw Markdown HTML is stripped, encrypted Livewire saves use the validated envelope factory, containers fail when `APP_KEY` is absent, and the automated Laravel and JavaScript suites pass.
+
+Production remains blocked. A password-protected portal still trusts a client-controlled Livewire unlock flag, and private portal authorization runs only in `mount()`, leaving already-mounted sessions without continuous membership enforcement. The plugin persists its E2EE passphrase and bearer token. The TypeScript gate is red, Docker uses an unsupported Node version for Vite 8, and legal, recovery, operational, accessibility, and claim-substantiation controls remain incomplete.
+
+## Readiness scorecard
+
+| Area | Score | Decision |
 |---|---:|---|
-| Tenant isolation and authorization | 35/100 | Blocked |
-| Application security | 42/100 | Blocked |
-| Data protection and cryptography | 48/100 | Blocked |
-| Reliability and recoverability | 44/100 | Blocked |
-| Build, CI, and supply chain | 51/100 | Blocked |
-| Product truth and legal readiness | 24/100 | Blocked |
-| Accessibility and user safety | 45/100 | Unverified |
-| Observability and operations | 40/100 | Incomplete |
-| Overall production readiness | **41/100** | **No go** |
+| Tenant isolation and authorization | 68/100 | Blocked by portal reauthorization |
+| Application security | 70/100 | Blocked by portal unlock state |
+| Data protection and cryptography | 58/100 | Blocked by local secret persistence |
+| Build, CI, and supply chain | 64/100 | Plugin type gate is red |
+| Reliability and recoverability | 52/100 | Restore capability unproven |
+| Operations and observability | 48/100 | Enterprise controls incomplete |
+| Legal, privacy, and product truth | 38/100 | Required public controls absent |
+| Accessibility | 48/100 | WCAG 2.2 AA unverified |
+| **Overall** | **62/100** | **No go** |
 
-## Release blocking findings
+## Release blockers
 
-### P0-01: A tenant member can publish another tenant's vault through a portal
+### P0-01 — Password-protected portal access depends on client-controlled Livewire state
 
-**Confidence:** High  
-**Evidence:** `resources/views/pages/portals/index.blade.php:70-84,110-134`; `app/Models/VaultPortal.php:155-169`; `resources/views/pages/portals/show.blade.php:42-69`.
+**Evidence:** `resources/views/pages/portals/show.blade.php:36-37,65-95,349-375`
 
-`savePortal()` validates `vault_id` only with `exists:vaults,id`. It does not require the selected vault to belong to the current team. The new portal is assigned the attacker's `team_id` but keeps the foreign `vault_id`. `VaultPortal::getAccessibleFiles()` then retrieves files solely by that foreign vault ID, and the public portal renders them.
+`$isUnlocked` is a public Livewire property and directly controls protected content. The authoritative session value is read only during `mount()`. Public properties must be treated as untrusted request input, so a crafted component update can attempt to set the flag without passing `unlock()`.
 
-**Impact:** Cross tenant disclosure of entire vault contents to a public URL. A normal team member is explicitly allowed by the existing test suite to create portals.
+**Fix:** Remove `isUnlocked` as an authorization source. Compute access on every request from a server-side portal session grant. Bind the grant to portal ID and a password version or hash fingerprint, expire it, and invalidate it on password change. Lock identity-bearing state. Add a tampering test that sets `isUnlocked=true` and proves no note, file list, graph, search result, or computed content is returned.
 
-**Required correction:** Validate ownership with a team scoped rule or query; authorize portal creation and publication; enforce the invariant at the database or service layer; reject inconsistent `team_id` and `vault_id`; add a regression test that uses two teams and proves create, update, primary file, and render paths cannot cross the boundary.
+### P0-02 — Private portal membership is checked only during initial mount
 
-### P0-02: Any signed in user can open another tenant's private portal
+**Evidence:** `resources/views/pages/portals/show.blade.php:42-63,97-209`
 
-**Confidence:** High  
-**Evidence:** `resources/views/pages/portals/show.blade.php:42-50`.
+The membership check runs in `mount()`. Livewire updates rehydrate the component without using `mount()` as a per-request authorization hook. A member who loads a portal and is then removed can retain a component snapshot and invoke actions or computed content.
 
-A private portal checks only `auth()->check()`. It does not verify that the user belongs to the portal team or has permission to the underlying vault and path.
-
-**Impact:** Cross tenant disclosure to any authenticated account when a portal slug is known or discovered.
-
-**Required correction:** Authorize the portal and its vault for every request and Livewire action. Return 404 for unauthorized tenants. Add tests for unrelated users, removed members, suspended teams, hidden paths, password protected portals, and tampered Livewire state.
-
-### P0-03: Removed team members retain working device tokens
-
-**Confidence:** High  
-**Evidence:** `resources/views/pages/teams/remove-member-modal.blade.php:31-47`; `app/Http/Middleware/AuthenticateDeviceToken.php:63-107`; `app/Services/DeviceVaultAccess.php:14-26`; `app/Models/Vault.php:141-202`.
-
-Removing a member deletes only the membership row. Existing device tokens remain. Device authentication verifies the token's user and team records, but not current membership. Vault authorization verifies matching team IDs and token scope. A former member without a role falls through to the vault's default permission, which is commonly `read_write`.
-
-**Impact:** Offboarded users can continue reading and modifying vault data indefinitely.
-
-**Required correction:** Revoke all team device tokens transactionally when membership ends; independently require live team membership in device authorization; invalidate pairing sessions and collaboration presence; test removal, role downgrade, team deletion, suspension, and token replay.
-
-### P0-04: Public portals allow stored script injection from vault Markdown
-
-**Confidence:** High  
-**Evidence:** `app/Services/PortalRendererService.php:109-129,239-249`; `resources/views/pages/portals/show.blade.php:671-674`.
-
-Portal Markdown uses CommonMark with `html_input => allow`, and the result is emitted with unescaped Blade output. Callout bodies also allow raw HTML. A vault editor can persist active HTML into a public or password protected portal.
-
-**Impact:** Stored XSS in visitors' Synkk origin, including account actions for signed in users, portal session access, phishing, content alteration, and possible data extraction.
-
-**Required correction:** Strip raw HTML or sanitize against a strict allowlist after all transformations. Remove inline event handlers generated by the renderer. Add hostile payload tests for script tags, SVG, MathML, `iframe`, `srcdoc`, event handlers, CSS URLs, malformed HTML, and link schemes. Deploy a nonce or hash based CSP as defense in depth.
+**Fix:** Centralize `authorizePortalAccess()` and execute it during hydration or before every action and protected computed property. Verify current membership, portal visibility, vault/team consistency, account status, and password grant. Test mounting as a member, removing membership, then reusing the same component for note selection, search, graph, and rendering.
 
 ## High priority findings
 
-### P1-01: Container builds are not reproducible with the declared frontend stack
+### P1-01 — Plugin settings persist the E2EE passphrase and bearer token
 
-**Evidence:** `Dockerfile:29-33`; installed Vite 8 declares Node `^20.19.0 || >=22.12.0`, while the image uses Node `20.18.3`.
+**Evidence:** `obsidian-plugin/src/types.ts:1-23,51-73`; `obsidian-plugin/src/settings.ts:299-310`; `obsidian-plugin/src/main.ts:34-46`
 
-The production image can fail or behave outside the supported runtime. Align local development, CI, Docker, and documented versions, then build and run the exact release image in CI.
+`e2eePassphrase` and `deviceToken` are saved with the full settings object and restored on startup. A process that reads plugin data can recover both the decryption secret and API credential.
 
-### P1-02: APP_KEY is generated inside an ephemeral container
+**Fix:** Never persist the passphrase. Keep the derived key only in memory for a bounded session and require unlock after restart. Use a reviewed native credential store where available. Minimize token scope, make rotation/revocation visible, remove legacy saved passphrases, and rotate exposed tokens.
 
-**Evidence:** `docker/entrypoint.sh:12-20`; `docker-compose.yml:23-25`.
+### P1-02 — Plugin TypeScript release gate fails
 
-When `APP_KEY` is absent, the entrypoint writes a generated key into the container filesystem. The `.env` path is not persisted. Recreating the container can rotate the key and invalidate sessions, encrypted framework values, recovery data, and any application encryption that relies on it.
+**Evidence:** `/Users/mac/Herd/obsidian-synkk-sync/src/migrationWizardModal.ts:409`; `.github/workflows/tests.yml:38-43`
 
-Require an externally managed, stable production key and fail closed when it is missing. Document rotation and recovery procedures. Never auto generate a production key at boot.
+The build succeeds, but `tsc --noEmit` fails because the disabled expression returns `boolean | null`. CI runs this type check.
 
-### P1-03: E2EE passphrases are persisted in Obsidian plugin settings
+**Fix:** Convert it to a strict boolean, such as `this.preflightResponse !== null && !this.preflightResponse.authorized`. Combine plugin build, typecheck, and tests into one required local and CI command.
 
-**Evidence:** `obsidian-plugin/src/types.ts:65-79`; `obsidian-plugin/src/settings.ts:291-336`; `obsidian-plugin/src/main.ts:44-46`.
+### P1-03 — Docker uses a Node version outside Vite 8's supported range
 
-The plugin model includes `e2eePassphrase`, and the UI assigns the entered passphrase to saved plugin settings. Obsidian plugin settings are normally stored in the vault's plugin data file. That undermines the claimed protection if the device or synced configuration is exposed.
+**Evidence:** `Dockerfile:28-33`; `package.json:24`; `.github/workflows/tests.yml:30-33`
 
-Use OS credential storage where available or require an unlock per session. Never sync the passphrase. Publish a clear threat model covering local compromise, browser memory, recovery, sharing, revocation, and metadata leakage.
+Docker uses Node 20.18.3; Vite 8 requires Node 20.19+ or 22.12+, while CI uses Node 22.
 
-### P1-04: Encrypted save metadata is trusted without strict validation
+**Fix:** Pin Docker and CI to the same supported Node 22 patch, declare `engines.node`, and build the exact Docker image in CI. Docker was unavailable on the audit host, so the image was not built or started.
 
-**Evidence:** `resources/views/pages/vaults/show.blade.php:295-368`.
+### P1-04 — Portal passwords allow brute force and weak credentials
 
-The public Livewire action decodes Base64 without strict mode, constructs an encryption envelope directly, and does not apply the validation performed by `VaultContentEnvelope::fromValidated()`. It can persist malformed IVs, tags, or ciphertext marked as encrypted.
+**Evidence:** `resources/views/pages/portals/index.blade.php:71-88`; `resources/views/pages/portals/show.blade.php:85-95`
 
-Use one validated envelope boundary for API and Livewire traffic. Reject malformed Base64, enforce algorithm parameters and size bounds, verify vault E2EE state, and use authenticated format versioning.
+Passwords allow four characters and `unlock()` has no rate limit, cooldown, attempt audit, or alert. The session grant has no explicit expiry or password-version binding.
 
-### P1-05: Product claims conflict with source behavior and roadmap status
+**Fix:** Require a strong or generated access secret; rate limit by portal plus a privacy-preserving client identifier; add progressive delay and security events; expire grants; invalidate them on password change.
 
-**Evidence:** `README.md:100-102,124-132`; `resources/views/welcome.blade.php:678-682,1332-1343,1488-1528,1547-1573,1877-1940`; `resources/views/about.blade.php:420-443`.
+### P1-05 — Tenant consistency is enforced only in the portal UI path
 
-Examples include XChaCha20-Poly1305 in the README versus AES-256-GCM in the product; README roadmap language versus categorical shipped claims; WebAssembly claims while the code uses WebCrypto; fixed subsecond performance claims without production benchmarks; "military grade", "Zero-Knowledge Verified", encrypted backups, automatic updates, custom SLAs, and SOC 2 positioning without audit evidence in this repository.
+**Evidence:** `resources/views/pages/portals/index.blade.php:71-77,108-134`; `app/Models/VaultPortal.php:38-58`; `database/migrations/2026_09_16_183000_create_vault_portals_table.php:16-36`
 
-Create a claim register that maps every public claim to a test, benchmark, operating control, or approved roadmap label. Remove unverifiable superlatives and compliance implications before launch.
+Team-scoped validation blocks the demonstrated UI exploit. The model still mass assigns `team_id`, `vault_id`, and `primary_file_id`, and the database does not enforce that they belong together.
 
-### P1-06: Required customer legal and privacy surfaces are absent
+**Fix:** Use one authorized domain action that derives team ID from context. Validate vault and primary file ownership. Add model-level fail-closed validation and supported composite database constraints. Test direct service/model creation and primary-file reassignment.
 
-**Evidence:** No privacy, terms, cookie, retention, subprocessor, data rights, acceptable use, security disclosure, or refund routes were found in the public application.
+### P1-06 — Portal defense still depends on inline script execution
 
-Before collecting accounts, vault content, device and IP data, support data, or payments, publish jurisdiction reviewed documents covering controller and processor roles, purposes and lawful bases, retention and deletion, subprocessors and transfers, security measures, breach handling, data subject requests, children's use, acceptable use, billing, cancellation and refunds, open source versus cloud responsibilities, and contact details. Execute DPAs with relevant vendors. This section is an engineering readiness assessment and is not legal advice.
+**Evidence:** `app/Services/PortalRendererService.php:114-118,182,243-244,319-328`; `docker/nginx.conf:25-31`
 
-### P1-07: Release test gates are currently red
+Raw HTML is stripped, but generated output still includes inline `onclick` and dynamically assembled Alpine expressions. CSP permits `'unsafe-inline'` and broad `ws:` and `wss:`. Hostile tests cover only script and image-handler examples.
 
-**Evidence:**
+**Fix:** Replace inline handlers with static listeners and data attributes. Use context-correct encoding. Add SVG, MathML, iframe, srcdoc, malformed HTML, encoded payload, CSS URL, unsafe scheme, frontmatter, and wikilink tests. Adopt nonce or hash CSP and restrict connection origins.
 
-- Main JavaScript: 49 passed, 1 failed because `tests/JavaScript/sync-policy.test.js` imports an export absent from the embedded plugin.
-- Standalone plugin: 10 passed, 10 failed because `package.json` declares ESM while ten test files use CommonJS `require()`.
-- Full Pest invocation was initially blocked by the sandbox's local port restriction; the focused suite passed outside the sandbox. The full suite also contains five landing assertions that fail against the current uncommitted copy.
+### P1-07 — Public product claims are inconsistent or unsubstantiated
 
-No release should proceed with a red gate. Make the plugin module format coherent, eliminate duplicated or drifting source copies, run the same commands locally and in CI, and require all release checks on the exact commit and artifact.
+**Evidence:** `README.md:100-132`; `resources/views/welcome.blade.php:1495,1550,1695`; `resources/views/documentation.blade.php:883`
+
+The README presents E2EE, ghost files, and CRDT as current capabilities and also as “Next.” Marketing references WebAssembly while implementation uses WebCrypto. SOC 2 positioning and fixed performance language lack certification or benchmark evidence in this repository.
+
+**Fix:** Create a claim register with exact wording, owner, implementation evidence, test or benchmark, release, scope, and approval. Clearly label shipped, beta, roadmap, self-hosted, and cloud behavior. Remove compliance implications until independently supported.
+
+### P1-08 — Customer legal and privacy surfaces are absent
+
+**Evidence:** Public routes contain no privacy notice, terms, acceptable use, cookie notice, DPA, subprocessor list, retention policy, refund terms, or vulnerability disclosure page.
+
+**Fix:** Before processing customer data or payments, have counsel approve applicable terms and disclosures. Cover controller/processor roles, lawful bases, data inventory, subprocessors and transfers, retention/deletion, export/access requests, breach notification, billing/refunds, age limits, acceptable use, and cloud versus self-hosted responsibility. Provide working privacy and private security contacts.
 
 ## Medium priority findings
 
-### P2-01: Security headers are incomplete and inconsistent
+### P2-01 — Portal publication is available to every team member
 
-`docker/nginx.conf` lacks HSTS and CSP; HSTS exists only in the optional Caddy layer. Both configs retain the obsolete `X-XSS-Protection` header. Define one reviewed header policy at the public edge: HSTS after HTTPS readiness, a restrictive CSP, frame protection, nosniff, referrer policy, permissions policy, and cache controls for sensitive responses.
+**Evidence:** Existing test `team member can create a new portal via studio`; `resources/views/pages/portals/index.blade.php:35-148`.
 
-### P2-02: Dependency maintenance covers only GitHub Actions
+Add dedicated create, update, publish, password-rotation, and delete permissions, default them to owner/admin roles, and audit every publication action.
 
-`.github/dependabot.yml` has no Composer or npm ecosystems. Current `composer audit` and production `npm audit` checks returned zero known advisories, but continuous coverage is missing. Add Composer, root npm, and plugin npm update streams; include audit, lockfile review, SBOM, license policy, secret scanning, static analysis, and artifact provenance in CI.
+### P2-02 — Member removal and token revocation are not transactional
 
-### P2-03: SQLite deployment is a single node design without verified recovery
+**Evidence:** `resources/views/pages/teams/remove-member-modal.blade.php:32-55`.
 
-The default Docker deployment combines Nginx, PHP FPM, queue, scheduler, Reverb, and SQLite in one container. Database and private storage volumes are persistent, but no backup automation, offsite copy, restore validation, point in time objective, capacity limit, corruption procedure, or failover design is supplied.
+Middleware now prevents continued access, but membership and token deletions are separate writes. Use a transaction and central offboarding action; revoke pairing and collaboration sessions and test concurrent requests.
 
-Define RPO and RTO; back up the database and object data consistently; encrypt and test restores; monitor WAL, disk, queue, and worker health; document supported scale. Enterprise cloud operation should use managed durable services or explicitly accept the single node limits.
+### P2-03 — Dependency maintenance omits Composer and both npm projects
 
-### P2-04: Operations and incident response are incomplete
+**Evidence:** `.github/dependabot.yml:1-11`.
 
-No evidence was found for centralized structured logs, audit log immutability, alert routing, SLOs, synthetic checks, tracing, capacity alarms, on call ownership, incident runbooks, customer notification procedures, status page, or post incident review. Application health alone is insufficient.
+Add Composer, root npm, and plugin npm updates. Add SBOM generation, secret and license scanning, SAST, and release provenance. Current audits are clean only for the present lockfiles.
 
-### P2-05: A development cookie jar is tracked
+### P2-04 — Default SQLite deployment lacks verified recovery
 
-`cookies.txt` is tracked and contains a `synkk.test` XSRF cookie record. Even if it is local and expired, credential artifacts must never be versioned. Remove it from history as appropriate, add the pattern to ignore and secret scanning, and rotate any still valid local sessions.
+**Evidence:** `docker-compose.yml:18-38`; `.env.example:23-38`.
 
-### P2-06: Packaging commands are stale and inconsistent
+Define RPO/RTO, encrypted offsite backups, consistent database and object snapshots, restore drills, corruption handling, supported scale, and failover. Managed enterprise service should use durable managed services or formally test and accept single-node limits.
 
-`ExportSelfHostedBundle` identifies v1.0.0, advertises Lemon Squeezy, and assembles files differently from `PackageCommunityEdition`. The latter recursively includes database and bootstrap directories but relies on a partial exclusion list. Consolidate the packaging pipeline, generate from a clean export allowlist, inspect archive contents automatically, and test absence of databases, caches, cookies, secrets, logs, user content, and commercial only code.
+### P2-05 — Health and operations do not prove service readiness
 
-### P2-07: RAG indexing is memory bound
+**Evidence:** `docker-compose.yml:29-34`; `docker/supervisord.conf:25-48`; `.env.example:18-21`.
 
-`app/Services/VaultRagService.php` loads all eligible files and embeddings with `get()`. Large vaults can exhaust memory and degrade request or worker service. Index with bounded chunks or cursors, isolate workloads on a dedicated queue, set memory and time limits, expose progress, and benchmark representative vault sizes.
+`/up` does not verify queues, scheduler, Reverb, database writes, storage, or dependencies. Add structured redacted logs, immutable audit events, metrics, alerts, synthetic checks, SLOs, on-call ownership, incident runbooks, status communication, and capacity alarms.
 
-### P2-08: Accessibility conformance is unverified
+### P2-06 — RAG indexing remains memory and query intensive
 
-The UI has positive semantic and reduced motion work, but no complete WCAG 2.2 AA audit, assistive technology test record, keyboard matrix, zoom/reflow proof, contrast report, error announcement review, or accessibility statement. Public claims should target WCAG 2.2 AA only after automated and manual verification.
+**Evidence:** `app/Services/VaultRagService.php:55-105`; `app/Jobs/IndexVaultRagJob.php:20-58`.
 
-## Existing strengths confirmed
+Use lazy/chunked iteration, batch preload/upsert, a dedicated queue, memory limits, resumable checkpoints, and representative load tests.
 
-- Laravel 13.30.1 on PHP 8.5 with typed code and PHPStan level checks.
-- Device tokens are random and stored as SHA-256 hashes rather than plaintext.
-- Vault API routes apply throttling and a dedicated device authentication middleware.
-- Cross team vault access and read only mutation restrictions have focused tests.
-- Dodo webhooks validate signed payloads with timestamp tolerance and idempotent event records.
-- E2EE payload handling uses AES-256-GCM in the clients and disables server RAG for encrypted vaults.
-- Conflict files preserve concurrent edits instead of silently overwriting them.
-- Docker context excludes local SQLite files, private storage, logs, `.env` files, dependencies, tests, and developer artifacts.
-- Composer and production npm advisory scans returned no known vulnerabilities on the audited lockfiles.
-- Focused Laravel security, billing, portal, membership, and packaging tests passed: 39 tests, 158 assertions.
-- PHPStan passed with zero errors.
+### P2-07 — Accessibility conformance is unverified
 
-These controls reduce risk but do not establish production readiness while the release blockers remain.
+No complete WCAG 2.2 AA audit, screen-reader record, keyboard matrix, zoom/reflow evidence, contrast report, status-message review, or accessibility statement was found. Run automated checks plus manual keyboard, VoiceOver/NVDA, focus, error recovery, motion, and mobile reflow testing.
 
-## Required release plan
+### P2-08 — Frontend bundle lacks a production performance budget
 
-### Gate 1: Containment
+The build reports the app JavaScript at about 721 kB minified and 239 kB gzip and emits a chunk warning. Split editor, graph, collaboration, and admin code by route; set CI budgets; verify Core Web Vitals on production-like devices and networks.
 
-1. Disable portal creation and public portal serving until P0-01, P0-02, and P0-04 are fixed.
-2. Revoke every device token belonging to removed or inactive members; add live membership enforcement.
-3. Remove or qualify unsupported security, performance, compliance, backup, and availability claims.
-4. Stop commercial onboarding until privacy and contract documents are approved.
+### P2-09 — Security headers improved, but CSP remains permissive
 
-### Gate 2: Engineering correction
+**Evidence:** `docker/nginx.conf:25-31`.
 
-1. Centralize tenant scoped authorization for portals, vaults, files, collaboration documents, billing, devices, exports, and Livewire actions.
-2. Sanitize all user authored HTML and add CSP.
-3. Harden E2EE secret storage, envelope validation, recovery, key rotation, and threat model documentation.
-4. Fix Node and module version drift, unify the plugin source of truth, and restore all test gates.
-5. Make the container fail closed on missing secrets and build the exact deployable image in CI.
-6. Consolidate packaging around a clean allowlist and archive inspection.
+Remove inline dependencies, use nonces or hashes, narrow WebSocket origins, add reviewed cache controls, and verify the same policy at the actual edge. Apply HSTS only on HTTPS production hosts.
 
-### Gate 3: Enterprise operations
+### P2-10 — Production environment defaults are development-oriented
 
-1. Define availability, RPO, RTO, retention, deletion, support, and incident objectives.
-2. Implement monitored backups and complete a documented restore drill.
-3. Add centralized audit logs, metrics, alerting, tracing, synthetic checks, and incident runbooks.
-4. Add dependency update automation, SAST, secret scanning, SBOM, license review, artifact signing and provenance.
-5. Commission an independent penetration test after fixes; retest authorization, XSS, WebSockets, pairing, E2EE, billing, and packages.
+**Evidence:** `.env.example:18-23`.
 
-### Gate 4: Product and legal verification
+Provide a production template with debug disabled, suitable logging, secure cookies, trusted proxies/hosts, durable cache/session/queue/database services, mail, distributed rate limiting, and secret-manager references. Validate required settings at boot.
 
-1. Approve privacy notice, terms, DPA, subprocessor list, security page, acceptable use, billing and refund terms, deletion process, and vulnerability disclosure policy with qualified counsel.
-2. Complete a data inventory and retention schedule, including logs, device data, IP addresses, vault content, embeddings, support records, and billing identifiers.
-3. Complete WCAG 2.2 AA automated and manual testing.
-4. Publish only claims backed by repeatable evidence and name roadmap items clearly.
+## Previously critical findings now resolved
 
-## Final acceptance criteria
+| Prior finding | Current evidence | Status |
+|---|---|---|
+| Cross-tenant portal vault selection | Team-scoped rule and create/update tests | UI path resolved; invariant work remains P1-05 |
+| Any authenticated user could view a private portal | Membership check and 404 tests | Initial access fixed; continuous authorization remains P0-02 |
+| Removed member device tokens remained valid | Token deletion, middleware check, four tests | Resolved |
+| Raw Markdown HTML enabled stored XSS | `html_input=strip` for notes and callouts | Demonstrated payload fixed; broader hardening remains P1-06 |
+| Ephemeral `APP_KEY` | Entrypoint and Compose fail closed | Resolved |
+| Malformed encrypted Livewire envelopes | Validated envelope factory used | Resolved |
+| Red Laravel and JavaScript suites | Current suites pass | Resolved; TypeScript remains red |
+| Tracked `cookies.txt` | Removed and ignored | Resolved |
+| Queue retry below job timeout | 630-second retry for 600-second job | Resolved |
 
-Production approval requires all of the following:
-
-- Zero open P0 findings and documented acceptance for every remaining P1.
-- Cross tenant negative tests at every data boundary, including Livewire state tampering.
-- All PHP, JavaScript, plugin, build, Docker, and end to end checks green on a clean checkout.
-- Clean dependency advisories plus SBOM and provenance for the released artifact.
-- Successful backup and restore drill against production equivalent data volume.
-- External penetration test with critical and high findings remediated and retested.
-- Approved legal and privacy materials and a working deletion or export process.
-- WCAG 2.2 AA verification with manual keyboard and assistive technology evidence.
-- A claim register showing evidence for each public security, privacy, performance, availability, and compliance statement.
-
-## Standards baseline used
-
-- OWASP Application Security Verification Standard 5.0.0: https://owasp.org/projects/asvs
-- NIST Secure Software Development Framework 1.1, SP 800-218: https://csrc.nist.gov/pubs/sp/800/218/final
-- W3C Web Content Accessibility Guidelines 2.2: https://www.w3.org/TR/WCAG22/
-- EU GDPR, including data protection by design and processor obligations: https://eur-lex.europa.eu/eli/reg/2016/679/oj
-
-The exact legal obligations depend on Synkk's operating entity, customer locations, hosting model, subprocessors, and data flows. Obtain jurisdiction specific advice, including Zimbabwe's Cyber and Data Protection Act and rules in every target market.
-
-## Verification record and limitations
+## Verification record
 
 | Check | Result |
 |---|---|
-| `composer audit --locked --no-interaction` | Pass: no advisories |
-| Root `npm audit --omit=dev --json` | Pass: 0 vulnerabilities |
-| Standalone plugin `npm audit --omit=dev --json` | Pass: 0 vulnerabilities |
-| `vendor/bin/phpstan analyse` | Pass: 0 errors |
-| Focused Pest suite outside sandbox | Pass: 39 tests, 158 assertions |
-| Root `npm run test:js` | Fail: 49 pass, 1 fail |
-| Standalone plugin `npm test` | Fail: 10 pass, 10 fail |
-| Full Pest suite | Inconclusive as a clean release gate: browser plugin could not bind inside the sandbox and current landing edits also fail five assertions |
-| Codex Security Deep Scan | Incomplete: coordinator failed before discovery with `error: unexpected argument '--thread-source' found` |
-| Production infrastructure, external services, live billing, email delivery, DNS, TLS, backups, restore, load, browser accessibility, and penetration testing | Not verified in this repository audit |
+| `php artisan test --compact` | **Pass:** 400 tests, 1,809 assertions, one unspecified warning |
+| Focused portal/revocation/security tests | **Pass:** 29 tests, 122 assertions |
+| Root `npm run test:js` | **Pass:** 55/55 |
+| Embedded plugin `npm test` | **Pass:** 54/54 |
+| Standalone plugin `npm test` | **Pass:** 54/54 |
+| PHPStan | **Pass:** 0 errors |
+| Composer audit | **Pass:** no known advisories |
+| Root and plugin production npm audits | **Pass:** 0 known vulnerabilities |
+| Composer validation | **Pass** |
+| Root production build | **Pass with large-chunk warning** |
+| Standalone plugin build | **Pass** |
+| Standalone plugin TypeScript | **Fail:** `migrationWizardModal.ts:409` |
+| Embedded plugin TypeScript | Local dependencies absent; shared line 409 remains applicable after install |
+| Docker image build/start | **Not run:** Docker unavailable on audit host |
+| Live billing/mail/DNS/TLS, backups, restore, load, accessibility, penetration test | **Not verified** |
 
-This audit is based on the current local working tree, which contained pre-existing and concurrent uncommitted changes. It did not modify application code.
+## Required remediation order
+
+1. Close P0-01 and P0-02 with adversarial Livewire tests.
+2. Remove persisted passphrases, migrate old settings, and rotate affected tokens.
+3. Repair TypeScript, align Node versions, and require exact artifact builds in CI.
+4. Centralize portal authorization, invariants, permissions, password controls, and audit events.
+5. Remove inline script execution and deploy strict CSP.
+6. Complete legal/privacy documents and reconcile public claims.
+7. Implement monitored backups and complete a production-scale restore drill.
+8. Add observability, incident response, dependency automation, SBOM/provenance, and rollback.
+9. Complete WCAG 2.2 AA testing, load testing, and an independent penetration test.
+
+## Production acceptance criteria
+
+- No open P0; every P1 closed or formally accepted by an accountable owner with expiry.
+- Portal tampering and post-removal reauthorization tests pass for every data path.
+- Passphrases are absent from persisted plugin data and legacy copies are removed.
+- PHP, JavaScript, TypeScript, plugin, build, Docker, and end-to-end gates pass on a clean checkout and exact artifact.
+- Backup and restore meets documented RPO/RTO.
+- External testing covers tenant isolation, Livewire, portals, WebSockets, pairing, E2EE, billing, and packages; all critical/high findings are retested closed.
+- Approved legal/privacy pages, export/deletion, subprocessors, and security reporting are live.
+- WCAG 2.2 AA evidence includes automated and manual assistive-technology testing.
+- Every product and compliance claim has approved evidence.
+
+## Standards baseline
+
+- OWASP Application Security Verification Standard 5.0
+- NIST SP 800-218 Secure Software Development Framework 1.1
+- W3C Web Content Accessibility Guidelines 2.2, Level AA target
+- GDPR data protection by design and by default, plus applicable Zimbabwe and customer-market privacy law
+
+This is a technical readiness assessment, not legal advice. Exact obligations depend on the operating entity, markets, hosting model, contracts, subprocessors, and production data flows.

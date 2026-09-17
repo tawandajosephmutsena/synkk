@@ -179,7 +179,7 @@ class PortalRendererService
             <span class="synkk-traffic-dot synkk-dot-green"></span>
         </div>
         <span class="synkk-code-lang">{$displayLang}</span>
-        <button type="button" class="synkk-code-copy-btn" onclick="copyCode(this)" title="Copy code">
+        <button type="button" class="synkk-code-copy-btn" data-action="copy-code" title="Copy code">
             <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
@@ -262,8 +262,8 @@ HTML;
     protected function restoreCallouts(string $html, array $callouts): string
     {
         foreach ($callouts as $token => $calloutHtml) {
-            $pattern = '/(?:<p>\s*)?%%%'.preg_quote($token, '/').'%%%(?:\s*<\/p>)?/';
-            $html = preg_replace($pattern, $calloutHtml, $html) ?? $html;
+            $html = str_replace('<p>%%%'.$token.'%%%</p>', $calloutHtml, $html);
+            $html = str_replace('%%%'.$token.'%%%', $calloutHtml, $html);
         }
 
         return $html;
@@ -300,7 +300,7 @@ HTML;
             $label = isset($parts[1]) ? trim($parts[1]) : $target;
             $safeLabel = e($label);
 
-            // Match against files by exact path, basename, or path ending
+            // Match against accessible files (by filename without ext or whole path)
             $matchedFile = $allFiles->first(function (VaultFile $f) use ($target) {
                 $basename = pathinfo($f->path, PATHINFO_FILENAME);
 
@@ -322,10 +322,7 @@ HTML;
                     $excerpt = e($this->extractExcerpt($c, 140));
                 }
 
-                $jsTitle = addslashes($previewTitle);
-                $jsExcerpt = addslashes($excerpt);
-
-                return '<a href="?note='.$targetPath.'" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="'.$previewTitle.'" data-preview-excerpt="'.$excerpt.'" data-preview-path="'.$targetPath.'" x-on:mouseenter="showPreview($event, \''.$jsTitle.'\', \''.$jsExcerpt.'\')" x-on:mouseleave="hidePreview()"><span>'.$safeLabel.'</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>';
+                return '<a href="?note='.$targetPath.'" wire:navigate class="synkk-wikilink inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors" data-preview-title="'.$previewTitle.'" data-preview-excerpt="'.$excerpt.'" data-preview-path="'.$targetPath.'" x-on:mouseenter="showPreview($event)" x-on:mouseleave="hidePreview()"><span>'.$safeLabel.'</span><svg class="size-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>';
             }
 
             return '<span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60">[['.$safeLabel.']]</span>';

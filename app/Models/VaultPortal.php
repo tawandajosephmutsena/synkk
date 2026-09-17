@@ -86,6 +86,24 @@ class VaultPortal extends Model
                 }
             }
         });
+
+        static::saving(function (VaultPortal $portal) {
+            // Enforce tenant isolation invariant: vault must belong to the same team as the portal
+            if ($portal->vault_id && $portal->team_id) {
+                $vault = $portal->vault ?: Vault::find($portal->vault_id);
+                if ($vault && (int) $vault->team_id !== (int) $portal->team_id) {
+                    throw new \InvalidArgumentException('Cross-tenant violation: Vault does not belong to the portal team.');
+                }
+            }
+
+            // Enforce vault integrity: primary file must belong to the portal vault
+            if ($portal->primary_file_id && $portal->vault_id) {
+                $primaryFile = $portal->primaryFile ?: VaultFile::find($portal->primary_file_id);
+                if ($primaryFile && (int) $primaryFile->vault_id !== (int) $portal->vault_id) {
+                    throw new \InvalidArgumentException('Vault integrity violation: Primary file does not belong to the portal vault.');
+                }
+            }
+        });
     }
 
     /**

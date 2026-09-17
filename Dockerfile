@@ -26,7 +26,7 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Build frontend assets using Node
-FROM node:20.18.3-alpine3.21 as frontend-builder
+FROM node:22.14.0-alpine3.21 as frontend-builder
 WORKDIR /app
 COPY package*.json vite.config.js ./
 COPY resources ./resources

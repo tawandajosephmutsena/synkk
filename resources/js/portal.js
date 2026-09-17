@@ -32,6 +32,13 @@ window.copyCode = function (button) {
     });
 };
 
+document.addEventListener('click', (e) => {
+    const btn = e.target?.closest?.('.synkk-code-copy-btn, [data-action="copy-code"]');
+    if (btn) {
+        window.copyCode(btn);
+    }
+});
+
 // 2. Bento Card Cursor Spotlight Tracker
 function initSpotlightCards() {
     const cards = document.querySelectorAll('.synkk-bento-card');

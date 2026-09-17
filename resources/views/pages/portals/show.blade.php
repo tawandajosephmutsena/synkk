@@ -6,8 +6,10 @@ use App\Services\KnowledgeGraphService;
 use App\Services\PortalRendererService;
 use Flux\Flux;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -34,20 +36,35 @@ class extends Component {
 
     public string $sidebarFilter = '';
     public string $passwordInput = '';
-    public bool $isUnlocked = false;
     public bool $mobileDrawerOpen = false;
     public bool $commandPaletteOpen = false;
     public bool $graphModalOpen = false;
 
-    public function mount(string $slug, ?string $path = null): void
+    public function booted(): void
     {
-        $this->portal = VaultPortal::with(['team', 'vault', 'primaryFile'])
-            ->where('slug', $slug)
-            ->firstOrFail();
+        $this->authorizePortalAccess();
+    }
 
+    public function hydrate(): void
+    {
+        $this->authorizePortalAccess();
+    }
+
+    public function authorizePortalAccess(): void
+    {
+        if (! isset($this->portal) || ! $this->portal->exists) {
+            return;
+        }
+
+        // Verify team and vault consistency (fail-closed)
+        if ($this->portal->vault && $this->portal->vault->team_id !== $this->portal->team_id) {
+            abort(404);
+        }
+
+        // Verify membership for private portals
         if (! $this->portal->is_public) {
             if (! auth()->check()) {
-                abort(403, 'This portal is private.');
+                abort(404); // 404 hides portal existence from unauthenticated visitors
             }
 
             /** @var \App\Models\User $viewer */
@@ -58,19 +75,53 @@ class extends Component {
                 ->exists();
 
             if (! $isMember) {
-                abort(404); // 404 hides portal existence from non-members
+                abort(404); // 404 hides portal existence from removed or non-members
             }
         }
+    }
 
-        // Check password protection session
-        if ($this->portal->isPasswordProtected()) {
-            $sessionKey = "synkk_portal_unlocked_{$this->portal->id}";
-            $this->isUnlocked = session()->get($sessionKey, false);
-        } else {
-            $this->isUnlocked = true;
+    public function isPortalUnlocked(): bool
+    {
+        if (! isset($this->portal) || ! $this->portal->isPasswordProtected()) {
+            return true;
         }
 
-        if ($this->isUnlocked) {
+        $sessionKey = "synkk_portal_grant_{$this->portal->id}";
+        $grant = session()->get($sessionKey);
+
+        if (! is_array($grant)) {
+            return false;
+        }
+
+        if (empty($grant['expires_at']) || now()->timestamp > $grant['expires_at']) {
+            session()->forget($sessionKey);
+            return false;
+        }
+
+        $currentFingerprint = substr((string) $this->portal->password_hash, 0, 16);
+        if (empty($grant['fingerprint']) || ! hash_equals($grant['fingerprint'], $currentFingerprint)) {
+            session()->forget($sessionKey);
+            return false;
+        }
+
+        return true;
+    }
+
+    #[Computed]
+    public function isUnlocked(): bool
+    {
+        return $this->isPortalUnlocked();
+    }
+
+    public function mount(string $slug, ?string $path = null): void
+    {
+        $this->portal = VaultPortal::with(['team', 'vault', 'primaryFile'])
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        $this->authorizePortalAccess();
+
+        if ($this->isUnlocked()) {
             $this->portal->incrementViews();
         }
 
@@ -84,18 +135,38 @@ class extends Component {
 
     public function unlock(): void
     {
+        $this->authorizePortalAccess();
+        $this->resetErrorBag('passwordInput');
+
+        $throttleKey = 'portal-unlock:'.$this->portal->id.':'.request()->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            $this->addError('passwordInput', __('Too many attempts. Please try again in :seconds seconds.', ['seconds' => $seconds]));
+            return;
+        }
+
         if ($this->portal->verifyPassword($this->passwordInput)) {
-            $this->isUnlocked = true;
-            session()->put("synkk_portal_unlocked_{$this->portal->id}", true);
+            RateLimiter::clear($throttleKey);
+
+            $currentFingerprint = substr((string) $this->portal->password_hash, 0, 16);
+            session()->put("synkk_portal_grant_{$this->portal->id}", [
+                'fingerprint' => $currentFingerprint,
+                'expires_at' => now()->addHours(2)->timestamp,
+            ]);
+
             $this->portal->incrementViews();
             $this->passwordInput = '';
+            $this->resetErrorBag('passwordInput');
         } else {
+            RateLimiter::hit($throttleKey, 60);
             $this->addError('passwordInput', __('Incorrect portal password.'));
         }
     }
 
     public function selectNote(string $path): void
     {
+        $this->authorizePortalAccess();
         $this->notePath = $path;
         $this->mobileDrawerOpen = false;
         $this->commandPaletteOpen = false;
@@ -107,6 +178,7 @@ class extends Component {
 
     public function filterTag(string $tag): void
     {
+        $this->authorizePortalAccess();
         $this->activeTag = ($this->activeTag === $tag) ? '' : $tag;
     }
 
@@ -140,6 +212,10 @@ class extends Component {
     #[Computed]
     public function accessibleFiles(): Collection
     {
+        if (! $this->isUnlocked()) {
+            return collect();
+        }
+
         return $this->portal->getAccessibleFiles();
     }
 
@@ -166,6 +242,10 @@ class extends Component {
     #[Computed]
     public function activeFile(): ?VaultFile
     {
+        if (! $this->isUnlocked()) {
+            return null;
+        }
+
         if (filled($this->notePath)) {
             $matched = $this->markdownFiles->first(function (VaultFile $f) {
                 return $f->path === $this->notePath
@@ -188,9 +268,9 @@ class extends Component {
     #[Computed]
     public function renderedNote(): array
     {
-        if (! $this->activeFile) {
+        if (! $this->isUnlocked() || ! $this->activeFile) {
             return [
-                'html' => '<div class="p-12 text-center text-zinc-500 font-medium">No note selected or vault has no markdown files.</div>',
+                'html' => '<div class="p-12 text-center text-zinc-500 font-medium">'.($this->isUnlocked() ? 'No note selected or vault has no markdown files.' : 'This portal is password protected.').'</div>',
                 'toc' => [],
                 'reading_time' => '0 min',
                 'word_count' => 0,
@@ -211,6 +291,10 @@ class extends Component {
     #[Computed]
     public function bentoCards(): array
     {
+        if (! $this->isUnlocked()) {
+            return [];
+        }
+
         $service = app(PortalRendererService::class);
         $cards = [];
 
@@ -256,6 +340,10 @@ class extends Component {
     #[Computed]
     public function allTags(): array
     {
+        if (! $this->isUnlocked()) {
+            return [];
+        }
+
         $service = app(PortalRendererService::class);
         $tags = [];
 
@@ -277,6 +365,10 @@ class extends Component {
     #[Computed]
     public function interactiveGraph(): array
     {
+        if (! $this->isUnlocked()) {
+            return ['nodes' => [], 'edges' => []];
+        }
+
         try {
             return app(KnowledgeGraphService::class)->getInteractiveGraph(
                 $this->portal->vault,
@@ -290,6 +382,10 @@ class extends Component {
     #[Computed]
     public function totalWordCount(): int
     {
+        if (! $this->isUnlocked()) {
+            return 0;
+        }
+
         $total = 0;
         foreach ($this->markdownFiles as $file) {
             $c = $file->getContents() ?? '';
@@ -311,9 +407,13 @@ class extends Component {
         previewX: 0,
         previewY: 0,
         showPreview(e, title, excerpt) {
-            const rect = e.target.getBoundingClientRect();
-            this.previewTitle = title;
-            this.previewExcerpt = excerpt;
+            const el = e?.currentTarget || e?.target?.closest('[data-preview-title]');
+            const previewTitle = title || el?.dataset?.previewTitle || '';
+            const previewExcerpt = excerpt || el?.dataset?.previewExcerpt || '';
+            const targetEl = el || e?.target;
+            const rect = targetEl?.getBoundingClientRect ? targetEl.getBoundingClientRect() : { left: 16, bottom: 0 };
+            this.previewTitle = previewTitle;
+            this.previewExcerpt = previewExcerpt;
             this.previewX = Math.min(window.innerWidth - 320, Math.max(16, rect.left));
             this.previewY = rect.bottom + 8;
             this.previewVisible = true;
@@ -346,7 +446,7 @@ class extends Component {
     <div class="synkk-aurora-orb synkk-aurora-float-1"></div>
     <div class="synkk-aurora-orb synkk-aurora-float-2"></div>
 
-    @if (! $isUnlocked)
+    @if (! $this->isUnlocked)
         <!-- Password Gate Screen -->
         <div class="relative z-10 flex min-h-screen flex-col items-center justify-center p-6 text-center">
             <div class="synkk-glass-card w-full max-w-md space-y-6 p-8 shadow-2xl">

@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 Route::view('/about', 'about')->name('about');
+Route::view('/privacy', 'privacy')->name('privacy');
+Route::view('/terms', 'terms')->name('terms');
+Route::view('/security', 'security')->name('security');
 Route::get('/pair', [PairingBridgeController::class, 'show'])->name('pairing.bridge');
 
 if (app()->environment('local')) {

@@ -32,7 +32,7 @@
     "name": "vault-graph"
   },
   "resources/css/app.css": {
-    "file": "assets/app-DEzCvIRr.css",
+    "file": "assets/app-DP-SC5QG.css",
     "name": "app",
     "names": [
       "app.css"
@@ -80,7 +80,7 @@
     "isEntry": true
   },
   "resources/js/portal.js": {
-    "file": "assets/portal-BG20wcBS.js",
+    "file": "assets/portal-D4oSFtLq.js",
     "name": "portal",
     "src": "resources/js/portal.js",
     "isEntry": true,
