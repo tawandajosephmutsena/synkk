@@ -1,0 +1,47 @@
+name: Production Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2, phpstan, pint
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install PHP Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Build Assets
+        run: npm run build
+
+      - name: Run Tests (Pest)
+        run: vendor/bin/pest
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=2G
+
+      - name: Run Pint
+        run: vendor/bin/pint --test
+
+      - name: Build Docker Image
+        run: docker build -t synkk/app:latest -f Dockerfile .
