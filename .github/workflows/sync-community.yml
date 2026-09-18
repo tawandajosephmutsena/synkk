@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout Commercial SaaS Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -39,7 +39,7 @@ jobs:
           unzip -q storage/app/exports/synkk-community-ce.zip -d /tmp/community-dist
 
       - name: Push to Public Community Repository
-        uses: cpina/github-action-push-to-another-repository@v1.7.2
+        uses: cpina/github-action-push-to-another-repository@v1.7.3
         env:
           API_TOKEN_GITHUB: ${{ secrets.COMMUNITY_SYNC_TOKEN }}
         with:
