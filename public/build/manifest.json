@@ -32,7 +32,7 @@
     "name": "vault-graph"
   },
   "resources/css/app.css": {
-    "file": "assets/app-lZKJtYZ9.css",
+    "file": "assets/app-DWIhLO4N.css",
     "name": "app",
     "names": [
       "app.css"
@@ -59,7 +59,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-BTUDQmpj.js",
+    "file": "assets/app-BNQDtRSh.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
