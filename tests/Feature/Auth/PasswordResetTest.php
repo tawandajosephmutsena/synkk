@@ -41,6 +41,49 @@ test('reset password screen can be rendered', function () {
     });
 });
 
+test('reset password screen includes the token from the reset URL', function () {
+    Notification::fake();
+
+    $user = User::factory()->create();
+
+    $this->post(route('password.request'), ['email' => $user->email]);
+
+    Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
+        $response = $this->get(route('password.reset', $notification->token));
+
+        $response
+            ->assertOk()
+            ->assertSee('name="token" value="'.e($notification->token).'"', false);
+
+        return true;
+    });
+});
+
+test('failed password reset preserves the token for a retry', function () {
+    Notification::fake();
+
+    $user = User::factory()->create();
+
+    $this->post(route('password.request'), ['email' => $user->email]);
+
+    Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
+        $response = $this
+            ->from(route('password.reset', $notification->token))
+            ->post(route('password.update'), [
+                'token' => $notification->token,
+                'email' => $user->email,
+                'password' => 'not-the-same',
+                'password_confirmation' => 'different',
+            ]);
+
+        $response
+            ->assertRedirect(route('password.reset', $notification->token))
+            ->assertSessionHasInput('token', $notification->token);
+
+        return true;
+    });
+});
+
 test('password can be reset with valid token', function () {
     Notification::fake();
 
