@@ -416,14 +416,18 @@ export function createMarkdownEditor(options = {}) {
                 }
 
                 // Sync local content changes to Yjs
-                if (this.ytext && !this.isApplyingRemote && value !== this.ytext.toString()) {
+                if (this.ytext && !this.editorInstance && !this.isApplyingRemote && value !== this.ytext.toString()) {
                     this.ydoc.transact(() => {
                         this.ytext.delete(0, this.ytext.length);
                         this.ytext.insert(0, value);
                     }, 'local');
                 }
 
-                if (this.editorInstance && this.editorInstance.getContent() !== value) {
+                // When collaboration is active, y-codemirror owns the editor
+                // document and applies Y.Text changes to the CodeMirror view.
+                // Dispatching a second full-document replacement here can run
+                // while CodeMirror is processing the Yjs transaction.
+                if (this.editorInstance && !this.ytext && this.editorInstance.getContent() !== value) {
                     this.editorInstance.setContent(value);
                 }
 
@@ -520,16 +524,14 @@ export function createMarkdownEditor(options = {}) {
                     }));
             });
 
-            // If initial content exists and ytext is empty, seed it
-            if (this.content && this.ytext.length === 0) {
-                this.ydoc.transact(() => {
-                    this.ytext.insert(0, this.content);
-                }, 'local');
-            }
-
             // Observe remote Yjs changes
             this.ytext.observe((event, transaction) => {
-                if (transaction.origin !== 'local') {
+                const isRemoteTransaction = transaction.origin === this.provider?.providerOrigin
+                    || transaction.origin === 'remote'
+                    || transaction.origin === undefined
+                    || transaction.origin === null;
+
+                if (isRemoteTransaction) {
                     this.isApplyingRemote = true;
                     try {
                         const incoming = this.ytext.toString();
@@ -537,9 +539,6 @@ export function createMarkdownEditor(options = {}) {
                         this.initialContent = incoming;
                         this.isDirty = false;
                         this.updateMetrics();
-                        if (this.editorInstance && this.editorInstance.getContent() !== incoming) {
-                            this.editorInstance.setContent(incoming);
-                        }
                     } finally {
                         this.isApplyingRemote = false;
                     }
@@ -652,6 +651,21 @@ export function createMarkdownEditor(options = {}) {
             });
 
             await this.provider.connect();
+
+            // Catch up from the durable journal before seeding a new document.
+            // Seeding first would make every client insert the initial snapshot
+            // with a different Yjs client id, duplicating the note when the
+            // server later returns the already-persisted snapshot.
+            if (this.ytext.length === 0 && this.content) {
+                this.ydoc.transact(() => {
+                    this.ytext.insert(0, this.content);
+                }, 'local');
+            } else if (this.ytext.length > 0 && this.content !== this.ytext.toString()) {
+                this.content = this.ytext.toString();
+                this.initialContent = this.content;
+                this.isDirty = false;
+                this.updateMetrics();
+            }
         },
 
         scheduleSnapshotFlush() {

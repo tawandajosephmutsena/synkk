@@ -10,6 +10,7 @@ import {
 import {
     EditorState,
     Compartment,
+    Annotation,
     RangeSetBuilder,
 } from '@codemirror/state';
 import {
@@ -26,7 +27,17 @@ import {
 } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { closeBrackets } from '@codemirror/autocomplete';
-import { yCollab } from 'y-codemirror.next';
+
+const remoteYTextSync = Annotation.define();
+
+export function syncEditorContentToYText(ytext, content, origin) {
+    if (!ytext?.doc || ytext.toString() === content) return;
+
+    ytext.doc.transact(() => {
+        ytext.delete(0, ytext.length);
+        ytext.insert(0, content);
+    }, origin);
+}
 
 /**
  * Bespoke Synkk Obsidian Dark Theme
@@ -262,6 +273,9 @@ export function createSynkkEditor(container, {
 } = {}) {
     const readOnlyCompartment = new Compartment();
     const editableCompartment = new Compartment();
+    const collaborationOrigin = Symbol('synkk-codemirror-local');
+    let localYTextSyncTimer = null;
+    let view = null;
 
     // If Y.Text is provided and empty, seed with initialDoc
     if (ytext && ytext.length === 0 && initialDoc) {
@@ -285,15 +299,11 @@ export function createSynkkEditor(container, {
         editableCompartment.of(EditorView.editable.of(canEdit)),
     ];
 
-    // Collaboration Binding
-    if (ytext && awareness) {
-        extensions.push(
-            yCollab(ytext, awareness, { undoManager: undoManager || false })
-        );
-    } else {
-        // Standalone history when not using Yjs UndoManager
-        extensions.push(history());
-    }
+    // Collaboration is synchronized through a guarded Y.Text bridge below.
+    // y-codemirror's observer dispatches against absolute positions while a
+    // CodeMirror update may still be in flight, which can corrupt the view
+    // when a durable snapshot and a local edit arrive together.
+    extensions.push(history());
 
     // Keybindings
     const customKeymaps = [
@@ -319,6 +329,16 @@ export function createSynkkEditor(container, {
         extensions.push(EditorView.updateListener.of((update) => {
             if (update.docChanged) {
                 const doc = update.state.doc;
+                const isRemoteSync = update.transactions.some((transaction) => transaction.annotation(remoteYTextSync));
+
+                if (ytext && !isRemoteSync) {
+                    if (localYTextSyncTimer) clearTimeout(localYTextSyncTimer);
+                    localYTextSyncTimer = setTimeout(() => {
+                        syncEditorContentToYText(ytext, doc.toString(), collaborationOrigin);
+                        localYTextSyncTimer = null;
+                    }, 150);
+                }
+
                 const metrics = extractDocumentMetrics(doc);
                 const headings = extractDocumentHeadings(doc);
                 onChange({
@@ -339,10 +359,31 @@ export function createSynkkEditor(container, {
         extensions,
     });
 
-    const view = new EditorView({
+    view = new EditorView({
         state,
         parent: container,
     });
+
+    const remoteYTextObserver = ytext
+        ? (event, transaction) => {
+            if (transaction.origin === collaborationOrigin) return;
+
+            if (localYTextSyncTimer) {
+                clearTimeout(localYTextSyncTimer);
+                localYTextSyncTimer = null;
+            }
+
+            const incoming = ytext.toString();
+            if (view.state.doc.toString() === incoming) return;
+
+            view.dispatch({
+                changes: { from: 0, to: view.state.doc.length, insert: incoming },
+                annotations: remoteYTextSync.of(true),
+            });
+        }
+        : null;
+
+    remoteYTextObserver && ytext.observe(remoteYTextObserver);
 
     /**
      * Wrap selection with prefix and suffix (e.g. bold, italic)
@@ -449,6 +490,8 @@ export function createSynkkEditor(container, {
         },
 
         destroy() {
+            if (localYTextSyncTimer) clearTimeout(localYTextSyncTimer);
+            remoteYTextObserver && ytext.unobserve(remoteYTextObserver);
             view.destroy();
         },
 

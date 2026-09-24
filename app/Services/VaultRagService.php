@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultFile;
 use App\Models\VaultFileEmbedding;
@@ -347,7 +348,7 @@ class VaultRagService
      *     wikilinks: array<int, string>
      * }>
      */
-    public function search(Vault $vault, string $query, int $limit = 5): array
+    public function search(Vault $vault, string $query, int $limit = 5, ?User $user = null): array
     {
         if ($vault->is_e2ee) {
             return [];
@@ -370,6 +371,10 @@ class VaultRagService
 
         foreach ($embeddings as $record) {
             if ($record->file->is_deleted) {
+                continue;
+            }
+
+            if ($user && $vault->permissionForPath($user, $record->file->path) === 'hidden') {
                 continue;
             }
 
@@ -470,7 +475,7 @@ class VaultRagService
      *     duration_ms: int
      * }
      */
-    public function query(Vault $vault, string $query, array $options = []): array
+    public function query(Vault $vault, string $query, array $options = [], ?User $user = null): array
     {
         if ($vault->is_e2ee) {
             return [
@@ -489,11 +494,11 @@ class VaultRagService
         $keywords = $this->extractQueryKeywords($query);
 
         // 1. Hybrid Retrieval
-        $topChunks = $this->search($vault, $query, $maxCitations);
+        $topChunks = $this->search($vault, $query, $maxCitations, $user);
 
         // 2. Graph Backlink Traversal (Graph-Augmented RAG)
         $seedPaths = array_values(array_unique(array_column($topChunks, 'path')));
-        $graphNodes = $expandGraph ? $this->graphService->expandContext($vault, $seedPaths, depth: 1) : [];
+        $graphNodes = $expandGraph ? $this->graphService->expandContext($vault, $seedPaths, depth: 1, user: $user) : [];
 
         // 3. Compile Citations with clean excerpts
         $citations = [];

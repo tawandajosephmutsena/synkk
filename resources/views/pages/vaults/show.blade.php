@@ -1627,6 +1627,11 @@ new #[Title('Vault Details')] class extends Component
                 vaultTestCipher: {{ Js::from($vault->e2ee_test_cipher) }},
                 documentId: {{ Js::from($this->collaborationDocumentId) }},
                 filePath: {{ Js::from($this->activeFile?->path) }},
+                collabEnabled: {{ Js::from(
+                    ! str_contains($this->activeFile?->path ?? '', '.conflict-')
+                    && ! str_contains($this->activeFile?->path ?? '', '.sync-conflict-')
+                    && $this->currentFileConflicts->isEmpty()
+                ) }},
                 user: {
                     id: {{ Js::from(auth()->id()) }},
                     name: {{ Js::from(auth()->user()?->name) }}

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultFile;
 use Illuminate\Support\Facades\Cache;
@@ -216,8 +217,12 @@ class KnowledgeGraphService
      *     adjacency: array<string, array<string, array<int, string>>>
      * }
      */
-    public function getGraphTopology(Vault $vault): array
+    public function getGraphTopology(Vault $vault, ?User $user = null): array
     {
+        if ($user) {
+            return $this->buildGraphTopology($vault, $user);
+        }
+
         $version = $vault->latestVersion();
         $cacheKey = "vault_graph_topology_{$vault->id}_v{$version}";
 
@@ -238,12 +243,18 @@ class KnowledgeGraphService
      *     adjacency: array<string, array<string, array<int, string>>>
      * }
      */
-    public function buildGraphTopology(Vault $vault): array
+    public function buildGraphTopology(Vault $vault, ?User $user = null): array
     {
         $markdownFiles = VaultFile::where('vault_id', $vault->id)
             ->where('is_deleted', false)
             ->where('path', 'like', '%.md')
             ->get();
+
+        if ($user) {
+            $markdownFiles = $markdownFiles
+                ->filter(fn (VaultFile $file): bool => $vault->permissionForPath($user, $file->path) !== 'hidden')
+                ->values();
+        }
 
         $pathMap = [];
         $basenameMap = [];
@@ -326,13 +337,13 @@ class KnowledgeGraphService
      *     excerpt: string|null
      * }>
      */
-    public function expandContext(Vault $vault, array $seedPaths, int $depth = 1): array
+    public function expandContext(Vault $vault, array $seedPaths, int $depth = 1, ?User $user = null): array
     {
         if (empty($seedPaths)) {
             return [];
         }
 
-        $topology = $this->getGraphTopology($vault);
+        $topology = $this->getGraphTopology($vault, $user);
         $outbound = $topology['adjacency']['outbound'];
         $inbound = $topology['adjacency']['inbound'];
 

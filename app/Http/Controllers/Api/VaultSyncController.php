@@ -820,7 +820,7 @@ class VaultSyncController extends Controller
         $result = $this->ragService->query($vault, $validated['query'], [
             'expand_graph' => $validated['expand_graph'] ?? true,
             'max_citations' => $validated['max_citations'] ?? 4,
-        ]);
+        ], $deviceToken->user);
 
         return response()->json([
             'status' => 'ok',
@@ -844,7 +844,7 @@ class VaultSyncController extends Controller
             'limit' => ['nullable', 'integer', 'min:1', 'max:25'],
         ]);
 
-        $results = $this->ragService->search($vault, $validated['query'], $validated['limit'] ?? 5);
+        $results = $this->ragService->search($vault, $validated['query'], $validated['limit'] ?? 5, $deviceToken->user);
 
         return response()->json([
             'status' => 'ok',
