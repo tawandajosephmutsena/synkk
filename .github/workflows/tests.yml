@@ -42,14 +42,80 @@ jobs:
           npx --prefix obsidian-plugin tsc --project obsidian-plugin/tsconfig.json --noEmit --skipLibCheck
           npm run test:js
 
+      - name: Run CI Checks
+        run: composer ci:check
+
+      - name: Validate production Compose configuration
+        run: |
+          cp .env.production.example .env.production
+          docker compose -f docker-compose.prod.yml config --quiet
+
+      - name: Build production container
+        run: docker build --tag synkk-ci:${{ github.sha }} .
+
+      - name: Smoke test production container
+        run: |
+          if docker run --rm --env APP_KEY=base64:GENERATE_ME_USING_INSTALL_SCRIPT synkk-ci:${{ github.sha }} /bin/true; then
+            echo "Container accepted an invalid APP_KEY" >&2
+            exit 1
+          fi
+          docker volume create synkk-ci-storage >/dev/null
+          trap 'docker rm --force synkk-ci-smoke >/dev/null 2>&1 || true; docker volume rm synkk-ci-storage >/dev/null 2>&1 || true' EXIT
+          start_container() {
+            docker run --detach --name synkk-ci-smoke \
+              --publish 127.0.0.1:18080:80 \
+              --volume synkk-ci-storage:/var/www/html/storage \
+              --env APP_ENV=production \
+              --env APP_DEBUG=false \
+              --env APP_KEY=base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY= \
+              --env QUEUE_CONNECTION=database \
+              --env CACHE_STORE=database \
+              --env SESSION_DRIVER=database \
+              --env REVERB_APP_ID=synkk-ci \
+              --env REVERB_APP_KEY=synkk-ci-key \
+              --env REVERB_APP_SECRET=synkk-ci-secret \
+              --env REVERB_HOST=127.0.0.1 \
+              --env REVERB_PORT=8080 \
+              --env REVERB_SCHEME=http \
+              --env SYNKK_BOOTSTRAP_EMAIL=admin@example.test \
+              --env SYNKK_BOOTSTRAP_PASSWORD=SecurePass123!@# \
+              synkk-ci:${{ github.sha }}
+          }
+          start_container
+          curl --fail --silent --show-error --retry 20 --retry-delay 3 --retry-connrefused \
+            http://127.0.0.1:18080/up || { docker logs synkk-ci-smoke; exit 1; }
+          container_ip="$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' synkk-ci-smoke)"
+          test -n "$container_ip"
+          docker exec synkk-ci-smoke php -r '
+            $loopback = @fsockopen("127.0.0.1", 9000, $errno, $error, 1);
+            if ($loopback === false) { fwrite(STDERR, "PHP-FPM is not reachable on loopback.\n"); exit(1); }
+            fclose($loopback);
+            $network = @fsockopen($argv[1], 9000, $errno, $error, 1);
+            if ($network !== false) { fclose($network); fwrite(STDERR, "PHP-FPM is exposed on the container network.\n"); exit(1); }
+          ' "$container_ip"
+          test "$(docker exec synkk-ci-smoke sqlite3 /var/www/html/storage/app/database.sqlite \
+            "SELECT COUNT(*) FROM users WHERE email='admin@example.test' AND is_super_admin=1 AND email_verified_at IS NOT NULL;")" = 1
+          password_hash_before="$(docker exec synkk-ci-smoke sqlite3 /var/www/html/storage/app/database.sqlite \
+            "SELECT password FROM users WHERE email='admin@example.test';")"
+          docker rm --force synkk-ci-smoke >/dev/null
+          start_container
+          curl --fail --silent --show-error --retry 20 --retry-delay 3 --retry-connrefused \
+            http://127.0.0.1:18080/up || { docker logs synkk-ci-smoke; exit 1; }
+          curl --fail --silent --show-error http://127.0.0.1:18080/login >/dev/null
+          test "$(docker exec synkk-ci-smoke sqlite3 /var/www/html/storage/app/database.sqlite \
+            "SELECT COUNT(*) FROM users WHERE email='admin@example.test' AND is_super_admin=1 AND email_verified_at IS NOT NULL;")" = 1
+          test "$password_hash_before" = "$(docker exec synkk-ci-smoke sqlite3 /var/www/html/storage/app/database.sqlite \
+            "SELECT password FROM users WHERE email='admin@example.test';")"
+          for attempt in $(seq 1 20); do
+            if python3 -c 'import socket; s=socket.create_connection(("127.0.0.1", 18080), timeout=5); s.sendall(b"GET /app/synkk-ci-key?protocol=7&client=js&version=8.6.0&flash=false HTTP/1.1\r\nHost: 127.0.0.1:18080\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n"); response=s.recv(512); s.close(); assert response.startswith(b"HTTP/1.1 101"), response'; then
+              break
+            fi
+            if [ "$attempt" -eq 20 ]; then docker logs synkk-ci-smoke; exit 1; fi
+            sleep 1
+          done
+
       - name: Audit production dependencies
         run: |
           composer audit --locked --no-interaction
           npm audit --omit=dev --audit-level=high
           npm audit --prefix obsidian-plugin --omit=dev --audit-level=high
-
-      - name: Run CI Checks
-        run: composer ci:check
-
-      - name: Build production container
-        run: docker build --tag synkk-ci:${{ github.sha }} .

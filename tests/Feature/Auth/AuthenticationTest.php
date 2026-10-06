@@ -11,6 +11,16 @@ test('login screen can be rendered', function () {
     $response->assertOk();
 });
 
+test('login screen exposes the public Reverb key without its secret', function () {
+    config()->set('broadcasting.connections.reverb.key', 'public&key');
+    config()->set('broadcasting.connections.reverb.secret', 'private-secret');
+
+    $response = $this->get(route('login'));
+
+    $response->assertSee('<meta name="synkk-reverb-key" content="public&amp;key">', false)
+        ->assertDontSee('private-secret');
+});
+
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 

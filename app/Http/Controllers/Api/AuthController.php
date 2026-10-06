@@ -49,11 +49,7 @@ class AuthController extends Controller
                 'name' => 'Synkk Vault Sync',
                 'version' => '1.0.0',
             ],
-            'broadcasting' => $pairingService->getBroadcastingConfig(
-                $request->getHost(),
-                $request->getPort(),
-                $request->getScheme()
-            ),
+            'broadcasting' => $pairingService->getBroadcastingConfig($request->getSchemeAndHttpHost()),
         ]);
     }
 

@@ -19,6 +19,9 @@ storage/logs/*
 tests
 docs
 artifacts
+Archive.zip
+outputs
+videos
 scratch
 .phpunit.cache
 npm-debug.log*

@@ -21,41 +21,41 @@
 
 Synkk is the web server and dashboard for a controlled Obsidian sync workflow. The Foundation release is built for people who want a private team vault, path-aware access, reliable whole-file sync, clear version history, and a safer launch path before the advanced sync roadmap lands.
 
-## ⚡ 1-Click Deployment
+## Install Synkk
 
-Deploy your private Synkk team vault sync server instantly:
+### 🚀 VPS Installer (Ubuntu, Debian, AlmaLinux, Rocky)
 
-<p align="left">
-  <a href="https://render.com/deploy?repo=https://github.com/tawandajosephmutsena/synkk">
-    <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="30">
-  </a>
-  <a href="https://railway.app/new/template?template=https://github.com/tawandajosephmutsena/synkk">
-    <img src="https://railway.app/button.svg" alt="Deploy on Railway" height="30">
-  </a>
-  <a href="https://synkk.space/documentation">
-    <img src="https://elest.io/images/deploy-on-elestio-btn.svg" alt="Deploy on Elestio" height="30">
-  </a>
-</p>
-
-### 🚀 1-Line Turnkey Installer (Ubuntu, Debian, AlmaLinux, Rocky, Any VPS)
-
-Run this single command on your server to automatically install Docker, provision Let's Encrypt SSL/TLS via Caddy, configure queue workers and WebSockets, and bootstrap your superadmin account in under 3 minutes:
+Point a public DNS name at your server and allow inbound ports 80 and 443. From a Synkk source checkout, run the installer as root. It prompts for an administrator password or generates one, installs Docker if needed, and starts Synkk behind Caddy HTTPS:
 
 ```bash
-curl -sSL https://synkk.space/install.sh | bash
+git clone --recurse-submodules https://github.com/tawandajosephmutsena/synkk.git
+cd synkk
+sudo SYNKK_DOMAIN=vault.example.com SYNKK_ADMIN_EMAIL=you@example.com bash install.sh
 ```
+
+Replace the example domain and email. Keep the generated login credentials and `/opt/synkk/.env.production` private. Installation requires a working DNS record and valid TLS certificate; build time depends on your server and network. Configure SMTP after installation to deliver invitations and password recovery emails.
 
 ### 🐳 Run With Docker Compose
 
 ```bash
-# 1. Download production compose file & Caddy configuration
-curl -sSL https://raw.githubusercontent.com/tawandajosephmutsena/synkk/main/docker-compose.prod.yml -o docker-compose.yml
-curl -sSL https://raw.githubusercontent.com/tawandajosephmutsena/synkk/main/docker/Caddyfile -o Caddyfile
-curl -sSL https://raw.githubusercontent.com/tawandajosephmutsena/synkk/main/.env.production.example -o .env
+# 1. Clone the repository and prepare the environment
+git clone --recurse-submodules https://github.com/tawandajosephmutsena/synkk.git
+cd synkk
+cp .env.production.example .env.production
 
-# 2. Launch production container stack with automated HTTPS
-docker compose up -d
+# 2. Generate a stable APP_KEY and unique Reverb credentials
+openssl rand -base64 32
+openssl rand -hex 16
+openssl rand -hex 32
+
+# 3. Edit .env.production as described below, then start Synkk
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml ps
 ```
+
+In `.env.production`, set `APP_KEY=base64:<output of the first command>`, put the two hex values in `REVERB_APP_KEY` and `REVERB_APP_SECRET`, and set `APP_URL` to your public HTTPS address. Keep `REVERB_HOST=127.0.0.1`, `REVERB_PORT=8080`, and `REVERB_SCHEME=http` for server-side publishing inside the container. Uncomment `SYNKK_BOOTSTRAP_EMAIL` and `SYNKK_BOOTSTRAP_PASSWORD` and replace their examples with your own credentials **before first start**. The container creates that owner account once; sign in at `APP_URL` with those credentials. The database and uploaded files use named Docker volumes and survive container replacement.
+
+This Compose file serves HTTP on host loopback port 8000. Put a trusted HTTPS reverse proxy in front of it, forwarding WebSocket upgrades to the same port, before exposing Synkk publicly. For a localhost-only trial, set `APP_URL=http://localhost:8000` and `SESSION_SECURE_COOKIE=false` in `.env.production`. Configure SMTP before using invitations, password recovery, or email changes; the default log mailer cannot deliver email. After the first login, remove the bootstrap credentials from `.env.production` and recreate the container with `docker compose -f docker-compose.prod.yml up -d`.
 
 ## Product Screens
 

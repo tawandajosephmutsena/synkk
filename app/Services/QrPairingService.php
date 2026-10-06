@@ -201,7 +201,7 @@ class QrPairingService
                 'device_name' => $deviceName,
                 'team_slug' => $team->slug,
                 'access_scope' => $tokenResult['device_token']->access_scope,
-                'broadcasting' => $this->getBroadcastingConfig(),
+                'broadcasting' => $this->getBroadcastingConfig($session['server_url']),
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -218,21 +218,32 @@ class QrPairingService
 
     /**
      * Get the public broadcasting / Reverb connection details for client devices.
+     * The public URL may be an origin or the API URL saved in a pairing session.
      *
      * @return array{driver: string, key: string, host: string, port: int, scheme: string}
      */
-    public function getBroadcastingConfig(?string $requestHost = null, int|string|null $requestPort = null, ?string $requestScheme = null): array
+    public function getBroadcastingConfig(?string $publicUrl = null): array
     {
         $default = (string) config('broadcasting.default', 'reverb');
         $reverbKey = (string) config('broadcasting.connections.reverb.key', '');
-        $reverbHost = config('broadcasting.connections.reverb.options.host') ?: ($requestHost ?: 'localhost');
-        $reverbPort = (int) (config('broadcasting.connections.reverb.options.port') ?: ($requestPort ? (int) $requestPort : 8080));
-        $reverbScheme = (string) (config('broadcasting.connections.reverb.options.scheme') ?: ($requestScheme ?: 'http'));
+        $configuredHost = trim((string) config('broadcasting.connections.reverb.options.host', ''));
+        $isInternalHost = in_array(strtolower($configuredHost), ['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]'], true);
+
+        if ($configuredHost !== '' && (app()->isLocal() || ! $isInternalHost)) {
+            $reverbHost = $configuredHost;
+            $reverbPort = (int) (config('broadcasting.connections.reverb.options.port') ?: 8080);
+            $reverbScheme = (string) (config('broadcasting.connections.reverb.options.scheme') ?: 'http');
+        } else {
+            $publicUrlParts = parse_url($publicUrl ?? (string) config('app.url', 'http://localhost')) ?: [];
+            $reverbHost = (string) ($publicUrlParts['host'] ?? 'localhost');
+            $reverbScheme = (string) ($publicUrlParts['scheme'] ?? 'http');
+            $reverbPort = (int) ($publicUrlParts['port'] ?? ($reverbScheme === 'https' ? 443 : 80));
+        }
 
         return [
             'driver' => $default,
             'key' => $reverbKey,
-            'host' => (string) $reverbHost,
+            'host' => $reverbHost,
             'port' => $reverbPort,
             'scheme' => $reverbScheme,
         ];
