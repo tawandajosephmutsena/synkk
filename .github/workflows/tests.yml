@@ -82,7 +82,7 @@ jobs:
               synkk-ci:${{ github.sha }}
           }
           start_container
-          curl --fail --silent --show-error --retry 20 --retry-delay 3 --retry-connrefused \
+          curl --fail --silent --show-error --retry 60 --retry-delay 2 --retry-all-errors \
             http://127.0.0.1:18080/up || { docker logs synkk-ci-smoke; exit 1; }
           container_ip="$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' synkk-ci-smoke)"
           test -n "$container_ip"
@@ -99,7 +99,7 @@ jobs:
             "SELECT password FROM users WHERE email='admin@example.test';")"
           docker rm --force synkk-ci-smoke >/dev/null
           start_container
-          curl --fail --silent --show-error --retry 20 --retry-delay 3 --retry-connrefused \
+          curl --fail --silent --show-error --retry 60 --retry-delay 2 --retry-all-errors \
             http://127.0.0.1:18080/up || { docker logs synkk-ci-smoke; exit 1; }
           curl --fail --silent --show-error http://127.0.0.1:18080/login >/dev/null
           test "$(docker exec synkk-ci-smoke sqlite3 /var/www/html/storage/app/database.sqlite \
