@@ -35,6 +35,9 @@ jobs:
         run: npm run build
 
       - name: Run Tests (Pest)
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
         run: vendor/bin/pest
 
       - name: Run PHPStan

@@ -6,6 +6,7 @@ RUN apk add --no-cache \
     su-exec \
     curl \
     libzip-dev \
+    sqlite-dev \
     zip \
     unzip \
     nodejs \
