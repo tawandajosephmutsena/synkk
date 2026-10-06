@@ -25,6 +25,7 @@ class QrPairingService
      * Create a new temporary QR pairing session and render high-contrast SVG.
      *
      * @param  array<int>|null  $allowedVaultIds
+     * @param  array<int, string>|null  $allowedIpSubnets
      * @return array{
      *     session: string,
      *     session_id: string,
@@ -43,6 +44,7 @@ class QrPairingService
         string $accessScope = 'read_write',
         ?array $allowedVaultIds = null,
         ?DeviceToken $initiatorToken = null,
+        ?array $allowedIpSubnets = null,
     ): array {
         $sessionId = 'synkk_pair_'.Str::random(32);
 
@@ -75,6 +77,10 @@ class QrPairingService
                     abort(403, 'Cannot create pairing session for a vault this token cannot access.');
                 }
                 $allowedVaultIds = $vaultModel ? [$vaultModel->id] : $initiatorToken->allowed_vault_ids;
+            }
+
+            if ($initiatorToken->allowed_ip_subnets !== null) {
+                $allowedIpSubnets = $initiatorToken->allowed_ip_subnets;
             }
         }
 
@@ -118,6 +124,7 @@ class QrPairingService
             'server_url' => $serverUrl,
             'access_scope' => $accessScope,
             'allowed_vault_ids' => $allowedVaultIds,
+            'allowed_ip_subnets' => $allowedIpSubnets,
             'status' => 'waiting',
             'claimed_device_name' => null,
             'device_token_id' => null,
@@ -159,7 +166,7 @@ class QrPairingService
         $lockKey = "pairing_lock_{$sessionId}";
 
         return Cache::lock($lockKey, 10)->block(5, function () use ($cacheKey, $deviceName, $platform) {
-            /** @var array{user_id: int, team_id: int, status?: string, server_url: string, vault_slug: string, access_scope?: string, allowed_vault_ids?: array<int>|null, claimed_device_name?: string|null, device_token_id?: int|null, claimed_at?: int}|null $session */
+            /** @var array{user_id: int, team_id: int, status?: string, server_url: string, vault_slug: string, access_scope?: string, allowed_vault_ids?: array<int>|null, allowed_ip_subnets?: array<int, string>|null, claimed_device_name?: string|null, device_token_id?: int|null, claimed_at?: int}|null $session */
             $session = Cache::get($cacheKey);
 
             if (! $session) {
@@ -173,11 +180,14 @@ class QrPairingService
             $user = User::query()->whereKey($session['user_id'])->firstOrFail();
             $team = Team::query()->whereKey($session['team_id'])->firstOrFail();
 
+            abort_unless(app(PlanService::class)->canAddDevice($team), 403, 'This team cannot pair another device.');
+
             $tokenResult = DeviceToken::createToken(
                 user: $user,
                 team: $team,
                 name: $deviceName,
-                platform: in_array($platform, ['ios', 'android', 'mac', 'windows', 'linux'], true) ? $platform : 'ios'
+                platform: in_array($platform, ['ios', 'android', 'mac', 'windows', 'linux'], true) ? $platform : 'ios',
+                allowedIpSubnets: $session['allowed_ip_subnets'] ?? null,
             );
 
             $tokenResult['device_token']->update([

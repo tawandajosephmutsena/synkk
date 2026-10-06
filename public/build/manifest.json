@@ -59,7 +59,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-BQDDcNL3.js",
+    "file": "assets/app-BEyXZvxy.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -68,13 +68,13 @@
     ]
   },
   "resources/js/landing.js": {
-    "file": "assets/landing-DBKT-BaN.js",
+    "file": "assets/landing-aNcITQmC.js",
     "name": "landing",
     "src": "resources/js/landing.js",
     "isEntry": true
   },
   "resources/js/passkeys.js": {
-    "file": "assets/passkeys-ZWACIUjA.js",
+    "file": "assets/passkeys-CsxEE3hN.js",
     "name": "passkeys",
     "src": "resources/js/passkeys.js",
     "isEntry": true

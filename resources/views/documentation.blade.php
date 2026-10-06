@@ -33,7 +33,7 @@
     </head>
     <body class="synkk-site font-sans antialiased">
         @php
-            $pluginReleaseUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/tag/1.0.0';
+            $pluginReleaseUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/latest';
             $userTeam = auth()->check()
                 ? (auth()->user()->currentTeam ?? auth()->user()->personalTeam() ?? auth()->user()->teams->first())
                 : null;

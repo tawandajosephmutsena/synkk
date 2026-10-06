@@ -135,10 +135,6 @@ class AuthController extends Controller
                 'error' => 'Pairing session expired or already consumed.',
                 'message' => $e->getMessage(),
             ], 410);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'error' => $e->getMessage(),
-            ], 422);
         }
     }
 

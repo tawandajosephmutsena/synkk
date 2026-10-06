@@ -10,17 +10,30 @@ function makeInstallScriptFixture(): array
     $bin = $root.'/bin';
 
     mkdir($source.'/docker', 0700, true);
+    mkdir($source.'/database', 0700, true);
+    mkdir($source.'/storage/app/appsumo', 0700, true);
+    mkdir($source.'/storage/app/public', 0700, true);
+    mkdir($source.'/storage/framework/cache/data', 0700, true);
+    mkdir($source.'/storage/framework/views', 0700, true);
     mkdir($bin, 0700, true);
     copy(__DIR__.'/../../install.sh', $source.'/install.sh');
+    copy(__DIR__.'/../../.dockerignore', $source.'/.dockerignore');
+    copy(__DIR__.'/../../docker/Caddyfile', $source.'/docker/Caddyfile');
 
     foreach ([
         'Dockerfile' => "FROM scratch\n",
         'composer.json' => "{}\n",
         'package.json' => "{}\n",
         'docker/entrypoint.sh' => "#!/bin/sh\n",
-        'docker/Caddyfile' => "{\n    email {\$CADDY_EMAIL}\n}\n{\$SYNKK_DOMAIN} {\n    reverse_proxy synkk:8080\n}\n",
-        '.dockerignore' => ".env\n.env.*\n",
         '.env.local' => "SECRET_SENTINEL=do-not-copy\n",
+        'auth.json' => "{\"test-only\":\"credential\"}\n",
+        '.npmrc' => "//registry.npmjs.org/:_authToken=test-only-token\n",
+        'storage/app/database.sqlite' => 'test-only database fixture',
+        'database/database.sqlite.backup-test' => 'test-only database backup',
+        'storage/app/appsumo/keys.csv' => 'test-only key fixture',
+        'storage/app/public/upload.md' => 'test-only uploaded note',
+        'storage/framework/cache/data/cached-value' => 'test-only cached value',
+        'storage/framework/views/compiled.php' => 'test-only compiled view',
     ] as $path => $contents) {
         file_put_contents($source.'/'.$path, $contents);
     }
@@ -130,6 +143,21 @@ it('creates a fresh HTTPS installation without copying local secrets into the bu
         expect($result['stdout'])->toContain('Synkk is online at https://vault.example.test')
             ->toContain('Initial administrator password: SecureInstallPassword123!');
         expect(file_exists($fixture['install'].'/.env.local'))->toBeFalse();
+        expect(file_exists($fixture['install'].'/auth.json'))->toBeFalse();
+        expect(file_exists($fixture['install'].'/.npmrc'))->toBeFalse();
+        expect(file_exists($fixture['install'].'/storage/app/database.sqlite'))->toBeFalse();
+        expect(file_exists($fixture['install'].'/database/database.sqlite.backup-test'))->toBeFalse();
+        expect(file_exists($fixture['install'].'/storage/app/appsumo/keys.csv'))->toBeFalse();
+        expect(file_exists($fixture['install'].'/storage/app/public/upload.md'))->toBeFalse();
+        expect(file_exists($fixture['install'].'/storage/framework/cache/data/cached-value'))->toBeFalse();
+        expect(file_exists($fixture['install'].'/storage/framework/views/compiled.php'))->toBeFalse();
+        expect(file_get_contents($fixture['install'].'/.dockerignore'))
+            ->toContain('storage/app/*')
+            ->toContain('auth.json')
+            ->toContain('.npmrc')
+            ->toContain('database/*.sqlite*')
+            ->toContain('.aws')
+            ->toContain('.ssh');
         expect(file_get_contents($fixture['install'].'/.env.production'))
             ->toContain('APP_URL=https://vault.example.test')
             ->toContain('SYNKK_BOOTSTRAP_PASSWORD="SecureInstallPassword123!"');
@@ -139,7 +167,8 @@ it('creates a fresh HTTPS installation without copying local secrets into the bu
             ->not->toContain('/var/www/html/database');
         expect(file_get_contents($fixture['install'].'/docker/Caddyfile.install'))
             ->toContain('reverse_proxy app:80')
-            ->not->toContain('synkk:8080');
+            ->not->toContain('synkk:8080')
+            ->not->toContain('synkk:80');
         expect(file_get_contents($fixture['root'].'/docker.log'))
             ->toContain('synkk:bootstrap-admin --if-empty --no-interaction')
             ->not->toContain('SecureInstallPassword123!');
@@ -154,7 +183,9 @@ it('preserves generated secrets and user data when rerun', function () {
     try {
         expect(runInstallScriptFixture($fixture)['exit'])->toBe(0);
         $originalEnvironment = file_get_contents($fixture['install'].'/.env.production');
-        mkdir($fixture['install'].'/storage/app', 0700, true);
+        if (! is_dir($fixture['install'].'/storage/app')) {
+            mkdir($fixture['install'].'/storage/app', 0700, true);
+        }
         file_put_contents($fixture['install'].'/storage/app/user-note.md', 'keep this note');
 
         $result = runInstallScriptFixture($fixture, [

@@ -147,6 +147,24 @@ test('local development keeps its direct Reverb port', function () {
         ->and($broadcasting['scheme'])->toBe('http');
 });
 
+test('pairing exchange refuses another device when the free plan is full', function () {
+    $user = User::factory()->create();
+    $team = $user->personalTeam();
+    $team->update(['plan' => 'free', 'max_devices' => 1]);
+    $sessionId = (new QrPairingService)->createPairingSession($user, $team)['session'];
+    DeviceToken::createToken($user, $team, 'Existing laptop', 'mac');
+
+    $response = $this->postJson('/api/v1/pairing/exchange', [
+        'session' => $sessionId,
+        'device_name' => 'Extra phone',
+        'platform' => 'android',
+    ]);
+
+    $response->assertForbidden();
+
+    expect($team->deviceTokens()->count())->toBe(1);
+});
+
 test('API endpoints return HTTP 410 when pairing session is expired or already consumed', function () {
     $user = User::factory()->create();
     $team = Team::factory()->create();
@@ -267,8 +285,11 @@ test('initiator token scope and vault restrictions are strictly inherited by chi
     );
     $restrictedResult['device_token']->update([
         'allowed_vault_ids' => [$vaultA->id],
+        'allowed_ip_subnets' => ['203.0.113.*'],
     ]);
     $restrictedToken = $restrictedResult['plain_token'];
+
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.5']);
 
     // Inaccessible vault B -> rejected
     $badVaultAttempt = $this->withHeader('Authorization', "Bearer {$restrictedToken}")
@@ -301,7 +322,8 @@ test('initiator token scope and vault restrictions are strictly inherited by chi
     expect($childDevice->access_scope)->toBe('read_write') // Escalation prevented!
         ->and($childDevice->allowed_vault_ids)->toBe([$vaultA->id]) // Vault constraint inherited!
         ->and($childDevice->canAccessVault($vaultA->id))->toBeTrue()
-        ->and($childDevice->canAccessVault($vaultB->id))->toBeFalse();
+        ->and($childDevice->canAccessVault($vaultB->id))->toBeFalse()
+        ->and($childDevice->allowed_ip_subnets)->toBe(['203.0.113.*']);
 });
 
 test('public mobile pairing bridge renders auto-redirect and obsidian protocol links', function () {

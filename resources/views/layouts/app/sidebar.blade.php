@@ -89,7 +89,7 @@
                     {{ __('Sync your vault notes across trusted devices.') }}
                 </p>
                 <a
-                    href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin"
+                    href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/latest"
                     target="_blank"
                     class="block w-full rounded-full bg-white py-1.5 text-center text-xs font-bold text-[#0D3B29] hover:bg-gray-100 transition-colors"
                 >
@@ -189,4 +189,3 @@
         @fluxScripts
     </body>
 </html>
-

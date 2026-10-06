@@ -18,6 +18,8 @@ use Livewire\Component;
 new #[Title('Devices & Sync Tokens')] class extends Component {
     public string $deviceName = '';
     public string $devicePlatform = 'mac';
+    public string $pairingMethod = 'qr';
+    public string $pairingVaultId = '';
     public string $accessScope = 'full_access';
     public string $allowedIpSubnets = '';
     public ?string $generatedPlainToken = null;
@@ -49,8 +51,9 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         }
 
         $this->validate([
-            'deviceName' => ['required', 'string', 'max:255'],
-            'devicePlatform' => ['required', 'in:mac,windows,ios,android,linux'],
+            'deviceName' => [$this->pairingMethod === 'token' ? 'required' : 'nullable', 'string', 'max:255'],
+            'devicePlatform' => [$this->pairingMethod === 'token' ? 'required' : 'nullable', 'in:mac,windows,ios,android,linux'],
+            'pairingMethod' => ['required', 'in:qr,token'],
             'accessScope' => ['required', 'in:full_access,read_only'],
             'allowedIpSubnets' => ['nullable', 'string'],
         ]);
@@ -74,35 +77,60 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
             $subnets = array_values(array_filter(array_map('trim', explode(',', $this->allowedIpSubnets))));
         }
 
-        $result = DeviceToken::createToken(
-            Auth::user(),
-            $team,
-            $this->deviceName,
-            $this->devicePlatform,
-            $this->accessScope,
-            $subnets,
-        );
-
-        $this->generatedPlainToken = $result['plain_token'];
-
-        // Generate scoped one-scan pairing session & QR SVG
-        try {
-            $pairingService = app(\App\Services\QrPairingService::class);
-            $sessionData = $pairingService->createPairingSession(
-                user: Auth::user(),
-                team: $team,
-                vault: $team->vaults()->first(),
-                accessScope: $this->accessScope,
+        if ($this->pairingMethod === 'token') {
+            $result = DeviceToken::createToken(
+                Auth::user(),
+                $team,
+                $this->deviceName,
+                $this->devicePlatform,
+                $this->accessScope,
+                $subnets,
             );
-            $this->generatedQrCodeSvg = $sessionData['qr_svg'];
-            $this->generatedPairingUrl = $sessionData['pairing_url'] ?? null;
-            $this->generatedWebPairingUrl = $sessionData['web_pairing_url'] ?? null;
-            $this->pairingSessionId = $sessionData['session'];
-        } catch (\Throwable $e) {
+
+            $this->generatedPlainToken = $result['plain_token'];
             $this->generatedQrCodeSvg = null;
             $this->generatedPairingUrl = null;
             $this->generatedWebPairingUrl = null;
             $this->pairingSessionId = null;
+        } else {
+            $this->generatedPlainToken = null;
+
+            $pairableVaults = $this->pairableVaults;
+            if ($pairableVaults->isEmpty()) {
+                $this->addError('pairingMethod', __('Create a vault before pairing a device with a QR code.'));
+
+                return;
+            }
+
+            $vault = $pairableVaults->count() === 1
+                ? $pairableVaults->first()
+                : $pairableVaults->firstWhere('id', (int) $this->pairingVaultId);
+
+            if (! $vault) {
+                $this->addError('pairingVaultId', __('Select a vault to pair with this device.'));
+
+                return;
+            }
+
+            try {
+                $pairingService = app(\App\Services\QrPairingService::class);
+                $sessionData = $pairingService->createPairingSession(
+                    user: Auth::user(),
+                    team: $team,
+                    vault: $vault,
+                    accessScope: $this->accessScope,
+                    allowedIpSubnets: $subnets,
+                );
+                $this->generatedQrCodeSvg = $sessionData['qr_svg'];
+                $this->generatedPairingUrl = $sessionData['pairing_url'];
+                $this->generatedWebPairingUrl = $sessionData['web_pairing_url'];
+                $this->pairingSessionId = $sessionData['session'];
+            } catch (\Throwable $exception) {
+                report($exception);
+                $this->addError('pairingMethod', __('Could not create a pairing code. Try again or choose a manual token.'));
+
+                return;
+            }
         }
 
         $this->reset('deviceName', 'allowedIpSubnets');
@@ -111,7 +139,10 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         $this->dispatch('modal-close', name: 'create-device-token');
         $this->dispatch('modal-show', name: 'show-token-modal');
 
-        Flux::toast(variant: 'success', text: __('Sync token & instant QR pairing generated.'));
+        Flux::toast(
+            variant: 'success',
+            text: $this->pairingMethod === 'qr' ? __('QR pairing code generated.') : __('Sync token generated.'),
+        );
     }
 
     public function clearGeneratedToken(): void
@@ -128,6 +159,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
     {
         $token = DeviceToken::where('id', $tokenId)
             ->where('team_id', Auth::user()->currentTeam?->id)
+            ->userDevices()
             ->firstOrFail();
 
         $this->editingTokenId = $token->id;
@@ -172,6 +204,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
 
         DeviceToken::where('id', $this->editingTokenId)
             ->where('team_id', Auth::user()->currentTeam?->id)
+            ->userDevices()
             ->update([
                 'name' => $this->editName,
                 'client_platform' => $this->editPlatform,
@@ -189,6 +222,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
     {
         DeviceToken::where('id', $tokenId)
             ->where('team_id', Auth::user()->currentTeam?->id)
+            ->userDevices()
             ->delete();
 
         Flux::toast(variant: 'info', text: __('Device token revoked.'));
@@ -208,6 +242,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
 
         $token = DeviceToken::where('id', $tokenId)
             ->where('team_id', Auth::user()->currentTeam?->id)
+            ->userDevices()
             ->firstOrFail();
 
         $token->triggerRemoteWipe();
@@ -229,9 +264,16 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         }
 
         return DeviceToken::where('team_id', $this->team->id)
+            ->userDevices()
             ->with('user')
             ->latest('created_at')
             ->get();
+    }
+
+    #[Computed]
+    public function pairableVaults(): Collection
+    {
+        return $this->team?->vaults()->orderBy('name')->get() ?? collect();
     }
 }; ?>
 
@@ -437,19 +479,48 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         <form wire:submit="generateToken" class="space-y-5">
             <div>
                 <flux:heading size="lg">{{ __('Connect Device') }}</flux:heading>
-                <flux:subheading class="text-xs">{{ __('Generate a secure sync token or instant QR code for your Obsidian device.') }}</flux:subheading>
+                <flux:subheading class="text-xs">{{ __('Choose a QR code or a manual sync token for your Obsidian device.') }}</flux:subheading>
             </div>
 
             <div class="space-y-4">
-                <flux:input wire:model="deviceName" :label="__('Device Name')" placeholder="e.g. MacBook Pro, iPhone 15, Work PC" required />
-
-                <flux:select wire:model="devicePlatform" :label="__('Operating System')">
-                    <flux:select.option value="mac">{{ __('macOS') }}</flux:select.option>
-                    <flux:select.option value="windows">{{ __('Windows PC') }}</flux:select.option>
-                    <flux:select.option value="ios">{{ __('iPhone / iPad (iOS)') }}</flux:select.option>
-                    <flux:select.option value="android">{{ __('Android Phone / Tablet') }}</flux:select.option>
-                    <flux:select.option value="linux">{{ __('Linux') }}</flux:select.option>
+                <flux:select wire:model.live="pairingMethod" :label="__('Setup Method')">
+                    <flux:select.option value="qr">{{ __('Scan a QR code') }}</flux:select.option>
+                    <flux:select.option value="token">{{ __('Copy a manual token') }}</flux:select.option>
                 </flux:select>
+                <flux:error name="pairingMethod" />
+
+                @if ($pairingMethod === 'token')
+                    <flux:input wire:model="deviceName" :label="__('Device Name')" placeholder="e.g. MacBook Pro, iPhone 15, Work PC" required />
+
+                    <flux:select wire:model="devicePlatform" :label="__('Operating System')">
+                        <flux:select.option value="mac">{{ __('macOS') }}</flux:select.option>
+                        <flux:select.option value="windows">{{ __('Windows PC') }}</flux:select.option>
+                        <flux:select.option value="ios">{{ __('iPhone / iPad (iOS)') }}</flux:select.option>
+                        <flux:select.option value="android">{{ __('Android Phone / Tablet') }}</flux:select.option>
+                        <flux:select.option value="linux">{{ __('Linux') }}</flux:select.option>
+                    </flux:select>
+                @else
+                    <flux:subheading>{{ __('Obsidian will identify the device when it scans the code.') }}</flux:subheading>
+
+                    @if ($this->pairableVaults->isEmpty())
+                        <flux:callout variant="warning" :heading="__('Create a vault first')">
+                            {{ __('QR pairing needs a vault to sync. Create one before generating a code.') }}
+                            <flux:button :href="route('vaults.index', ['current_team' => $this->team->slug])" size="sm" class="mt-2">
+                                {{ __('Go to Vaults') }}
+                            </flux:button>
+                        </flux:callout>
+                    @elseif ($this->pairableVaults->count() === 1)
+                        <flux:subheading>{{ __('Pairing with vault: :name', ['name' => $this->pairableVaults->first()->name]) }}</flux:subheading>
+                    @else
+                        <flux:select wire:model="pairingVaultId" :label="__('Vault to Sync')">
+                            <flux:select.option value="">{{ __('Choose a vault') }}</flux:select.option>
+                            @foreach ($this->pairableVaults as $vault)
+                                <flux:select.option value="{{ $vault->id }}" wire:key="pairing-vault-{{ $vault->id }}">{{ $vault->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <flux:error name="pairingVaultId" />
+                    @endif
+                @endif
 
                 <flux:select wire:model="accessScope" :label="__('Access Scope')">
                     <flux:select.option value="full_access">{{ __('Full Read & Write Access') }}</flux:select.option>
@@ -463,7 +534,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                 <flux:modal.close>
                     <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
                 </flux:modal.close>
-                <flux:button variant="primary" type="submit">{{ __('Generate Token & QR') }}</flux:button>
+                <flux:button variant="primary" type="submit">{{ __('Continue') }}</flux:button>
             </div>
         </form>
     </flux:modal>
@@ -504,12 +575,11 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
         </form>
     </flux:modal>
 
-    <!-- Display Token Modal (Shows Plaintext Once + Instant QR Pairing) -->
+    <!-- Display the selected connection method -->
     <flux:modal name="show-token-modal" focusable class="max-w-lg" :closable="false" :dismissible="false" :escapable="false">
         <div
             class="space-y-5"
             x-data="{
-                activeTab: 'qr',
                 copyState: 'idle',
                 confirmed: false,
                 sessionId: @js($pairingSessionId),
@@ -546,7 +616,6 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                 resetCopyState() {
                     this.copyState = 'idle';
                     this.confirmed = false;
-                    this.activeTab = 'qr';
                     this.pairStatus = 'pending';
                     this.claimedDevice = '';
                     this.sessionId = $wire.pairingSessionId || @js($pairingSessionId);
@@ -581,40 +650,19 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                 <div class="flex items-start gap-2.5">
                     <flux:icon icon="exclamation-triangle" class="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                        <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">{{ __('Save this token or scan QR now — it won\'t be shown again') }}</p>
-                        <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">{{ __('For maximum cryptographic safety, the QR code uses one-scan scoped exchange and the manual token is only displayed once.') }}</p>
+                        @if ($pairingMethod === 'qr')
+                            <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">{{ __('Scan this QR code now — it expires in 10 minutes') }}</p>
+                            <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">{{ __('The code can pair one device only. Generate another code if it expires.') }}</p>
+                        @else
+                            <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">{{ __('Save this token now — it won\'t be shown again') }}</p>
+                            <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">{{ __('Keep this token private. You can revoke it from the devices page.') }}</p>
+                        @endif
                     </div>
                 </div>
             </div>
 
-            <!-- Tab Switcher: QR Code vs Manual Token -->
-            <div class="flex rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
-                <button
-                    type="button"
-                    class="flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors"
-                    x-bind:class="activeTab === 'qr' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-700 dark:text-white' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400'"
-                    x-on:click="activeTab = 'qr'"
-                >
-                    <span class="flex items-center justify-center gap-1.5">
-                        <flux:icon icon="qr-code" class="size-4" />
-                        {{ __('One-Scan QR Pairing') }}
-                    </span>
-                </button>
-                <button
-                    type="button"
-                    class="flex-1 rounded-md py-1.5 text-xs font-semibold transition-colors"
-                    x-bind:class="activeTab === 'token' ? 'bg-white shadow text-zinc-900 dark:bg-zinc-700 dark:text-white' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400'"
-                    x-on:click="activeTab = 'token'"
-                >
-                    <span class="flex items-center justify-center gap-1.5">
-                        <flux:icon icon="key" class="size-4" />
-                        {{ __('Manual Token String') }}
-                    </span>
-                </button>
-            </div>
-
-            <!-- View 1: Instant QR Code Pairing -->
-            <div x-show="activeTab === 'qr'" class="space-y-4 text-center">
+            @if ($pairingMethod === 'qr')
+            <div class="space-y-4 text-center">
                 @if ($generatedQrCodeSvg)
                     <div class="inline-block rounded-xl bg-white p-4 shadow-sm border border-zinc-200 dark:border-zinc-700">
                         <div class="size-48 mx-auto flex items-center justify-center [&>svg]:size-full">
@@ -671,7 +719,7 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                     </div>
                 @else
                     <div class="p-6 text-center text-xs text-zinc-400">
-                        {{ __('QR generation unavailable. Use manual token below.') }}
+                        {{ __('QR generation unavailable. Close this window and choose a manual token.') }}
                     </div>
                 @endif
                 <button type="button" class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold underline underline-offset-4" x-on:click="confirmed = true">
@@ -679,8 +727,8 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                 </button>
             </div>
 
-            <!-- View 2: Manual Token Display -->
-            <div x-show="activeTab === 'token'" class="space-y-3">
+            @else
+            <div class="space-y-3">
                 <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{{ __('Device Sync Token') }}</label>
                 <div class="flex items-center gap-2">
                     <input
@@ -744,10 +792,11 @@ new #[Title('Devices & Sync Tokens')] class extends Component {
                     </ol>
                 </div>
             </div>
+            @endif
 
             <!-- Close Button (only enabled after copy or QR scan) -->
             <div class="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-white/10">
-                <p class="text-xs text-zinc-400" x-show="!confirmed">{{ __('Copy token or scan QR above to finish') }}</p>
+                <p class="text-xs text-zinc-400" x-show="!confirmed">{{ __('Copy the token or scan the QR code to finish') }}</p>
                 <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium" x-show="confirmed" x-cloak>
                     <flux:icon icon="check-circle" class="size-3.5 inline -mt-0.5" />
                     {{ __('Device configuration confirmed') }}

@@ -148,7 +148,7 @@ new #[Title('Dashboard')] class extends Component {
             return 0;
         }
 
-        return DeviceToken::where('team_id', $this->team->id)->count();
+        return DeviceToken::where('team_id', $this->team->id)->userDevices()->count();
     }
 
     #[Computed]
@@ -158,7 +158,7 @@ new #[Title('Dashboard')] class extends Component {
             return ['mac' => 0, 'windows' => 0, 'ios' => 0, 'android' => 0, 'linux' => 0, 'wiped' => 0];
         }
 
-        $tokens = DeviceToken::where('team_id', $this->team->id)->get();
+        $tokens = DeviceToken::where('team_id', $this->team->id)->userDevices()->get();
 
         return [
             'mac' => $tokens->where('client_platform', 'mac')->count(),
@@ -603,6 +603,7 @@ new #[Title('Dashboard')] class extends Component {
 
         // 3. Paired Devices
         $devices = DeviceToken::where('team_id', $team->id)
+            ->userDevices()
             ->latest('created_at')
             ->limit(5)
             ->get();

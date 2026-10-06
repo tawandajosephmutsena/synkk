@@ -34,11 +34,11 @@ class AuthenticateDeviceToken
                         [
                             'user_id' => $user->id,
                             'team_id' => $team->id,
-                            'name' => 'Web Browser Session',
+                            'token_preview' => DeviceToken::WEB_SESSION_TOKEN_PREVIEW,
                         ],
                         [
-                            'token_hash' => hash('sha256', 'web_session_'.$user->id.'_'.(string) config('app.key')),
-                            'token_preview' => 'web_sess...',
+                            'name' => 'Web Browser Session',
+                            'token_hash' => hash('sha256', 'web_session_'.$user->id.'_'.$team->id.'_'.(string) config('app.key')),
                             'access_scope' => 'read_write',
                         ]
                     );

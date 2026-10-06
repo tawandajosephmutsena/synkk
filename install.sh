@@ -112,6 +112,7 @@ if ! has_build_source "$INSTALL_DIR"; then
             --exclude='./.env' \
             --exclude='./.env.*' \
             --exclude='./auth.json' \
+            --exclude='./.npmrc' \
             --exclude='./.aws' \
             --exclude='./.ssh' \
             --exclude='./.codex' \
@@ -119,7 +120,11 @@ if ! has_build_source "$INSTALL_DIR"; then
             --exclude='./docker-compose.install.yml' \
             --exclude='./docker/Caddyfile.install' \
             --exclude='./database/*.sqlite*' \
-            --exclude='./storage/app/private/*' \
+            --exclude='./storage/app/*' \
+            --exclude='./storage/framework/cache/*' \
+            --exclude='./storage/framework/sessions/*' \
+            --exclude='./storage/framework/testing/*' \
+            --exclude='./storage/framework/views/*' \
             --exclude='./storage/logs/*' \
             --exclude='./storage/*.key' \
             -cf - . | tar -C "$STAGING_DIR" -xf -
