@@ -61,6 +61,7 @@ jobs:
           fi
           docker volume create synkk-ci-storage >/dev/null
           trap 'docker rm --force synkk-ci-smoke >/dev/null 2>&1 || true; docker volume rm synkk-ci-storage >/dev/null 2>&1 || true' EXIT
+          export SYNKK_BOOTSTRAP_PASSWORD="Aa1!$(openssl rand -hex 24)"
           start_container() {
             docker run --detach --name synkk-ci-smoke \
               --publish 127.0.0.1:18080:80 \
@@ -78,7 +79,7 @@ jobs:
               --env REVERB_PORT=8080 \
               --env REVERB_SCHEME=http \
               --env SYNKK_BOOTSTRAP_EMAIL=admin@example.test \
-              --env SYNKK_BOOTSTRAP_PASSWORD=SecurePass123!@# \
+              --env SYNKK_BOOTSTRAP_PASSWORD \
               synkk-ci:${{ github.sha }}
           }
           start_container
