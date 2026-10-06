@@ -6,7 +6,9 @@ services:
     container_name: synkk-app
     restart: unless-stopped
     ports:
-      - "${PORT:-8000}:80"
+      - "127.0.0.1:${PORT:-8000}:80"
+    env_file:
+      - .env
     environment:
       APP_NAME: "Synkk Vault Sync"
       APP_ENV: "production"
@@ -16,16 +18,25 @@ services:
       # Generate with: php artisan key:generate --show
       APP_KEY: "${APP_KEY:?APP_KEY is required. Generate with: php artisan key:generate --show}"
       DB_CONNECTION: "sqlite"
-      DB_DATABASE: "/var/www/html/database/database.sqlite"
+      DB_DATABASE: "/var/www/html/storage/app/database.sqlite"
+      QUEUE_CONNECTION: "database"
+      CACHE_STORE: "database"
+      SESSION_DRIVER: "database"
+      SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-false}"
       SYNKK_STORAGE_DISK: "local"
-      REVERB_SERVER_HOST: "0.0.0.0"
+      REVERB_SERVER_HOST: "127.0.0.1"
       REVERB_SERVER_PORT: "8080"
-      REVERB_HOST: "localhost"
-      REVERB_PORT: "${PORT:-8000}"
+      REVERB_HOST: "127.0.0.1"
+      REVERB_PORT: "8080"
       REVERB_SCHEME: "http"
+      REVERB_APP_ID: "${REVERB_APP_ID:?REVERB_APP_ID is required}"
+      REVERB_APP_KEY: "${REVERB_APP_KEY:?REVERB_APP_KEY is required}"
+      REVERB_APP_SECRET: "${REVERB_APP_SECRET:?REVERB_APP_SECRET is required}"
+      SYNKK_BOOTSTRAP_EMAIL: "${SYNKK_BOOTSTRAP_EMAIL:-}"
+      SYNKK_BOOTSTRAP_PASSWORD: "${SYNKK_BOOTSTRAP_PASSWORD:-}"
+      SYNKK_BOOTSTRAP_NAME: "${SYNKK_BOOTSTRAP_NAME:-}"
     volumes:
-      - synkk_database:/var/www/html/database
-      - synkk_storage:/var/www/html/storage/app/private
+      - synkk_storage:/var/www/html/storage
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/up"]
       interval: 30s
@@ -34,5 +45,4 @@ services:
       start_period: 10s
 
 volumes:
-  synkk_database:
   synkk_storage:

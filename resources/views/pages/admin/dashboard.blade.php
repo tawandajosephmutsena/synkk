@@ -69,7 +69,7 @@ new #[Title('Platform Super Admin')] class extends Component {
         $totalVaults = Vault::count();
         $totalFiles = VaultFile::where('is_deleted', false)->count();
         $totalBytes = (int) VaultFile::where('is_deleted', false)->sum('size');
-        $activeDevices = DeviceToken::where('is_wiped', false)->count();
+        $activeDevices = DeviceToken::userDevices()->where('is_wiped', false)->count();
         $syncEvents = VaultChangeLog::count();
         $dlpAlerts = VaultChangeLog::where('has_secrets', true)->count();
 
@@ -89,7 +89,11 @@ new #[Title('Platform Super Admin')] class extends Component {
     #[Computed]
     public function tenants(): Collection
     {
-        $query = Team::withCount(['members', 'vaults', 'deviceTokens'])->latest();
+        $query = Team::withCount([
+            'members',
+            'vaults',
+            'deviceTokens as device_tokens_count' => fn ($query) => $query->userDevices(),
+        ])->latest();
 
         if (filled($this->tenantSearch)) {
             $search = $this->tenantSearch;
@@ -157,13 +161,17 @@ new #[Title('Platform Super Admin')] class extends Component {
             return null;
         }
 
-        return Team::with(['vaults', 'deviceTokens.user', 'members'])->find($this->inspectingTeamId);
+        return Team::with([
+            'vaults',
+            'deviceTokens' => fn ($query) => $query->userDevices()->with('user'),
+            'members',
+        ])->find($this->inspectingTeamId);
     }
 
     #[Computed]
     public function platformBreakdown(): array
     {
-        return DeviceToken::where('is_wiped', false)
+        return DeviceToken::userDevices()->where('is_wiped', false)
             ->whereNotNull('client_platform')
             ->select('client_platform', DB::raw('count(*) as count'))
             ->groupBy('client_platform')
@@ -194,9 +202,9 @@ new #[Title('Platform Super Admin')] class extends Component {
     public function revokeAllTenantDevices(int $teamId): void
     {
         $team = Team::findOrFail($teamId);
-        $count = $team->deviceTokens()->where('is_wiped', false)->count();
+        $count = $team->deviceTokens()->userDevices()->where('is_wiped', false)->count();
 
-        $team->deviceTokens()->where('is_wiped', false)->update([
+        $team->deviceTokens()->userDevices()->where('is_wiped', false)->update([
             'is_wiped' => true,
             'wiped_at' => now(),
         ]);

@@ -130,7 +130,7 @@ class PlanService
             return true;
         }
 
-        return $team->deviceTokens()->count() < $this->getDeviceLimit($team);
+        return $team->deviceTokens()->userDevices()->count() < $this->getDeviceLimit($team);
     }
 
     /**
@@ -234,7 +234,7 @@ class PlanService
     {
         $config = $this->getPlanConfig($team);
         $deviceLimit = $this->getDeviceLimit($team);
-        $devicesUsed = $team->deviceTokens()->count();
+        $devicesUsed = $team->deviceTokens()->userDevices()->count();
 
         $vaultLimit = $this->getVaultLimit($team);
         $vaultsUsed = $team->vaults()->count();

@@ -34,7 +34,6 @@
     <body class="synkk-site font-sans antialiased" data-motion="on">
         @php
             $pluginUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin';
-            $pluginReleaseUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/tag/1.0.0';
             $userTeam = auth()->check()
                 ? (auth()->user()->currentTeam ?? auth()->user()->personalTeam() ?? auth()->user()->teams->first())
                 : null;

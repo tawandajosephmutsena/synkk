@@ -8,6 +8,7 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="synkk-reverb-key" content="{{ config('broadcasting.connections.reverb.key') }}">
 
 @fonts
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -31,6 +32,8 @@ use Illuminate\Support\Str;
 #[Fillable(['user_id', 'team_id', 'name', 'token_hash', 'token_preview', 'last_used_at', 'last_ip', 'client_platform', 'access_scope', 'allowed_ip_subnets', 'allowed_vault_ids', 'is_wiped', 'wiped_at'])]
 class DeviceToken extends Model
 {
+    public const WEB_SESSION_TOKEN_PREVIEW = 'web_sess...';
+
     protected function casts(): array
     {
         return [
@@ -56,6 +59,15 @@ class DeviceToken extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
+    }
+
+    /**
+     * @param  Builder<DeviceToken>  $query
+     * @return Builder<DeviceToken>
+     */
+    public function scopeUserDevices(Builder $query): Builder
+    {
+        return $query->where('token_preview', '!=', self::WEB_SESSION_TOKEN_PREVIEW);
     }
 
     public function triggerRemoteWipe(): void

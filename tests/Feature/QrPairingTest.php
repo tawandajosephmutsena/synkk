@@ -62,6 +62,109 @@ test('QrPairingService creates pairing sessions with obsidian protocol URL and p
         ->toThrow(PairingSessionConsumedException::class, 'Pairing session has already been used.');
 });
 
+test('trusted HTTPS proxy returns its public custom port for verification and pairing exchange', function () {
+    config()->set('trustedproxy.proxies', '10.21.0.1');
+    config()->set('broadcasting.default', 'reverb');
+    config()->set('broadcasting.connections.reverb.key', 'public-key');
+    config()->set('broadcasting.connections.reverb.options.host', '127.0.0.1');
+    config()->set('broadcasting.connections.reverb.options.port', 8080);
+    config()->set('broadcasting.connections.reverb.options.scheme', 'http');
+
+    $user = User::factory()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($user, ['role' => 'owner']);
+    $token = DeviceToken::createToken($user, $team, 'Laptop', 'mac')['plain_token'];
+
+    $this->withServerVariables([
+        'REMOTE_ADDR' => '10.21.0.1',
+        'HTTP_HOST' => 'synkk_web_1',
+        'SERVER_PORT' => 80,
+    ])->withHeaders([
+        'Authorization' => "Bearer {$token}",
+        'X-Forwarded-Host' => 'umbrel.local',
+        'X-Forwarded-Port' => '14965',
+        'X-Forwarded-Proto' => 'https',
+    ]);
+
+    $verifyResponse = $this->getJson('/api/v1/auth/verify');
+
+    $verifyResponse->assertOk()
+        ->assertJsonPath('broadcasting.driver', 'reverb')
+        ->assertJsonPath('broadcasting.key', 'public-key')
+        ->assertJsonPath('broadcasting.host', 'umbrel.local')
+        ->assertJsonPath('broadcasting.port', 14965)
+        ->assertJsonPath('broadcasting.scheme', 'https');
+
+    $sessionResponse = $this->postJson('/api/v1/pairing/session');
+
+    $sessionResponse->assertOk()
+        ->assertJsonPath('session.payload.server', 'https://umbrel.local:14965/api/v1');
+
+    $exchange = (new QrPairingService)->exchange(
+        sessionId: $sessionResponse->json('session.session'),
+        deviceName: 'Phone',
+        platform: 'android',
+    );
+
+    expect($exchange['server_url'])->toBe('https://umbrel.local:14965/api/v1');
+    expect($exchange['broadcasting'])->toBe([
+        'driver' => 'reverb',
+        'key' => 'public-key',
+        'host' => 'umbrel.local',
+        'port' => 14965,
+        'scheme' => 'https',
+    ]);
+});
+
+test('public Reverb host configuration overrides the request origin', function () {
+    config()->set('broadcasting.default', 'reverb');
+    config()->set('broadcasting.connections.reverb.key', 'public-key');
+    config()->set('broadcasting.connections.reverb.options.host', 'realtime.example.test');
+    config()->set('broadcasting.connections.reverb.options.port', 9443);
+    config()->set('broadcasting.connections.reverb.options.scheme', 'https');
+
+    $broadcasting = (new QrPairingService)->getBroadcastingConfig('https://umbrel.local:14965');
+
+    expect($broadcasting)->toBe([
+        'driver' => 'reverb',
+        'key' => 'public-key',
+        'host' => 'realtime.example.test',
+        'port' => 9443,
+        'scheme' => 'https',
+    ]);
+});
+
+test('local development keeps its direct Reverb port', function () {
+    $this->app->detectEnvironment(fn (): string => 'local');
+    config()->set('broadcasting.connections.reverb.options.host', 'localhost');
+    config()->set('broadcasting.connections.reverb.options.port', 8080);
+    config()->set('broadcasting.connections.reverb.options.scheme', 'http');
+
+    $broadcasting = (new QrPairingService)->getBroadcastingConfig('http://localhost:8000');
+
+    expect($broadcasting['host'])->toBe('localhost')
+        ->and($broadcasting['port'])->toBe(8080)
+        ->and($broadcasting['scheme'])->toBe('http');
+});
+
+test('pairing exchange refuses another device when the free plan is full', function () {
+    $user = User::factory()->create();
+    $team = $user->personalTeam();
+    $team->update(['plan' => 'free', 'max_devices' => 1]);
+    $sessionId = (new QrPairingService)->createPairingSession($user, $team)['session'];
+    DeviceToken::createToken($user, $team, 'Existing laptop', 'mac');
+
+    $response = $this->postJson('/api/v1/pairing/exchange', [
+        'session' => $sessionId,
+        'device_name' => 'Extra phone',
+        'platform' => 'android',
+    ]);
+
+    $response->assertForbidden();
+
+    expect($team->deviceTokens()->count())->toBe(1);
+});
+
 test('API endpoints return HTTP 410 when pairing session is expired or already consumed', function () {
     $user = User::factory()->create();
     $team = Team::factory()->create();
@@ -182,8 +285,11 @@ test('initiator token scope and vault restrictions are strictly inherited by chi
     );
     $restrictedResult['device_token']->update([
         'allowed_vault_ids' => [$vaultA->id],
+        'allowed_ip_subnets' => ['203.0.113.*'],
     ]);
     $restrictedToken = $restrictedResult['plain_token'];
+
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.5']);
 
     // Inaccessible vault B -> rejected
     $badVaultAttempt = $this->withHeader('Authorization', "Bearer {$restrictedToken}")
@@ -216,7 +322,8 @@ test('initiator token scope and vault restrictions are strictly inherited by chi
     expect($childDevice->access_scope)->toBe('read_write') // Escalation prevented!
         ->and($childDevice->allowed_vault_ids)->toBe([$vaultA->id]) // Vault constraint inherited!
         ->and($childDevice->canAccessVault($vaultA->id))->toBeTrue()
-        ->and($childDevice->canAccessVault($vaultB->id))->toBeFalse();
+        ->and($childDevice->canAccessVault($vaultB->id))->toBeFalse()
+        ->and($childDevice->allowed_ip_subnets)->toBe(['203.0.113.*']);
 });
 
 test('public mobile pairing bridge renders auto-redirect and obsidian protocol links', function () {

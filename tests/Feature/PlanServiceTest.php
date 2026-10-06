@@ -242,6 +242,7 @@ test('free plan prevents configuring ip subnet whitelist and read only device to
         ->test('pages::devices.index', ['current_team' => $team->slug])
         ->set('deviceName', 'Pro Guarded Mac')
         ->set('devicePlatform', 'mac')
+        ->set('pairingMethod', 'token')
         ->set('accessScope', 'read_only')
         ->set('allowedIpSubnets', '10.0.0.*')
         ->call('generateToken')

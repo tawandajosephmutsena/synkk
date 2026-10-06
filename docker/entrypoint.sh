@@ -10,15 +10,15 @@ fi
 # Require APP_KEY to be set externally — never auto-generate in production.
 # A container-generated key is lost on restart, invalidating sessions and
 # encrypted data. Set APP_KEY in your deployment environment.
-if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ]; then
-    echo "FATAL: APP_KEY environment variable is not set or is empty." >&2
+if ! php -r '$key = getenv("APP_KEY"); if (! is_string($key)) { exit(1); } if (str_starts_with($key, "base64:")) { $key = base64_decode(substr($key, 7), true); } exit(is_string($key) && strlen($key) === 32 ? 0 : 1);'; then
+    echo "FATAL: APP_KEY must be a valid 32-byte key or its base64 encoding." >&2
     echo "Generate a stable key with: php artisan key:generate --show" >&2
     echo "Then set APP_KEY in your deployment environment or secrets manager." >&2
     exit 1
 fi
 
 # Ensure SQLite database directory and file exist
-DB_FILE="${DB_DATABASE:-/var/www/html/database/database.sqlite}"
+DB_FILE="${DB_DATABASE:-/var/www/html/storage/app/database.sqlite}"
 DB_DIR="$(dirname "$DB_FILE")"
 mkdir -p "$DB_DIR"
 if [ ! -f "$DB_FILE" ]; then
@@ -33,6 +33,13 @@ chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache "
 
 # Run database migrations
 echo "Running database migrations..."
-php artisan migrate --force --no-interaction
+su-exec www-data php artisan migrate --force --no-interaction
+
+if [ -n "${SYNKK_BOOTSTRAP_EMAIL:-}" ] || [ -n "${SYNKK_BOOTSTRAP_PASSWORD:-}" ] || [ -n "${SYNKK_BOOTSTRAP_NAME:-}" ]; then
+    echo "Checking initial administrator bootstrap..."
+    su-exec www-data php artisan synkk:bootstrap-admin --if-empty --no-interaction
+fi
+
+unset SYNKK_BOOTSTRAP_EMAIL SYNKK_BOOTSTRAP_PASSWORD SYNKK_BOOTSTRAP_NAME SYNKK_BOOTSTRAP_PASSWORD_SOURCE
 
 exec "$@"

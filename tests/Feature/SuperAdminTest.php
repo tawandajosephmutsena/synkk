@@ -152,15 +152,23 @@ test('super admin can inspect tenant and execute emergency device revocation', f
 
     $dev1 = DeviceToken::createToken($user, $team, 'MacBook', 'mac');
     $dev2 = DeviceToken::createToken($user, $team, 'iPhone', 'ios');
+    $this->actingAs($user, 'web')->getJson('/api/v1/auth/verify')->assertOk();
+    $webSession = $team->deviceTokens()->where('token_preview', DeviceToken::WEB_SESSION_TOKEN_PREVIEW)->sole();
 
-    expect($team->deviceTokens()->where('is_wiped', false)->count())->toBe(2);
+    expect($team->deviceTokens()->where('is_wiped', false)->count())->toBe(3);
 
-    Livewire::actingAs($admin)
+    $component = Livewire::actingAs($admin)
         ->test('pages::admin.dashboard')
-        ->call('inspectTenant', $team->id)
-        ->call('revokeAllTenantDevices', $team->id);
+        ->call('inspectTenant', $team->id);
 
-    expect($team->deviceTokens()->where('is_wiped', false)->count())->toBe(0);
+    expect($component->get('stats')['active_devices'])->toBe(2)
+        ->and($component->get('tenants')->firstWhere('id', $team->id)->device_tokens_count)->toBe(2)
+        ->and($component->get('inspectedTeam')->deviceTokens)->toHaveCount(2);
+
+    $component->call('revokeAllTenantDevices', $team->id);
+
+    expect($team->deviceTokens()->userDevices()->where('is_wiped', false)->count())->toBe(0)
+        ->and($webSession->fresh()->is_wiped)->toBeFalse();
 });
 
 test('super admin can view sync telemetry and dismiss dlp security alerts', function () {

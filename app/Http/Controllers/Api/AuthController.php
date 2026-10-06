@@ -49,11 +49,7 @@ class AuthController extends Controller
                 'name' => 'Synkk Vault Sync',
                 'version' => '1.0.0',
             ],
-            'broadcasting' => $pairingService->getBroadcastingConfig(
-                $request->getHost(),
-                $request->getPort(),
-                $request->getScheme()
-            ),
+            'broadcasting' => $pairingService->getBroadcastingConfig($request->getSchemeAndHttpHost()),
         ]);
     }
 
@@ -139,10 +135,6 @@ class AuthController extends Controller
                 'error' => 'Pairing session expired or already consumed.',
                 'message' => $e->getMessage(),
             ], 410);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'error' => $e->getMessage(),
-            ], 422);
         }
     }
 

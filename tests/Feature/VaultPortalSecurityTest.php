@@ -7,6 +7,7 @@ use App\Models\VaultFile;
 use App\Models\VaultPortal;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Exceptions\PublicPropertyNotFoundException;
 use Livewire\Livewire;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -73,13 +74,10 @@ test('password protected portal does not expose data when locked and blocks comp
         ->and($component->get('interactiveGraph')['nodes'])->toBeEmpty()
         ->and($component->get('renderedNote')['html'])->toContain('This portal is password protected.');
 
-    // Tampering attempt: mutating computed property directly
-    try {
-        $component->set('isUnlocked', true);
-        $this->fail('Expected Livewire to prevent mutating computed property isUnlocked');
-    } catch (Throwable $e) {
-        expect($e)->toBeInstanceOf(Throwable::class);
-    }
+    // Tampering attempt: mutating computed property directly must be rejected.
+    expect(fn () => $component->set('isUnlocked', true))->toThrow(PublicPropertyNotFoundException::class);
+    expect($component->get('isUnlocked'))->toBeFalse()
+        ->and($component->get('accessibleFiles')->isEmpty())->toBeTrue();
 });
 
 test('locked portal does not reveal content even when selecting notes via Livewire action (P0-01)', function () {
@@ -232,15 +230,18 @@ test('expired portal session grant forces relock (P1-04)', function () {
     auth()->logout();
 
     // Simulate an expired session grant
-    $fingerprint = substr(hash('sha256', $portal->password), 0, 16);
-    session()->put('portal_unlocked_'.$portal->id, [
+    $fingerprint = substr((string) $portal->password_hash, 0, 16);
+    $sessionKey = 'synkk_portal_grant_'.$portal->id;
+    session()->put($sessionKey, [
         'fingerprint' => $fingerprint,
         'expires_at' => now()->subMinutes(10)->timestamp,
     ]);
+    expect(session()->has($sessionKey))->toBeTrue();
 
     $component = Livewire::test('pages::portals.show', ['slug' => 'expiry-portal']);
 
-    expect($component->get('isUnlocked'))->toBeFalse();
+    expect($component->get('isUnlocked'))->toBeFalse()
+        ->and(session()->has($sessionKey))->toBeFalse();
 });
 
 // =========================================================================
