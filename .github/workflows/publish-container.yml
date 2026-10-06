@@ -20,6 +20,9 @@ jobs:
       - name: Build container
         run: docker build --tag synkk-release-smoke:${{ github.sha }} .
 
+      - name: Verify persistent storage volume
+        run: docker image inspect synkk-release-smoke:${{ github.sha }} --format '{{json .Config.Volumes}}' | jq -e 'has("/var/www/html/storage")'
+
       - name: Start container and check HTTP health
         run: |
           if docker run --rm --env APP_KEY=base64:GENERATE_ME_USING_INSTALL_SCRIPT synkk-release-smoke:${{ github.sha }} /bin/true; then

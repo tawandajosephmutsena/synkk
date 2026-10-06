@@ -43,6 +43,7 @@ COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 80
+VOLUME ["/var/www/html/storage"]
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -fsS "http://127.0.0.1:${PORT:-80}/up" || exit 1
