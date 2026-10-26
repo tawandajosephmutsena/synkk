@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a reproducible Synkk server or dashboard problem
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Before posting, search existing issues. Do not include credentials, device tokens, private vault content, or security vulnerability details."
+  - type: input
+    id: version
+    attributes:
+      label: Synkk version or commit
+      placeholder: "Release tag or commit SHA"
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation method
+      options:
+        - VPS installer
+        - Docker Compose
+        - Local development
+        - Other
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Describe the smallest sequence that shows the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Include sanitized logs or screenshots if helpful.
