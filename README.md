@@ -21,6 +21,14 @@
 
 Synkk is the web server and dashboard for a controlled Obsidian sync workflow. The Foundation release is built for people who want a private team vault, path-aware access, reliable whole-file sync, clear version history, and a safer launch path before the advanced sync roadmap lands.
 
+## Join the community
+
+- [Start a discussion](https://github.com/tawandajosephmutsena/synkk/discussions) to ask questions, share your setup, suggest ideas, or talk with other Synkk users. Reply and react to posts you find useful.
+- [Report a bug](https://github.com/tawandajosephmutsena/synkk/issues/new/choose) with steps to reproduce it. Add context or a reaction to an existing issue if you have the same problem.
+- [Contribute a fix](CONTRIBUTING.md) by forking this repository and opening a pull request. Reviews and comments on pull requests are welcome.
+
+Please keep credentials, device tokens, private vault content, and vulnerability details out of public posts. See [Security](#security) for private reports.
+
 ## Install Synkk
 
 ### 🚀 VPS Installer (Ubuntu, Debian, AlmaLinux, Rocky)
