@@ -5,24 +5,13 @@
 }
 
 {$SYNKK_DOMAIN:localhost} {
-    # WebSocket proxy for Laravel Reverb (real-time broadcasting)
-    handle /app/* {
-        reverse_proxy synkk:8080 {
-            header_up Host {host}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-
-    # Main HTTP & Web API proxy to Synkk application container
-    handle {
-        reverse_proxy synkk:80 {
-            header_up Host {host}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
+    # Reverse proxy all HTTP and WebSocket traffic to the Synkk container on port 80.
+    # Nginx inside the container automatically handles both HTTP and WebSocket upgrades on /app/.
+    reverse_proxy app:80 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
     }
 
     # Encode responses with gzip and zstandard compression

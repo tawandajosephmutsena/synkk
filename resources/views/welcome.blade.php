@@ -36,10 +36,9 @@
             $pluginUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin';
             $pluginReleaseUrl = 'https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/latest';
             $pluginObsidianUri = 'obsidian://show-plugin?id=synkk-sync';
-            $storeUrl = config('synkk.lemon_squeezy.store_url');
-            $storeReady = filled($storeUrl)
-                && filled(config('synkk.lemon_squeezy.store_id'))
-                && filled(config('synkk.lemon_squeezy.product_id'));
+            $storeUrl = config('services.dodo.pro_checkout_url') ?: config('synkk.lemon_squeezy.store_url');
+            $storeReady = (filled($storeUrl) && (filled(config('synkk.lemon_squeezy.store_id')) && filled(config('synkk.lemon_squeezy.product_id')) || filled(config('services.dodo.pro_checkout_url'))))
+                || (filled(config('services.dodo.api_key')) && filled(config('services.dodo.pro_product_id')));
             $proPricing = config('synkk.pricing.pro_ltd', []);
             $cloudProPricing = config('synkk.pricing.cloud_pro', []);
             $cloudBusinessPricing = config('synkk.pricing.cloud_business', []);
@@ -1650,7 +1649,7 @@
                                 <li>Encrypted backups, automatic updates and priority support</li>
                             </ul>
                             @auth
-                                <a href="{{ route('subscription.checkout', ['plan' => 'cloud_pro']) }}" class="synkk-button synkk-button--accent">Choose Cloud Pro <span aria-hidden="true">→</span></a>
+                                <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--accent">Go to Dashboard <span aria-hidden="true">→</span></a>
                             @else
                                 <a href="{{ route('register') }}" class="synkk-button synkk-button--accent">Choose Cloud Pro <span aria-hidden="true">→</span></a>
                             @endauth
@@ -1671,7 +1670,7 @@
                                 <li>Encrypted backups, automatic updates and priority support</li>
                             </ul>
                             @auth
-                                <a href="{{ route('subscription.checkout', ['plan' => 'cloud_business']) }}" class="synkk-button synkk-button--ink">Choose Business <span aria-hidden="true">→</span></a>
+                                <a href="{{ $dashboardUrl }}" class="synkk-button synkk-button--ink">Go to Dashboard <span aria-hidden="true">→</span></a>
                             @else
                                 <a href="{{ route('register') }}" class="synkk-button synkk-button--ink">Choose Business <span aria-hidden="true">→</span></a>
                             @endauth
@@ -1683,8 +1682,16 @@
                             <h4>Self-Host Pro Commercial License · {{ $proPrice }} Lifetime Deal</h4>
                             <p>Demand complete data sovereignty with advanced enterprise controls? Back the launch promotion to unlock the private synkk-pro repository with unlimited self-hosted storage, Path-Level ACLs, Secret DLP, Remote Device Wipe, and Local RAG Copilot.</p>
                         </div>
-                        @if ($storeReady)
+                        @if ($storeReady && filled($storeUrl))
                             <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Get Pro LTD ({{ $proPrice }}) <span aria-hidden="true">→</span></a>
+                        @elseif ($userTeam)
+                            <form method="POST" action="{{ route('billing.dodo.checkout', ['current_team' => $userTeam->slug]) }}" class="inline">
+                                @csrf
+                                <input type="hidden" name="plan" value="pro_ltd">
+                                <button type="submit" class="synkk-button synkk-button--accent">Get Pro LTD ({{ $proPrice }}) <span aria-hidden="true">→</span></button>
+                            </form>
+                        @elseif ($storeReady)
+                            <a href="{{ route('register') }}" class="synkk-button synkk-button--accent">Get Pro LTD ({{ $proPrice }}) <span aria-hidden="true">→</span></a>
                         @else
                             <button type="button" class="synkk-button synkk-button--pending" disabled>Checkout opens after launch checks</button>
                         @endif
@@ -1709,7 +1716,7 @@
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
-                            <span>AppSumo Lifetime Deal · Zero Recurring Seat Tax</span>
+                            <span>Dodo Payments · Zero Recurring Seat Tax</span>
                         </div>
                         <div class="synkk-trust-item">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 16v-1a4.978 4.978 0 00-1.552-3.619A6.974 6.974 0 0118 15v1h-2zM4 16v-1c0-.853.21-1.657.58-2.368A4.978 4.978 0 003 15v1h1z"/></svg>
@@ -1717,7 +1724,7 @@
                         </div>
                     </div>
 
-                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public open-source plugin and server code. Dodo Payments handles monthly Cloud subscriptions, while AppSumo manages the one-time Pro lifetime license. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline">book-it.ottomate.space</a>.</p>
+                    <p class="synkk-launch-channels"><span>LAUNCH CHANNELS</span> GitHub hosts the public open-source plugin and server code. Dodo Payments powers both monthly Cloud subscriptions and one-time Pro lifetime licenses. Enterprise consultations are booked directly at <a href="https://book-it.ottomate.space" target="_blank" rel="noopener noreferrer" class="underline">book-it.ottomate.space</a>.</p>
                 </div>
             </section>
 
@@ -1901,7 +1908,7 @@
                             <span class="synkk-faq-toggle" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                         </summary>
                         <div class="synkk-faq-answer">
-                            <p>Synkk Community is 100% free and open-source. Synkk Cloud Pro ({{ $cloudProPrice }}/mo) and Cloud Business ({{ $cloudBusinessPrice }}/mo) offer managed, zero-config workspaces powered by Dodo Payments with a 30-day trial (card required upfront to prevent server abuse). For self-hosters wanting enterprise controls, the {{ $proPrice }} Pro Lifetime Deal (LTD) is available through AppSumo and Lemon Squeezy.</p>
+                            <p>Synkk Community is 100% free and open-source. Synkk Cloud Pro ({{ $cloudProPrice }}/mo) and Cloud Business ({{ $cloudBusinessPrice }}/mo) offer managed, zero-config workspaces powered by Dodo Payments with a 30-day trial (card required upfront to prevent server abuse). For self-hosters wanting enterprise controls, the {{ $proPrice }} Pro Lifetime Deal (LTD) is available directly powered by Dodo Payments.</p>
                         </div>
                     </details>
                     <details>

@@ -324,7 +324,7 @@ new class extends Component
                                         {{ __('Redeem Commercial License') }}
                                     </div>
                                     <p class="text-xs text-gray-500 dark:text-zinc-400 mt-1 max-w-xl">
-                                        {{ __('Have an AppSumo, LemonSqueezy, or founder lifetime key? Enter it below to unlock higher quotas, In-App DLP secret scanning, and path-level permissions.') }}
+                                        {{ __('Have a Dodo Payments or founder lifetime key? Enter it below to unlock higher quotas, In-App DLP secret scanning, and path-level permissions.') }}
                                     </p>
                                 </div>
                                 <a

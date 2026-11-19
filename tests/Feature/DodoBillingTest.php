@@ -206,6 +206,45 @@ test('an expired Dodo subscription restores the previous lifetime plan', functio
         ->and($freshTeam->billing_previous_plan)->toBeNull();
 });
 
+test('a signed Dodo payment.succeeded webhook activates a Pro LTD license', function () {
+    $secret = 'dodo-test-secret';
+    config()->set([
+        'services.dodo.webhook_key' => 'whsec_'.base64_encode($secret),
+        'services.dodo.webhook_tolerance_seconds' => 300,
+    ]);
+
+    $team = Team::factory()->create([
+        'plan' => 'free',
+        'license_status' => 'expired',
+    ]);
+
+    $payload = [
+        'type' => 'payment.succeeded',
+        'timestamp' => now()->toIso8601String(),
+        'data' => [
+            'payment_id' => 'pay_ltd_123',
+            'product_id' => 'pdt_pro_ltd',
+            'customer' => [
+                'customer_id' => 'cus_pro_buyer_123',
+            ],
+            'metadata' => [
+                'team_id' => (string) $team->id,
+                'plan' => 'pro_ltd',
+            ],
+        ],
+    ];
+
+    $request = signedDodoWebhookRequest($payload, 'msg_pay_123', $secret);
+
+    $this->call('POST', route('api.billing.dodo.webhook'), [], [], [], $request['headers'], $request['raw'])
+        ->assertOk();
+
+    $freshTeam = $team->fresh();
+    expect($freshTeam->plan)->toBe('pro_ltd')
+        ->and($freshTeam->license_status)->toBe('active')
+        ->and($freshTeam->billing_provider)->toBe('dodo');
+});
+
 /**
  * @return array{raw: string, headers: array<string, string>}
  */

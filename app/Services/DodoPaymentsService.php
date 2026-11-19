@@ -20,13 +20,19 @@ class DodoPaymentsService
     }
 
     /**
-     * Create a hosted checkout session for the team's Cloud subscription.
+     * Create a hosted checkout session for the team's Cloud subscription or Pro license.
      *
      * @throws DodoPaymentsException
      */
-    public function createCheckoutSession(Team $team, User $user): string
+    public function createCheckoutSession(Team $team, User $user, string $plan = 'cloud'): string
     {
         $this->ensureConfigured();
+
+        $productId = match ($plan) {
+            'pro_ltd' => (string) (config('services.dodo.pro_product_id') ?: config('services.dodo.cloud_product_id')),
+            'cloud_business' => (string) (config('services.dodo.cloud_business_product_id') ?: config('services.dodo.cloud_product_id')),
+            default => (string) config('services.dodo.cloud_product_id'),
+        };
 
         $customer = filled($team->billing_customer_id)
             ? ['customer_id' => $team->billing_customer_id]
@@ -37,7 +43,7 @@ class DodoPaymentsService
 
         $response = $this->client()->post('/checkouts', [
             'product_cart' => [[
-                'product_id' => config('services.dodo.cloud_product_id'),
+                'product_id' => $productId,
                 'quantity' => 1,
             ]],
             'billing_currency' => config('services.dodo.currency', 'USD'),
@@ -45,7 +51,7 @@ class DodoPaymentsService
             'metadata' => [
                 'team_id' => (string) $team->id,
                 'user_id' => (string) $user->id,
-                'plan' => 'cloud',
+                'plan' => $plan,
             ],
             'return_url' => route('billing.dodo.return', ['current_team' => $team->slug]),
             'cancel_url' => route('dashboard', ['current_team' => $team->slug]),

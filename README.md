@@ -97,9 +97,8 @@ This Compose file serves HTTP on host loopback port 8000. Put a trusted HTTPS re
 - Web/server repo: [github.com/tawandajosephmutsena/synkk](https://github.com/tawandajosephmutsena/synkk)
 - Obsidian plugin repo: [github.com/tawandajosephmutsena/synk-obsidian-plugin](https://github.com/tawandajosephmutsena/synk-obsidian-plugin)
 - Plugin release: [Latest release](https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/latest)
+- Commercial checkout: Powered by Dodo Payments for both managed Cloud subscriptions and Pro licenses.
 - Creator studio: [Ottomate](https://ottomate.space)
-- Commercial license: Lemon Squeezy checkout is enabled only after the live product, checkout, and activation flow are verified end to end.
-- AppSumo: planned after the GitHub public release and production checkout are stable.
 
 ## Current Architecture & Capabilities
 

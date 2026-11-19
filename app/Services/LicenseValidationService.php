@@ -9,7 +9,7 @@ use Throwable;
 class LicenseValidationService
 {
     /**
-     * Activate and validate a license key (LemonSqueezy or Synkk Commercial Key).
+     * Activate and validate a license key (Dodo Payments or Synkk Commercial Key).
      *
      * @return array{success: bool, message: string, plan?: string, license_key?: string, license?: array<string, mixed>}
      */

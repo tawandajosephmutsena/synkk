@@ -713,7 +713,7 @@ new #[Title('Platform Super Admin')] class extends Component {
                     >
                         <div class="flex items-center gap-2.5">
                             <flux:icon icon="key" class="size-4 text-amber-500" />
-                            <span class="text-xs font-semibold text-slate-800 dark:text-zinc-200">{{ __('Generate AppSumo Batch Keys') }}</span>
+                            <span class="text-xs font-semibold text-slate-800 dark:text-zinc-200">{{ __('Generate Commercial License Keys') }}</span>
                         </div>
                         <flux:icon icon="chevron-right" class="size-4 text-slate-400" />
                     </button>
@@ -1475,12 +1475,12 @@ new #[Title('Platform Super Admin')] class extends Component {
         </div>
     @endif
 
-    <!-- TAB 5: LICENSES & APPSUMO LTD -->
+    <!-- TAB 5: LICENSES & COMMERCIAL LTD -->
     @if ($activeTab === 'licenses')
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs lg:col-span-1 dark:border-zinc-800 dark:bg-zinc-900">
                 <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">{{ __('Generate Lifetime Licenses') }}</h3>
-                <p class="text-xs text-slate-500 dark:text-zinc-400 mb-4">{{ __('Generate cryptographically formatted license keys for AppSumo, Lemon Squeezy, or custom deals in single or bulk batches.') }}</p>
+                <p class="text-xs text-slate-500 dark:text-zinc-400 mb-4">{{ __('Generate cryptographically formatted license keys for Dodo Payments, commercial partners, or custom deals in single or bulk batches.') }}</p>
 
                 <div class="flex flex-col gap-3">
                     <div>

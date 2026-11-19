@@ -24,7 +24,8 @@ class DodoBillingController extends Controller
         }
 
         try {
-            $checkoutUrl = $payments->createCheckoutSession($current_team, $request->user());
+            $plan = (string) $request->input('plan', 'cloud');
+            $checkoutUrl = $payments->createCheckoutSession($current_team, $request->user(), $plan);
         } catch (DodoPaymentsException $exception) {
             report($exception);
 

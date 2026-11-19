@@ -59,6 +59,7 @@ class DodoWebhookProcessor
             }
 
             $this->applySubscriptionEvent($eventType, $payload['data'], $eventAt);
+            $this->applyPaymentEvent($eventType, $payload['data'], $eventAt);
 
             $event->forceFill(['processed_at' => CarbonImmutable::now()])->save();
         });
@@ -213,6 +214,64 @@ class DodoWebhookProcessor
         }
 
         $team->forceFill($updates)->save();
+    }
+
+    /**
+     * Apply a one-time payment event (e.g. Pro Lifetime Deal) to the linked Synkk workspace.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function applyPaymentEvent(string $eventType, array $data, CarbonImmutable $eventAt): void
+    {
+        if ($eventType !== 'payment.succeeded') {
+            return;
+        }
+
+        $paymentId = $data['payment_id'] ?? null;
+        if (! is_string($paymentId) || blank($paymentId)) {
+            return;
+        }
+
+        $metadata = is_array($data['metadata'] ?? null) ? $data['metadata'] : [];
+        $customer = is_array($data['customer'] ?? null) ? $data['customer'] : [];
+        $customerMetadata = is_array($customer['metadata'] ?? null) ? $customer['metadata'] : [];
+        $metadata = array_replace($customerMetadata, $metadata);
+
+        $teamId = $metadata['team_id'] ?? null;
+        $plan = $metadata['plan'] ?? 'pro_ltd';
+
+        $team = null;
+        if (is_numeric($teamId)) {
+            $team = Team::find((int) $teamId);
+        }
+
+        if (! $team) {
+            $customerId = $customer['customer_id'] ?? null;
+            if (is_string($customerId) && filled($customerId)) {
+                $team = Team::where('billing_customer_id', $customerId)->first();
+            }
+        }
+
+        if (! $team) {
+            Log::warning('Ignoring Dodo payment webhook without a linked Synkk team.', [
+                'event_type' => $eventType,
+                'payment_id' => $paymentId,
+            ]);
+
+            return;
+        }
+
+        $targetPlan = in_array($plan, ['pro_ltd', 'cloud', 'cloud_pro', 'cloud_business'], true) ? $plan : 'pro_ltd';
+
+        $team->forceFill([
+            'billing_provider' => 'dodo',
+            'billing_customer_id' => is_string($customer['customer_id'] ?? null) ? $customer['customer_id'] : $team->billing_customer_id,
+            'billing_status' => 'succeeded',
+            'billing_last_event_at' => $eventAt,
+            'plan' => $targetPlan,
+            'license_status' => 'active',
+            'license_activated_at' => $team->license_activated_at ?? $eventAt,
+        ])->save();
     }
 
     /**

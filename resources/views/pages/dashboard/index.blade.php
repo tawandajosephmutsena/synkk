@@ -1540,7 +1540,7 @@ new #[Title('Dashboard')] class extends Component {
             <!-- In-Modal Redeem Form -->
             <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
                 <div class="text-xs font-bold text-slate-900 dark:text-white">{{ __('Have a License Key?') }}</div>
-                <p class="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">{{ __('Enter your AppSumo, LemonSqueezy, or enterprise key to instantly activate your plan.') }}</p>
+                <p class="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">{{ __('Enter your Dodo Payments or enterprise key to instantly activate your plan.') }}</p>
 
                 <div class="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <div class="flex-1">

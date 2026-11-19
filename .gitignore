@@ -28,3 +28,6 @@ Archive.zip
 cookies.txt
 *.cookies.txt
 graphify-out/
+
+outputs/
+videos/

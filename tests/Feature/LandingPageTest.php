@@ -90,7 +90,7 @@ test('the landing page presents the transparent pricing architecture', function 
         ->assertSee('Synkk Cloud Business')
         ->assertSee('$25')
         ->assertSee('Self-Host Pro Commercial License · $79 Lifetime Deal')
-        ->assertSee('AppSumo Lifetime Deal · Zero Recurring Seat Tax')
+        ->assertSee('Dodo Payments · Zero Recurring Seat Tax')
         ->assertSee('book-it.ottomate.space', escape: false)
         ->assertSee('Book a meeting');
 });
