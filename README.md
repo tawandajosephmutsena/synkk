@@ -5,21 +5,25 @@
 </p>
 
 <p align="center">
-  <strong>Self-hosted team vault sync for Obsidian.</strong><br>
-  Keep Markdown, permissions, versions, and trusted devices together on infrastructure you control.
+  <strong>Sync an Obsidian team vault on infrastructure you control.</strong><br>
+  Synkk pairs the Obsidian plugin with a self-hosted server for shared Markdown, version history, and team access.
 </p>
 
 <p align="center">
   <a href="https://synkk.space">Website</a> ·
   <a href="https://synkk.space/documentation">Docs</a> ·
-  <a href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/latest">Plugin latest release</a> ·
+  <a href="https://obsidian.md/plugins?id=synkk-sync">Install from Obsidian</a> ·
   <a href="https://github.com/tawandajosephmutsena/synk-obsidian-plugin">Obsidian plugin repo</a> ·
-  <a href="https://ottomate.space">Ottomate</a>
+  <a href="https://github.com/tawandajosephmutsena/synkk/discussions">Community discussions</a>
 </p>
 
 ![Synkk dashboard overview](public/images/showcase/dashboard-overview.webp)
 
-Synkk is the web server and dashboard for a controlled Obsidian sync workflow. The Foundation release is built for people who want a private team vault, path-aware access, reliable whole-file sync, clear version history, and a safer launch path before the advanced sync roadmap lands.
+Synkk is an open-source server and dashboard for teams that want to sync Obsidian without putting their vault on someone else's sync service. Install the Obsidian plugin, run Synkk on your own server, and connect your devices with a pairing code.
+
+**New here?** [See the product screenshots](#product-screens), [install the Obsidian plugin](https://obsidian.md/plugins?id=synkk-sync), then follow the [server setup guide](https://synkk.space/documentation). You can run Synkk on a VPS or try it locally with Docker Compose.
+
+> Synkk is under active development. Features and limits depend on the deployment and team plan. The Community Free plan currently includes one vault, three members, three devices, and 1 GB of storage by default. Some security and team controls require a paid plan. Encrypted vault contents cannot be scanned by the server's plaintext secret scanner.
 
 ## Join the community
 
@@ -75,19 +79,15 @@ This Compose file serves HTTP on host loopback port 8000. Put a trusted HTTPS re
 | --- | --- |
 | ![Synkk graph view showing linked notes and graph navigation](public/images/showcase/graph-full.webp) | ![Synkk permissions matrix showing member path access rules](public/images/showcase/permissions-full.webp) |
 
-## What Ships Now
+## What you can do with Synkk
 
-- **Instant 3-Second QR Mobile Pairing:** Pair any iOS or Android device in seconds using camera scanning or `obsidian://synkk-pair` deep link protocols without manual key entry.
-- **Interactive Livewire Vault Portals:** Publish any team vault as a live, interactive web portal at `/p/{slug}` in real time without static site builders or node scripts. Includes 4 design presets (Obsidian Clean, Enterprise Documentation, Digital Garden, Minimalist Blog), instant Livewire fuzzy search, interactive backlinks, and dark mode. [Explore the live Synkk Docs Portal](https://synkk.space/p/synkk-docs).
-- **First-Sync Pre-Flight & Migration Engine:** Deterministic 4-phase local diagnostic scan (category rollup across Markdown, Canvases, Images, Media, PDFs), friction trap detection, 1-click cross-platform path sanitizer, dry-run simulation API (`POST /api/v1/vaults/{slug}/preflight`), and Atomic Safety Shield (20% deletion circuit breaker).
-- **Laravel Backend Server:** High-performance local-first sync server with SQLite WAL, team tenancy, device tokens, and scoped vault access.
-- **Whole-File Sync & Conflict Engine:** SHA-256 manifest verification, immutable file versions, conflict copies (`.sync-conflict-[timestamp].md`), audit logs, and soft-delete tombstones.
-- **Obsidian Plugin v1.0.0:** Native desktop and mobile plugin with startup, scheduled, and manual sync pulses.
-- **Device-Level Selective Sync:** Granular include/exclude glob patterns and path-based team access controls (Admin, Editor, Reader, Hidden).
-- **In-App DLP Secret Scanning:** Intercepts accidental commits of AWS, OpenAI, Anthropic, SSH keys, or JWT tokens before storage.
-- **Granular `.obsidian` Controls:** Synchronizes plugin lists, snippets, and plugin data while preserving local workspace layout and hotkeys.
-- **Enterprise Remote Device Wipe:** 1-click revocation and remote token invalidation (HTTP 410 auto-purge).
-- **Web Workspace & Visual Graph:** In-browser Markdown editor with split preview and 2D physics-based force graph canvas.
+- **Self-hosted sync:** Keep the server, database, and vault files on infrastructure you manage.
+- **Obsidian plugin:** Sync from desktop and mobile with manual, startup, and scheduled sync, plus QR and deep-link pairing.
+- **Conflict and version recovery:** Preserve file history, detect concurrent edits, and restore earlier versions.
+- **Team workspace:** Manage members, devices, and vault access from the web dashboard. The free and paid plans have different limits and controls.
+- **First-sync checks:** Review a vault's files and storage before its first upload, with safeguards for risky changes.
+- **Web access:** Browse and edit Markdown, explore linked notes in a graph, and optionally publish a vault portal.
+- **Optional security controls:** Paid plans include path permissions, device restrictions, remote revocation, and plaintext secret scanning. Client-side encryption is available for supported workflows; the server cannot inspect encrypted content.
 
 ## Launch Links
 
@@ -97,17 +97,7 @@ This Compose file serves HTTP on host loopback port 8000. Put a trusted HTTPS re
 - Web/server repo: [github.com/tawandajosephmutsena/synkk](https://github.com/tawandajosephmutsena/synkk)
 - Obsidian plugin repo: [github.com/tawandajosephmutsena/synk-obsidian-plugin](https://github.com/tawandajosephmutsena/synk-obsidian-plugin)
 - Plugin release: [Latest release](https://github.com/tawandajosephmutsena/synk-obsidian-plugin/releases/latest)
-- Commercial checkout: Powered by Dodo Payments for both managed Cloud subscriptions and Pro licenses.
-- Creator studio: [Ottomate](https://ottomate.space)
-
-## Current Architecture & Capabilities
-
-Synkk ships reliable whole-file sync, pre-flight migration safety, instant QR pairing, livewire vault portals, real-time CodeMirror 6 CRDT collaboration, client-side AES-256-GCM E2EE, and on-demand mobile ghost files. Next milestones on our active development horizon:
-
-- **Webhooks & Automated Relays:** Event-driven HTTP relays triggered on note lifecycle changes and sync completions.
-- **Federated Multi-Server Mesh:** Inter-cluster vault synchronization between self-hosted team servers.
-- **Vault Copilot & Local RAG:** Private Ollama/vLLM vector embeddings and neural graph querying.
-- **Enterprise SIEM Streaming:** Immutable structured audit log export to Datadog, Splunk, or OpenTelemetry.
+- Plan and feature details: [Synkk documentation](https://synkk.space/documentation)
 
 ## Install The Plugin
 
@@ -119,7 +109,7 @@ npm ci
 npm run check
 ```
 
-Install `main.js`, `manifest.json`, and `styles.css` in `<vault>/.obsidian/plugins/synkk-sync/`, or install directly from Obsidian's official Community Plugins directory (`obsidian://show-plugin?id=synkk-sync`). Then configure an HTTPS Synkk API endpoint ending in `/api/v1` and a device token from the dashboard (or scan the Instant QR Code).
+Install from Obsidian's Community Plugins browser, or install `main.js`, `manifest.json`, and `styles.css` in `<vault>/.obsidian/plugins/synkk-sync/`. Configure your Synkk API endpoint ending in `/api/v1` and pair the device from the dashboard. For networked servers, use HTTPS.
 
 ## Run The Server Locally
 
@@ -130,15 +120,12 @@ composer run dev
 
 For production, provide a unique `APP_KEY`, set `APP_ENV=production`, turn `APP_DEBUG=false`, run migrations, configure durable storage and database backups, serve HTTPS, and keep the required workers running. Never commit a populated `.env` file.
 
-## Roadmap
+## Help the project grow
 
-- **Foundation live:** Obsidian Community Plugin directory listing, self-hosted Laravel server, dashboard, Markdown editor, Graph View, path permissions, version restore, selective sync rules, `.obsidian` controls, deletion safety, and snapshots.
-- **Milestone A (Shipped):** Instant 2-Second QR Mobile Pairing and deep linking protocol (`obsidian://synkk-pair`).
-- **Milestone B (Shipped):** Interactive Livewire Vault Portals at `/p/{slug}` with 4 themes, live search, and wikilink navigation.
-- **Milestone C (Shipped):** First-Sync Pre-Flight & Migration Engine, 4-phase local diagnostic rollup, 1-click path sanitizer, dry-run simulation API, and 20% mass deletion atomic safety shield.
-- **Milestone D (Shipped):** Full CodeMirror 6 Web CRDT Collaborative Editor with Livewire session convergence and real-time remote awareness carets.
-- **Milestone E (Shipped):** Zero-Knowledge Client-Side E2EE with WebCrypto AES-256-GCM authenticated envelopes and on-demand Mobile Ghost Files.
-- **Active Horizon:** Webhooks & automated HTTP relays, federated multi-server synchronization, and private local RAG indexing.
+- [Share feedback or ask a question](https://github.com/tawandajosephmutsena/synkk/discussions).
+- [Report a reproducible problem](https://github.com/tawandajosephmutsena/synkk/issues/new/choose).
+- [Contribute code or improve the docs](CONTRIBUTING.md). The Obsidian plugin has its own [contribution repository](https://github.com/tawandajosephmutsena/synk-obsidian-plugin).
+- If Synkk is useful to you, star this repository so you can find it again and others can discover it.
 
 ## Creators
 
