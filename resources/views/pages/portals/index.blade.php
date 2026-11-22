@@ -3,6 +3,7 @@
 use App\Models\Team;
 use App\Models\Vault;
 use App\Models\VaultPortal;
+use App\Services\PlanService;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +32,11 @@ new #[Title('Synkk Portals')] class extends Component {
     public bool $enable_graph = true;
     public bool $enable_backlinks = true;
     public bool $enable_popover = true;
+
+    // Portal AI & llms.txt toggles
+    public bool $ai_enabled = false;
+    public int $ai_daily_question_limit = 100;
+    public bool $llms_txt_enabled = true;
 
     public string $search = '';
     public string $layoutFilter = '';
@@ -66,6 +72,9 @@ new #[Title('Synkk Portals')] class extends Component {
         $this->enable_graph = (bool) $portal->getSetting('enable_graph', true);
         $this->enable_backlinks = (bool) $portal->getSetting('enable_backlinks', true);
         $this->enable_popover = (bool) $portal->getSetting('enable_popover', true);
+        $this->ai_enabled = (bool) $portal->ai_enabled;
+        $this->ai_daily_question_limit = max(1, (int) ($portal->ai_daily_question_limit ?: 100));
+        $this->llms_txt_enabled = (bool) $portal->llms_txt_enabled;
 
         $this->modal('portal-modal')->show();
         $this->dispatch('modal-show', name: 'portal-modal');
@@ -86,6 +95,9 @@ new #[Title('Synkk Portals')] class extends Component {
             'root_path' => ['nullable', 'string', 'max:255'],
             'password' => ['nullable', 'string', 'min:8'],
             'is_public' => ['boolean'],
+            'ai_enabled' => ['boolean'],
+            'ai_daily_question_limit' => ['required', 'integer', 'min:1', 'max:10000'],
+            'llms_txt_enabled' => ['boolean'],
         ]);
 
         $slug = filled($this->slug)
@@ -112,6 +124,12 @@ new #[Title('Synkk Portals')] class extends Component {
             'enable_popover' => $this->enable_popover,
         ];
 
+        $selectedVault = $team->vaults()->find($this->vault_id);
+        $effectiveAiEnabled = $this->canUsePortalAi
+            && $this->ai_enabled
+            && $selectedVault !== null
+            && ! $selectedVault->is_e2ee;
+
         $data = [
             'vault_id' => $this->vault_id,
             'name' => $this->name,
@@ -122,6 +140,9 @@ new #[Title('Synkk Portals')] class extends Component {
             'root_path' => filled($this->root_path) ? '/'.ltrim($this->root_path, '/') : '/',
             'is_public' => $this->is_public,
             'settings' => $settings,
+            'ai_enabled' => $effectiveAiEnabled,
+            'ai_daily_question_limit' => $this->ai_daily_question_limit,
+            'llms_txt_enabled' => $this->llms_txt_enabled,
         ];
 
         if (filled($this->password)) {
@@ -169,6 +190,16 @@ new #[Title('Synkk Portals')] class extends Component {
         $this->enable_graph = true;
         $this->enable_backlinks = true;
         $this->enable_popover = true;
+        $this->ai_enabled = false;
+        $this->ai_daily_question_limit = 100;
+        $this->llms_txt_enabled = true;
+    }
+
+    #[Computed]
+    public function canUsePortalAi(): bool
+    {
+        return $this->team !== null
+            && app(PlanService::class)->hasFeature($this->team, 'ai_portal_assistant');
     }
 
     #[Computed]
@@ -422,15 +453,28 @@ new #[Title('Synkk Portals')] class extends Component {
                             </button>
                         </div>
 
-                        <!-- Open Live Portal Button -->
-                        <a
-                            href="{{ $portal->getUrl() }}"
-                            target="_blank"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 transition-colors"
-                        >
-                            <span>{{ __('Open Portal') }}</span>
-                            <flux:icon icon="arrow-top-right-on-square" class="size-3.5" />
-                        </a>
+                        <!-- Open Live Portal & llms.txt Links -->
+                        <div class="flex items-center gap-2">
+                            @if ($portal->llms_txt_enabled && ! $portal->vault?->is_e2ee)
+                                <a
+                                    href="{{ route('portal.llms_txt', ['slug' => $portal->slug]) }}"
+                                    target="_blank"
+                                    class="inline-flex items-center rounded-lg border border-zinc-200 px-2 py-1 font-mono text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-white transition-colors"
+                                    title="{{ __('LLM Discovery Index (/llms.txt)') }}"
+                                >
+                                    llms.txt
+                                </a>
+                            @endif
+
+                            <a
+                                href="{{ $portal->getUrl() }}"
+                                target="_blank"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 transition-colors"
+                            >
+                                <span>{{ __('Open Portal') }}</span>
+                                <flux:icon icon="arrow-top-right-on-square" class="size-3.5" />
+                            </a>
+                        </div>
                     </div>
                 </flux:card>
             @endforeach
@@ -507,6 +551,40 @@ new #[Title('Synkk Portals')] class extends Component {
                     <flux:checkbox wire:model="enable_graph" :label="__('Knowledge Graph View')" />
                     <flux:checkbox wire:model="enable_backlinks" :label="__('Backlinks & Mentions')" />
                     <flux:checkbox wire:model="enable_popover" :label="__('Wikilink Hover Previews')" />
+                </div>
+
+                <!-- AI Assistant & LLM Discovery -->
+                <div class="rounded-xl border border-zinc-200 p-4 space-y-3 dark:border-zinc-800">
+                    <div class="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                        {{ __('AI Assistant & LLM Discovery') }}
+                    </div>
+
+                    <flux:checkbox
+                        wire:model="llms_txt_enabled"
+                        :label="__('Expose /llms.txt index for AI agents')"
+                        data-test="portal-llms-txt-checkbox"
+                    />
+
+                    @if ($this->canUsePortalAi)
+                        <flux:checkbox
+                            wire:model.live="ai_enabled"
+                            :label="__('Enable Ask This Portal AI Assistant (bills to workspace AI quota)')"
+                            data-test="portal-ai-enabled-checkbox"
+                        />
+
+                        @if ($ai_enabled)
+                            <div class="max-w-xs pt-1">
+                                <flux:input
+                                    wire:model="ai_daily_question_limit"
+                                    type="number"
+                                    min="1"
+                                    max="10000"
+                                    :label="__('Daily Question Limit')"
+                                    data-test="portal-ai-daily-limit-input"
+                                />
+                            </div>
+                        @endif
+                    @endif
                 </div>
             </div>
 

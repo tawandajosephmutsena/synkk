@@ -28,6 +28,9 @@ use Illuminate\Support\Str;
  * @property string $root_path
  * @property int|null $primary_file_id
  * @property array<string, mixed>|null $settings
+ * @property bool $ai_enabled
+ * @property int $ai_daily_question_limit
+ * @property bool $llms_txt_enabled
  * @property int $views_count
  * @property Carbon|null $last_accessed_at
  * @property Carbon|null $created_at
@@ -55,6 +58,9 @@ use Illuminate\Support\Str;
     'root_path',
     'primary_file_id',
     'settings',
+    'ai_enabled',
+    'ai_daily_question_limit',
+    'llms_txt_enabled',
     'views_count',
     'last_accessed_at',
 ])]
@@ -65,6 +71,9 @@ class VaultPortal extends Model
         return [
             'is_public' => 'boolean',
             'settings' => 'array',
+            'ai_enabled' => 'boolean',
+            'ai_daily_question_limit' => 'integer',
+            'llms_txt_enabled' => 'boolean',
             'views_count' => 'integer',
             'last_accessed_at' => 'datetime',
         ];
@@ -141,6 +150,35 @@ class VaultPortal extends Model
     public function isPasswordProtected(): bool
     {
         return ! empty($this->password_hash);
+    }
+
+    public function hasValidPasswordGrant(): bool
+    {
+        if (! $this->isPasswordProtected()) {
+            return true;
+        }
+
+        $sessionKey = "synkk_portal_grant_{$this->id}";
+        $grant = session()->get($sessionKey);
+
+        if (! is_array($grant)) {
+            return false;
+        }
+
+        if (empty($grant['expires_at']) || now()->timestamp > (int) $grant['expires_at']) {
+            session()->forget($sessionKey);
+
+            return false;
+        }
+
+        $currentFingerprint = substr((string) $this->password_hash, 0, 16);
+        if (! is_string($grant['fingerprint'] ?? null) || ! hash_equals($grant['fingerprint'], $currentFingerprint)) {
+            session()->forget($sessionKey);
+
+            return false;
+        }
+
+        return true;
     }
 
     public function verifyPassword(string $password): bool

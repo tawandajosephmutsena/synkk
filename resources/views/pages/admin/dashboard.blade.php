@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AiPlatformSetting;
 use App\Models\DeviceToken;
 use App\Models\Team;
 use App\Models\User;
@@ -7,6 +8,7 @@ use App\Models\Vault;
 use App\Models\VaultChangeLog;
 use App\Models\VaultFile;
 use App\Models\VaultFileVersion;
+use App\Services\Admin\AdminAiOpsService;
 use App\Services\PlanService;
 use App\Services\VaultAnalyticsService;
 use Flux\Flux;
@@ -56,9 +58,120 @@ new #[Title('Platform Super Admin')] class extends Component {
     public int $batchLicenseCount = 5;
     public array $batchGeneratedKeys = [];
 
+    // AI Ops platform control state
+    public bool $aiKillSwitch = false;
+    public string $aiDefaultTrialUsd = '2.00';
+    public string $aiGlobalDailyCapUsd = '';
+    public ?int $grantCreditsTeamId = null;
+    public string $grantCreditsAmountUsd = '5.00';
+    public string $grantCreditsBucket = 'trial';
+
+    public function mount(): void
+    {
+        $platform = AiPlatformSetting::current();
+        $this->aiKillSwitch = $platform->managed_ai_kill_switch;
+        $this->aiDefaultTrialUsd = number_format($platform->default_trial_credits_microcents / 100_000_000, 2, '.', '');
+        $this->aiGlobalDailyCapUsd = $platform->global_daily_spend_cap_cents !== null
+            ? number_format($platform->global_daily_spend_cap_cents / 100, 2, '.', '')
+            : '';
+    }
+
     public function setTab(string $tab): void
     {
         $this->activeTab = $tab;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    #[Computed]
+    public function aiOpsTelemetry(): array
+    {
+        return app(AdminAiOpsService::class)->getPlatformTelemetry();
+    }
+
+    public function toggleManagedAiKillSwitch(AdminAiOpsService $aiOps): void
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403);
+
+        $next = ! $this->aiKillSwitch;
+        $dailyCap = filled($this->aiGlobalDailyCapUsd) ? (float) $this->aiGlobalDailyCapUsd : null;
+        $updated = $aiOps->updatePlatformControls($next, (float) $this->aiDefaultTrialUsd, $dailyCap);
+        $this->aiKillSwitch = $updated->managed_ai_kill_switch;
+        unset($this->aiOpsTelemetry);
+
+        Flux::toast(
+            variant: $this->aiKillSwitch ? 'warning' : 'success',
+            text: $this->aiKillSwitch
+                ? __('Global Managed AI kill switch activated.')
+                : __('Global Managed AI kill switch lifted.'),
+        );
+    }
+
+    public function saveAiPlatformSettings(AdminAiOpsService $aiOps): void
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403);
+
+        $this->validate([
+            'aiKillSwitch' => ['boolean'],
+            'aiDefaultTrialUsd' => ['required', 'numeric', 'min:0', 'max:1000'],
+            'aiGlobalDailyCapUsd' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+        ]);
+
+        $dailyCap = filled($this->aiGlobalDailyCapUsd) ? (float) $this->aiGlobalDailyCapUsd : null;
+        $updated = $aiOps->updatePlatformControls(
+            $this->aiKillSwitch,
+            (float) $this->aiDefaultTrialUsd,
+            $dailyCap,
+        );
+
+        $this->aiKillSwitch = $updated->managed_ai_kill_switch;
+        $this->aiDefaultTrialUsd = number_format($updated->default_trial_credits_microcents / 100_000_000, 2, '.', '');
+        $this->aiGlobalDailyCapUsd = $updated->global_daily_spend_cap_cents !== null
+            ? number_format($updated->global_daily_spend_cap_cents / 100, 2, '.', '')
+            : '';
+
+        unset($this->aiOpsTelemetry);
+
+        Flux::toast(variant: 'success', text: __('Platform AI controls updated.'));
+    }
+
+    public function grantTenantAiCredits(AdminAiOpsService $aiOps): void
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403);
+
+        $this->validate([
+            'grantCreditsTeamId' => ['required', 'integer', 'exists:teams,id'],
+            'grantCreditsAmountUsd' => ['required', 'numeric', 'min:0.10', 'max:10000'],
+            'grantCreditsBucket' => ['required', 'in:trial,managed'],
+        ]);
+
+        $team = Team::findOrFail($this->grantCreditsTeamId);
+        $aiOps->grantTenantCredits($team, (float) $this->grantCreditsAmountUsd, $this->grantCreditsBucket);
+        unset($this->aiOpsTelemetry);
+
+        Flux::toast(variant: 'success', text: __('Granted $:amount (:bucket) to :team.', [
+            'amount' => number_format((float) $this->grantCreditsAmountUsd, 2),
+            'bucket' => $this->grantCreditsBucket,
+            'team' => $team->name,
+        ]));
+    }
+
+    public function toggleTenantAiStatus(int $teamId, AdminAiOpsService $aiOps): void
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403);
+
+        $team = Team::with('aiConfig')->findOrFail($teamId);
+        $currentlyEnabled = $team->aiConfig?->is_enabled ?? false;
+        $aiOps->setTenantAiEnabled($team, ! $currentlyEnabled);
+        unset($this->aiOpsTelemetry);
+
+        Flux::toast(
+            variant: $currentlyEnabled ? 'warning' : 'success',
+            text: $currentlyEnabled
+                ? __('Disabled AI Add-On for :team.', ['team' => $team->name])
+                : __('Enabled AI Add-On for :team.', ['team' => $team->name]),
+        );
     }
 
     #[Computed]
@@ -570,6 +683,20 @@ new #[Title('Platform Super Admin')] class extends Component {
                 class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer {{ $activeTab === 'system' ? 'bg-white text-slate-900 shadow-xs dark:bg-zinc-900 dark:text-white' : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white' }}"
             >
                 {{ __('System & Ops') }}
+            </button>
+            <button
+                type="button"
+                wire:click="setTab('ai-ops')"
+                data-test="admin-tab-ai-ops"
+                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer relative {{ $activeTab === 'ai-ops' ? 'bg-white text-slate-900 shadow-xs dark:bg-zinc-900 dark:text-white' : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white' }}"
+            >
+                <span class="flex items-center gap-1.5">
+                    <flux:icon icon="sparkles" class="size-3.5 text-amber-500" />
+                    <span>{{ __('AI Ops') }}</span>
+                </span>
+                @if ($this->aiKillSwitch)
+                    <span class="size-2 rounded-full bg-rose-500 animate-pulse absolute -top-0.5 -right-0.5"></span>
+                @endif
             </button>
         </div>
     </div>
@@ -1660,6 +1787,211 @@ new #[Title('Platform Super Admin')] class extends Component {
                             <span class="text-base font-bold text-slate-900 dark:text-white mt-1 block">{{ number_format($count) }}</span>
                         </div>
                     @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- TAB 7: AI OPS -->
+    @if ($activeTab === 'ai-ops')
+        @php $aiOps = $this->aiOpsTelemetry; @endphp
+        <div class="space-y-6" data-test="admin-ai-ops-panel">
+            <!-- Emergency Kill Switch & Platform Spend Controls -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div class="rounded-2xl border {{ $this->aiKillSwitch ? 'border-rose-400 bg-rose-50/40 dark:border-rose-800 dark:bg-rose-950/20' : 'border-gray-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900' }} p-5 shadow-xs space-y-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Global Managed AI Kill Switch') }}</h3>
+                            <p class="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                                {{ __('Immediately halts all Synkk Managed Cloud inference across every tenant without affecting BYOK or local Ollama.') }}
+                            </p>
+                        </div>
+
+                        <flux:badge size="sm" color="{{ $this->aiKillSwitch ? 'rose' : 'emerald' }}">
+                            {{ $this->aiKillSwitch ? __('PAUSED') : __('ACTIVE') }}
+                        </flux:badge>
+                    </div>
+
+                    <button
+                        type="button"
+                        wire:click="toggleManagedAiKillSwitch"
+                        data-test="admin-ai-kill-switch-button"
+                        class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold cursor-pointer {{ $this->aiKillSwitch ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-rose-600 text-white hover:bg-rose-500' }}"
+                    >
+                        <flux:icon icon="shield-exclamation" class="size-4" />
+                        <span>{{ $this->aiKillSwitch ? __('Resume Managed Cloud AI') : __('Activate Emergency Kill Switch') }}</span>
+                    </button>
+                </div>
+
+                <form wire:submit="saveAiPlatformSettings" class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-4">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Platform Spend & Trial Defaults') }}</h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <flux:input
+                            wire:model="aiDefaultTrialUsd"
+                            type="number"
+                            step="0.50"
+                            min="0"
+                            :label="__('Default Cloud AI Trial (USD)')"
+                            data-test="admin-ai-default-trial-input"
+                        />
+
+                        <flux:input
+                            wire:model="aiGlobalDailyCapUsd"
+                            type="number"
+                            step="1"
+                            min="0"
+                            :label="__('Global Daily Managed Cap (USD)')"
+                            placeholder="Optional"
+                            data-test="admin-ai-daily-cap-input"
+                        />
+                    </div>
+
+                    <div class="flex justify-end">
+                        <flux:button type="submit" variant="primary" size="sm" data-test="admin-ai-platform-save">
+                            {{ __('Save Platform Controls') }}
+                        </flux:button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 4 KPI Cards -->
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="text-xs font-medium text-slate-500 dark:text-zinc-400">{{ __('Today Managed Spend') }}</div>
+                    <div class="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+                        ${{ number_format((float) $aiOps['summary']['today_managed_spend_usd'], 4) }}
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="text-xs font-medium text-slate-500 dark:text-zinc-400">{{ __('30d Managed Spend') }}</div>
+                    <div class="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+                        ${{ number_format((float) $aiOps['summary']['month_managed_spend_usd'], 4) }}
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="text-xs font-medium text-slate-500 dark:text-zinc-400">{{ __('30d AI Requests / Tokens') }}</div>
+                    <div class="mt-2 text-lg font-black text-slate-900 dark:text-white">
+                        {{ number_format((int) $aiOps['summary']['month_requests']) }}
+                        <span class="text-xs font-normal text-slate-500">({{ number_format((int) $aiOps['summary']['month_tokens']) }} tok)</span>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                    <div class="text-xs font-medium text-slate-500 dark:text-zinc-400">{{ __('Active AI Workspaces / Secrets Redacted') }}</div>
+                    <div class="mt-2 text-lg font-black text-slate-900 dark:text-white">
+                        {{ $aiOps['summary']['enabled_workspaces'] }}
+                        <span class="text-xs font-normal text-emerald-600">· {{ $aiOps['summary']['month_redacted_secrets'] }} DLP scrubs</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Usage Breakdown & Grant Credits -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-3">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('30d Feature Usage Breakdown') }}</h3>
+                    <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+                                <tr>
+                                    <th class="py-2 px-3">{{ __('Feature') }}</th>
+                                    <th class="py-2 px-3">{{ __('Requests') }}</th>
+                                    <th class="py-2 px-3">{{ __('Tokens') }}</th>
+                                    <th class="py-2 px-3 text-right">{{ __('Est. Cost') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
+                                @forelse ($aiOps['features'] as $feat)
+                                    <tr>
+                                        <td class="py-2 px-3 font-mono font-semibold text-slate-900 dark:text-white">{{ $feat['feature'] }}</td>
+                                        <td class="py-2 px-3 text-slate-600 dark:text-zinc-300">{{ number_format($feat['requests']) }}</td>
+                                        <td class="py-2 px-3 text-slate-600 dark:text-zinc-300">{{ number_format($feat['tokens']) }}</td>
+                                        <td class="py-2 px-3 text-right font-mono">${{ number_format($feat['cost_usd'], 4) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="py-4 text-center text-slate-400 italic">{{ __('No AI usage logged in the past 30 days.') }}</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <form wire:submit="grantTenantAiCredits" class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-4">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Grant Tenant AI Credits') }}</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <flux:select wire:model="grantCreditsTeamId" :label="__('Workspace')" data-test="admin-grant-team-select" required>
+                            <flux:select.option value="">{{ __('Select team...') }}</flux:select.option>
+                            @foreach ($aiOps['tenants'] as $tenantRow)
+                                <flux:select.option value="{{ $tenantRow['team_id'] }}">{{ $tenantRow['team_name'] }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        <flux:input
+                            wire:model="grantCreditsAmountUsd"
+                            type="number"
+                            step="0.50"
+                            min="0.10"
+                            :label="__('Amount (USD)')"
+                            data-test="admin-grant-amount-input"
+                        />
+
+                        <flux:select wire:model="grantCreditsBucket" :label="__('Credit Bucket')" data-test="admin-grant-bucket-select">
+                            <flux:select.option value="trial">{{ __('Trial Pool') }}</flux:select.option>
+                            <flux:select.option value="managed">{{ __('Managed Monthly Pool') }}</flux:select.option>
+                        </flux:select>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <flux:button type="submit" variant="primary" size="sm" data-test="admin-grant-credits-button">
+                            {{ __('Grant Credits') }}
+                        </flux:button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tenant AI Configuration & Usage Table -->
+            <div class="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-3">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ __('Workspaces AI Status & 30d Spend') }}</h3>
+                <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-800">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+                            <tr>
+                                <th class="py-2 px-3">{{ __('Workspace') }}</th>
+                                <th class="py-2 px-3">{{ __('Plan / Mode') }}</th>
+                                <th class="py-2 px-3">{{ __('Trial Remaining') }}</th>
+                                <th class="py-2 px-3">{{ __('Managed Remaining') }}</th>
+                                <th class="py-2 px-3">{{ __('30d Requests') }}</th>
+                                <th class="py-2 px-3">{{ __('30d Cost') }}</th>
+                                <th class="py-2 px-3 text-right">{{ __('Status') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
+                            @foreach ($aiOps['tenants'] as $tenantRow)
+                                <tr>
+                                    <td class="py-2 px-3 font-semibold text-slate-900 dark:text-white">{{ $tenantRow['team_name'] }}</td>
+                                    <td class="py-2 px-3 font-mono text-slate-600 dark:text-zinc-300">{{ $tenantRow['plan'] }} · {{ $tenantRow['provider_mode'] }}</td>
+                                    <td class="py-2 px-3 font-mono">${{ number_format($tenantRow['trial_remaining_usd'], 2) }}</td>
+                                    <td class="py-2 px-3 font-mono">${{ number_format($tenantRow['managed_remaining_usd'], 2) }}</td>
+                                    <td class="py-2 px-3">{{ number_format($tenantRow['requests_30d']) }}</td>
+                                    <td class="py-2 px-3 font-mono">${{ number_format($tenantRow['cost_30d_usd'], 4) }}</td>
+                                    <td class="py-2 px-3 text-right">
+                                        <button
+                                            type="button"
+                                            wire:click="toggleTenantAiStatus({{ $tenantRow['team_id'] }})"
+                                            data-test="admin-toggle-tenant-ai-{{ $tenantRow['team_id'] }}"
+                                            class="rounded-lg px-2.5 py-1 text-[11px] font-bold cursor-pointer {{ $tenantRow['is_enabled'] ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300' }}"
+                                        >
+                                            {{ $tenantRow['is_enabled'] ? __('Enabled (Disable)') : __('Disabled (Enable)') }}
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

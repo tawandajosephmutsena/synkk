@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Billing\DodoBillingController;
 use App\Http\Controllers\PairingBridgeController;
+use App\Http\Controllers\PortalLlmsController;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
@@ -67,6 +68,9 @@ Route::get('portals', function () {
 
     return redirect()->route('login');
 });
+
+Route::get('p/{slug}/llms.txt', [PortalLlmsController::class, 'show'])
+    ->name('portal.llms_txt');
 
 Route::livewire('p/{slug}/{path?}', 'pages::portals.show')
     ->name('portal.show')

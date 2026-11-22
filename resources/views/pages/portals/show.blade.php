@@ -1,7 +1,9 @@
 <?php
 
+use App\Exceptions\AiException;
 use App\Models\VaultFile;
 use App\Models\VaultPortal;
+use App\Services\Ai\PortalAiService;
 use App\Services\KnowledgeGraphService;
 use App\Services\PortalRendererService;
 use Flux\Flux;
@@ -39,6 +41,13 @@ class extends Component {
     public bool $mobileDrawerOpen = false;
     public bool $commandPaletteOpen = false;
     public bool $graphModalOpen = false;
+
+    public bool $aiDrawerOpen = false;
+    public string $aiQuestionInput = '';
+    /** @var array<int, array{role: string, content: string, citations?: array<int, array{path: string, title: string}>}> */
+    public array $aiConversation = [];
+    public ?string $aiErrorMessage = null;
+    public ?int $aiRemainingToday = null;
 
     public function booted(): void
     {
@@ -86,31 +95,54 @@ class extends Component {
             return true;
         }
 
-        $sessionKey = "synkk_portal_grant_{$this->portal->id}";
-        $grant = session()->get($sessionKey);
-
-        if (! is_array($grant)) {
-            return false;
-        }
-
-        if (empty($grant['expires_at']) || now()->timestamp > $grant['expires_at']) {
-            session()->forget($sessionKey);
-            return false;
-        }
-
-        $currentFingerprint = substr((string) $this->portal->password_hash, 0, 16);
-        if (empty($grant['fingerprint']) || ! hash_equals($grant['fingerprint'], $currentFingerprint)) {
-            session()->forget($sessionKey);
-            return false;
-        }
-
-        return true;
+        return $this->portal->hasValidPasswordGrant();
     }
 
     #[Computed]
     public function isUnlocked(): bool
     {
         return $this->isPortalUnlocked();
+    }
+
+    #[Computed]
+    public function canAskPortalAi(): bool
+    {
+        return $this->isUnlocked()
+            && isset($this->portal)
+            && app(PortalAiService::class)->canUsePortalAi($this->portal);
+    }
+
+    public function askPortalAi(PortalAiService $portalAiService): void
+    {
+        $this->authorizePortalAccess();
+
+        if (! $this->isPortalUnlocked()) {
+            abort(403, 'Portal is locked.');
+        }
+
+        $question = trim($this->aiQuestionInput);
+        if ($question === '') {
+            return;
+        }
+
+        $this->aiErrorMessage = null;
+
+        try {
+            $result = $portalAiService->ask($this->portal, $question, (string) request()->ip());
+            $this->aiConversation[] = [
+                'role' => 'user',
+                'content' => $question,
+            ];
+            $this->aiConversation[] = [
+                'role' => 'assistant',
+                'content' => $result['answer'],
+                'citations' => $result['citations'],
+            ];
+            $this->aiRemainingToday = $result['remaining_today'];
+            $this->aiQuestionInput = '';
+        } catch (AiException $e) {
+            $this->aiErrorMessage = $e->getMessage();
+        }
     }
 
     public function mount(string $slug, ?string $path = null): void
@@ -581,6 +613,18 @@ class extends Component {
                             {{ count($this->interactiveGraph['nodes']) }}
                         </span>
                     </button>
+
+                    @if ($this->canAskPortalAi)
+                        <button
+                            type="button"
+                            x-on:click="$wire.aiDrawerOpen = true"
+                            data-test="portal-ask-ai-button"
+                            class="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all cursor-pointer shadow-xs"
+                        >
+                            <flux:icon icon="sparkles" class="size-3.5 text-amber-400" />
+                            <span>{{ __('Ask AI') }}</span>
+                        </button>
+                    @endif
 
                     <!-- Theme Switcher Dropdown Menu -->
                     <div class="relative" x-data="{ themeMenuOpen: false }">
@@ -1298,5 +1342,99 @@ class extends Component {
                 </div>
             </div>
         </div>
+
+        @if ($this->canAskPortalAi)
+            <!-- Ask This Portal Slide-Over Drawer -->
+            <div
+                x-show="$wire.aiDrawerOpen"
+                class="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs"
+                style="display: none;"
+                data-test="portal-ai-drawer"
+            >
+                <div
+                    x-on:click.outside="$wire.aiDrawerOpen = false"
+                    class="flex h-full w-full max-w-md flex-col border-l border-zinc-800 bg-zinc-950 text-zinc-100 shadow-2xl"
+                >
+                    <div class="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
+                        <div class="flex items-center gap-2">
+                            <flux:icon icon="sparkles" class="size-4 text-amber-400" />
+                            <span class="text-sm font-bold">{{ __('Ask this Portal') }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            @if ($aiRemainingToday !== null)
+                                <span class="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-mono text-zinc-400 border border-zinc-800">
+                                    {{ $aiRemainingToday }} {{ __('left today') }}
+                                </span>
+                            @endif
+                            <button
+                                type="button"
+                                x-on:click="$wire.aiDrawerOpen = false"
+                                class="rounded-lg p-1 text-zinc-400 hover:bg-zinc-900 hover:text-white cursor-pointer"
+                            >
+                                <flux:icon icon="x-mark" class="size-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-5 space-y-4">
+                        @if (empty($aiConversation))
+                            <div class="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/40 p-5 text-center space-y-1.5">
+                                <p class="text-xs font-semibold text-zinc-200">{{ __('Instant answers grounded in published docs') }}</p>
+                                <p class="text-[11px] text-zinc-400">{{ __('Questions are answered strictly using notes published in this portal.') }}</p>
+                            </div>
+                        @endif
+
+                        @foreach ($aiConversation as $msg)
+                            <div class="rounded-2xl p-3.5 text-xs space-y-2 {{ $msg['role'] === 'user' ? 'bg-amber-500/10 border border-amber-500/20 text-amber-100 ml-6' : 'bg-zinc-900 border border-zinc-800 text-zinc-200 mr-4' }}">
+                                <div class="text-[10px] font-bold uppercase tracking-wider {{ $msg['role'] === 'user' ? 'text-amber-400' : 'text-emerald-400' }}">
+                                    {{ $msg['role'] === 'user' ? __('You') : __('Portal Assistant') }}
+                                </div>
+                                <div class="whitespace-pre-wrap leading-relaxed">{{ $msg['content'] }}</div>
+                                @if (! empty($msg['citations']))
+                                    <div class="flex flex-wrap gap-1.5 pt-1 border-t border-zinc-800/80">
+                                        @foreach ($msg['citations'] as $citation)
+                                            <button
+                                                type="button"
+                                                wire:click="selectNote('{{ addslashes($citation['path']) }}')"
+                                                x-on:click="$wire.aiDrawerOpen = false"
+                                                class="inline-flex items-center gap-1 rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-300 hover:text-amber-300 cursor-pointer"
+                                            >
+                                                <flux:icon icon="document-text" class="size-3 text-amber-400" />
+                                                <span>{{ $citation['title'] }}</span>
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+
+                        @if ($aiErrorMessage !== null)
+                            <div class="rounded-xl border border-rose-500/30 bg-rose-950/40 px-3.5 py-2.5 text-xs text-rose-200">
+                                {{ $aiErrorMessage }}
+                            </div>
+                        @endif
+                    </div>
+
+                    <form wire:submit="askPortalAi" class="border-t border-zinc-800 p-4 flex items-center gap-2">
+                        <input
+                            type="text"
+                            wire:model="aiQuestionInput"
+                            data-test="portal-ai-input"
+                            placeholder="{{ __('Ask a question about these docs...') }}"
+                            class="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:border-amber-500 focus:outline-hidden"
+                        />
+                        <button
+                            type="submit"
+                            wire:loading.attr="disabled"
+                            data-test="portal-ai-submit"
+                            class="rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-zinc-950 hover:bg-amber-400 disabled:opacity-50 cursor-pointer"
+                        >
+                            <span wire:loading.remove wire:target="askPortalAi">{{ __('Ask') }}</span>
+                            <span wire:loading wire:target="askPortalAi">...</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        @endif
     @endif
 </div>

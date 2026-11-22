@@ -30,7 +30,8 @@ test('synkk:package-ce successfully packages and sanitizes community edition', f
 
     // Verify proprietary Super Admin files are strictly omitted
     expect($zip->locateName('resources/views/pages/admin/dashboard.blade.php'))->toBeFalse()
-        ->and($zip->locateName('app/Http/Controllers/Admin/ImpersonationController.php'))->toBeFalse();
+        ->and($zip->locateName('app/Http/Controllers/Admin/ImpersonationController.php'))->toBeFalse()
+        ->and($zip->locateName('app/Services/Admin/AdminAiOpsService.php'))->toBeFalse();
 
     $communityRoutes = $zip->getFromName('routes/web.php');
     expect($communityRoutes)->toBeString()

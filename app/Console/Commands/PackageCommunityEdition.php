@@ -29,6 +29,7 @@ class PackageCommunityEdition extends Command
     protected array $excludedPaths = [
         'resources/views/pages/admin',
         'app/Http/Controllers/Admin',
+        'app/Services/Admin',
         'app/Http/Middleware/EnsureSuperAdmin.php',
         'public/hot',
         'public/storage',
