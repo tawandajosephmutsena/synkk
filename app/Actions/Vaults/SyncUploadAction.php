@@ -6,6 +6,7 @@ use App\Jobs\IndexVaultFileJob;
 use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultFileVersion;
+use App\Services\Ai\VaultGardenerService;
 use App\Services\Ai\VaultIndexService;
 use App\Services\SecretScannerService;
 use App\ValueObjects\VaultContentEnvelope;
@@ -315,6 +316,16 @@ class SyncUploadAction
 
         if ($indexedFileId !== null && app(VaultIndexService::class)->shouldAutoIndex($vault, $cleanPath)) {
             IndexVaultFileJob::dispatch($vault->id, $indexedFileId, deleted: false);
+        }
+
+        if ($indexedFileId !== null && ! str_starts_with($deviceName, 'Synkk AI')) {
+            $gardenerService = app(VaultGardenerService::class);
+            if ($gardenerService->shouldDebounceGarden($vault, $cleanPath, $deviceName)) {
+                $indexedFile = $vault->files()->find($indexedFileId);
+                if ($indexedFile !== null) {
+                    $gardenerService->scheduleDebouncedRun($vault, $indexedFile, $deviceName);
+                }
+            }
         }
 
         return $result;

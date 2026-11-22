@@ -4,6 +4,7 @@ namespace App\Services\Ai;
 
 use App\Actions\Vaults\SyncUploadAction;
 use App\Exceptions\AiException;
+use App\Jobs\IndexVaultFileJob;
 use App\Models\AiProposal;
 use App\Models\User;
 use App\Models\Vault;
@@ -187,6 +188,19 @@ class AiProposalService
     }
 
     /**
+     * Supersede any pending proposals of the same source & path before staging a fresh suggestion.
+     */
+    public function supersedePendingForPath(Vault $vault, string $targetPath, string $source): int
+    {
+        return AiProposal::query()
+            ->where('vault_id', $vault->id)
+            ->where('target_path', $targetPath)
+            ->where('source', $source)
+            ->where('status', 'pending')
+            ->update(['status' => 'superseded']);
+    }
+
+    /**
      * Approve and materialize a staged proposal into the vault as a versioned sync commit.
      *
      * @return array{
@@ -210,7 +224,7 @@ class AiProposalService
             throw new AiException('Zero-Knowledge E2EE vaults cannot apply server-side AI proposals.', 'E2EE_BLOCKED', 403);
         }
 
-        if ($vault->aiSetting?->isPathExcluded($proposal->target_path)) {
+        if ($vault->aiSetting !== null && $vault->aiSetting->isPathExcluded($proposal->target_path)) {
             throw new AiException("Path '{$proposal->target_path}' is excluded from AI access.", 'PATH_EXCLUDED', 403);
         }
 
@@ -230,19 +244,82 @@ class AiProposalService
             $finalContent = $proposal->proposed_content;
         }
 
-        $syncResult = $this->syncUploadAction->execute(
-            vault: $vault,
-            user: $reviewer,
-            deviceName: "Synkk AI ({$proposal->source})",
-            path: $proposal->target_path,
-            contents: $finalContent,
-            baseVersion: $preview['current_version'] ?? 0,
-        );
+        $isMove = $proposal->action === 'move'
+            && is_string($proposal->destination_path)
+            && trim($proposal->destination_path) !== ''
+            && trim($proposal->destination_path) !== $proposal->target_path;
 
-        $savedFile = $vault->files()
-            ->where('path', $proposal->target_path)
-            ->where('is_deleted', false)
-            ->first();
+        if ($isMove) {
+            $destinationPath = $this->normalizePath((string) $proposal->destination_path);
+
+            if ($vault->aiSetting !== null && $vault->aiSetting->isPathExcluded($destinationPath)) {
+                throw new AiException("Path '{$destinationPath}' is excluded from AI access.", 'PATH_EXCLUDED', 403);
+            }
+
+            if ($vault->permissionForPath($reviewer, $destinationPath) !== 'read_write') {
+                throw new AiException("Write permission denied for '{$destinationPath}'.", 'FORBIDDEN', 403);
+            }
+
+            $destExisting = $vault->files()
+                ->where('path', $destinationPath)
+                ->where('is_deleted', false)
+                ->first();
+
+            $syncResult = $this->syncUploadAction->execute(
+                vault: $vault,
+                user: $reviewer,
+                deviceName: "Synkk AI ({$proposal->source})",
+                path: $destinationPath,
+                contents: $finalContent,
+                baseVersion: $destExisting !== null ? $destExisting->version : 0,
+            );
+
+            $sourceFile = $vault->files()
+                ->where('path', $proposal->target_path)
+                ->where('is_deleted', false)
+                ->first();
+
+            if ($sourceFile !== null) {
+                $tombstoneVersion = $vault->latestVersion() + 1;
+                $sourceFile->update([
+                    'is_deleted' => true,
+                    'version' => $tombstoneVersion,
+                    'last_modified_by' => $reviewer->id,
+                ]);
+
+                $vault->changeLogs()->create([
+                    'user_id' => $reviewer->id,
+                    'device_name' => "Synkk AI ({$proposal->source})",
+                    'path' => $proposal->target_path,
+                    'action' => 'deleted',
+                    'version' => $tombstoneVersion,
+                    'sha256' => null,
+                    'size' => 0,
+                    'has_secrets' => false,
+                ]);
+
+                IndexVaultFileJob::dispatch($vault->id, $sourceFile->id, deleted: true);
+            }
+
+            $savedFile = $vault->files()
+                ->where('path', $destinationPath)
+                ->where('is_deleted', false)
+                ->first();
+        } else {
+            $syncResult = $this->syncUploadAction->execute(
+                vault: $vault,
+                user: $reviewer,
+                deviceName: "Synkk AI ({$proposal->source})",
+                path: $proposal->target_path,
+                contents: $finalContent,
+                baseVersion: $preview['current_version'] ?? 0,
+            );
+
+            $savedFile = $vault->files()
+                ->where('path', $proposal->target_path)
+                ->where('is_deleted', false)
+                ->first();
+        }
 
         $proposal->forceFill([
             'status' => 'approved',

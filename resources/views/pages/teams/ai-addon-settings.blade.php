@@ -11,6 +11,7 @@ use App\Models\VaultAiSetting;
 use App\Services\Ai\AiGateway;
 use App\Services\Ai\AiQuotaService;
 use App\Services\Ai\VaultDigestService;
+use App\Services\Ai\VaultGardenerService;
 use App\Services\DodoPaymentsService;
 use App\Services\PlanService;
 use Flux\Flux;
@@ -57,7 +58,7 @@ new class extends Component
 
     public string $monthlyBudgetUsd = '';
 
-    /** @var array<int, array{ai_mode: string, excluded_paths_text: string, allow_direct_mcp_writes: bool, digest_schedule: string, digest_folder: string, digest_vault_note: bool, digest_via_proposal: bool, digest_team_feed: bool, digest_email: bool}> */
+    /** @var array<int, array{ai_mode: string, excluded_paths_text: string, allow_direct_mcp_writes: bool, digest_schedule: string, digest_folder: string, digest_vault_note: bool, digest_via_proposal: bool, digest_team_feed: bool, digest_email: bool, gardener_enabled: bool, gardener_schedule: string, inbox_folders_text: string, gardener_debounce_minutes: int, gardener_graph_linker: bool, gardener_contradiction_check: bool, allow_direct_inbox_frontmatter: bool}> */
     public array $vaultSettings = [];
 
     /** @var array{ok: bool, message: string, latency_ms: int, model: string}|null */
@@ -105,6 +106,7 @@ new class extends Component
 
         $vaultSettings = [];
         $digestService = app(VaultDigestService::class);
+        $gardenerService = app(VaultGardenerService::class);
         foreach ($this->team->vaults()->with('aiSetting')->orderBy('name')->get() as $vault) {
             $setting = $vault->aiSetting;
             $mode = $setting?->ai_mode ?? 'off';
@@ -118,6 +120,13 @@ new class extends Component
                 $digestSchedule = 'off';
             }
 
+            $gardenerSchedule = $setting?->gardener_schedule ?? 'debounced';
+            if (! in_array($gardenerSchedule, ['debounced', 'nightly', 'manual'], true)) {
+                $gardenerSchedule = 'debounced';
+            }
+
+            $inboxFolders = $gardenerService->normalizeInboxFolders($setting?->inbox_folders);
+
             $vaultSettings[$vault->id] = [
                 'ai_mode' => $mode,
                 'excluded_paths_text' => implode(', ', $setting?->excluded_paths ?? []),
@@ -128,6 +137,13 @@ new class extends Component
                 'digest_via_proposal' => $delivery['via_proposal'],
                 'digest_team_feed' => $delivery['team_feed'],
                 'digest_email' => $delivery['email'],
+                'gardener_enabled' => ! $vault->is_e2ee && (bool) ($setting?->gardener_enabled ?? false),
+                'gardener_schedule' => $gardenerSchedule,
+                'inbox_folders_text' => implode(', ', $inboxFolders),
+                'gardener_debounce_minutes' => max(1, min(60, (int) ($setting?->gardener_debounce_minutes ?? 5))),
+                'gardener_graph_linker' => $setting === null ? true : $setting->gardener_graph_linker,
+                'gardener_contradiction_check' => $setting === null ? true : $setting->gardener_contradiction_check,
+                'allow_direct_inbox_frontmatter' => ! $vault->is_e2ee && (bool) ($setting?->allow_direct_inbox_frontmatter ?? false),
             ];
         }
         $this->vaultSettings = $vaultSettings;
@@ -326,15 +342,35 @@ new class extends Component
             'email' => (bool) ($entry['digest_email'] ?? false),
         ];
 
+        $gardenerEnabled = ! $vault->is_e2ee && $this->canUseGardener && (bool) ($entry['gardener_enabled'] ?? false);
+        $gardenerSchedule = (string) ($entry['gardener_schedule'] ?? 'debounced');
+        if (! in_array($gardenerSchedule, ['debounced', 'nightly', 'manual'], true)) {
+            $gardenerSchedule = 'debounced';
+        }
+
+        $rawInboxFolders = preg_split('/[\r\n,]+/', (string) ($entry['inbox_folders_text'] ?? 'Inbox')) ?: [];
+        $inboxFolders = app(VaultGardenerService::class)->normalizeInboxFolders($rawInboxFolders);
+        $gardenerDebounceMinutes = max(1, min(60, (int) ($entry['gardener_debounce_minutes'] ?? 5)));
+        $gardenerGraphLinker = ! $vault->is_e2ee && (bool) ($entry['gardener_graph_linker'] ?? true);
+        $gardenerContradictionCheck = ! $vault->is_e2ee && (bool) ($entry['gardener_contradiction_check'] ?? true);
+        $allowDirectInboxFrontmatter = ! $vault->is_e2ee && (bool) ($entry['allow_direct_inbox_frontmatter'] ?? false);
+
         VaultAiSetting::query()->updateOrCreate(
             ['vault_id' => $vault->id],
             [
                 'ai_mode' => $mode,
                 'excluded_paths' => $excludedPaths,
                 'allow_direct_mcp_writes' => ! $vault->is_e2ee && (bool) ($entry['allow_direct_mcp_writes'] ?? false),
+                'allow_direct_inbox_frontmatter' => $allowDirectInboxFrontmatter,
                 'digest_schedule' => $digestSchedule,
                 'digest_folder' => $digestFolder,
                 'digest_delivery' => $digestDelivery,
+                'gardener_enabled' => $gardenerEnabled,
+                'gardener_schedule' => $gardenerSchedule,
+                'inbox_folders' => $inboxFolders,
+                'gardener_debounce_minutes' => $gardenerDebounceMinutes,
+                'gardener_graph_linker' => $gardenerGraphLinker,
+                'gardener_contradiction_check' => $gardenerContradictionCheck,
             ]
         );
 
@@ -346,9 +382,42 @@ new class extends Component
         $this->vaultSettings[$vaultId]['digest_via_proposal'] = $digestDelivery['via_proposal'];
         $this->vaultSettings[$vaultId]['digest_team_feed'] = $digestDelivery['team_feed'];
         $this->vaultSettings[$vaultId]['digest_email'] = $digestDelivery['email'];
+        $this->vaultSettings[$vaultId]['gardener_enabled'] = $gardenerEnabled;
+        $this->vaultSettings[$vaultId]['gardener_schedule'] = $gardenerSchedule;
+        $this->vaultSettings[$vaultId]['inbox_folders_text'] = implode(', ', $inboxFolders);
+        $this->vaultSettings[$vaultId]['gardener_debounce_minutes'] = $gardenerDebounceMinutes;
+        $this->vaultSettings[$vaultId]['gardener_graph_linker'] = $gardenerGraphLinker;
+        $this->vaultSettings[$vaultId]['gardener_contradiction_check'] = $gardenerContradictionCheck;
+        $this->vaultSettings[$vaultId]['allow_direct_inbox_frontmatter'] = $allowDirectInboxFrontmatter;
         unset($this->vaults);
 
         Flux::toast(variant: 'success', text: __('Vault AI settings saved for :name.', ['name' => $vault->name]));
+    }
+
+    public function runGardenerNow(int $vaultId): void
+    {
+        Gate::authorize('update', $this->team);
+
+        /** @var Vault $vault */
+        $vault = $this->team->vaults()->findOrFail($vaultId);
+
+        try {
+            $result = app(VaultGardenerService::class)->runForVault(
+                vault: $vault,
+                triggeredBy: Auth::user(),
+                maxFiles: 10,
+                force: true,
+            );
+
+            unset($this->vaults, $this->usageSummary);
+
+            Flux::toast(variant: 'success', text: __('Vault Gardener scanned :files files and staged :proposals proposals.', [
+                'files' => $result['files_scanned'],
+                'proposals' => $result['proposals_created'],
+            ]));
+        } catch (AiException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+        }
     }
 
     public function generateDigestNow(int $vaultId): void
@@ -485,6 +554,12 @@ new class extends Component
     public function canUseTeamDigests(): bool
     {
         return app(PlanService::class)->hasFeature($this->team, 'ai_team_digests');
+    }
+
+    #[Computed]
+    public function canUseGardener(): bool
+    {
+        return app(PlanService::class)->hasFeature($this->team, 'ai_gardener');
     }
 
     #[Computed]
@@ -967,6 +1042,87 @@ new class extends Component
                                             wire:model="vaultSettings.{{ $vault->id }}.digest_email"
                                             :label="__('Email digest to team members')"
                                             data-test="ai-vault-digest-email-{{ $vault->id }}"
+                                        />
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if ($this->canUseGardener)
+                                <div class="border-t border-gray-200/80 dark:border-zinc-700/60 pt-3 mt-2 space-y-3" data-test="ai-vault-gardener-section-{{ $vault->id }}">
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                        <div>
+                                            <div class="text-xs font-bold text-gray-800 dark:text-zinc-200">{{ __('Vault Gardener Automation') }}</div>
+                                            <div class="text-[11px] text-gray-500 dark:text-zinc-400">
+                                                @if ($vault->aiSetting?->last_gardened_at)
+                                                    {{ __('Last gardened :time', ['time' => $vault->aiSetting->last_gardened_at->diffForHumans()]) }}
+                                                @else
+                                                    {{ __('Never gardened yet') }}
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <flux:button
+                                            variant="subtle"
+                                            size="xs"
+                                            type="button"
+                                            wire:click="runGardenerNow({{ $vault->id }})"
+                                            wire:loading.attr="disabled"
+                                            data-test="ai-vault-gardener-run-{{ $vault->id }}"
+                                            class="!rounded-full text-xs font-semibold"
+                                        >
+                                            {{ __('Run Gardener Now') }}
+                                        </flux:button>
+                                    </div>
+
+                                    <flux:checkbox
+                                        wire:model="vaultSettings.{{ $vault->id }}.gardener_enabled"
+                                        :label="__('Enable background Vault Gardener (Inbox triage, Graph Linker, Contradiction detector)')"
+                                        data-test="ai-vault-gardener-enabled-{{ $vault->id }}"
+                                    />
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <flux:select
+                                            wire:model="vaultSettings.{{ $vault->id }}.gardener_schedule"
+                                            :label="__('Gardener Schedule')"
+                                            data-test="ai-vault-gardener-schedule-{{ $vault->id }}"
+                                        >
+                                            <flux:select.option value="debounced">{{ __('Debounced on Sync') }}</flux:select.option>
+                                            <flux:select.option value="nightly">{{ __('Nightly Sweep (02:30)') }}</flux:select.option>
+                                            <flux:select.option value="manual">{{ __('Manual Only') }}</flux:select.option>
+                                        </flux:select>
+
+                                        <flux:input
+                                            wire:model="vaultSettings.{{ $vault->id }}.inbox_folders_text"
+                                            :label="__('Inbox Folders')"
+                                            placeholder="Inbox, Rough"
+                                            data-test="ai-vault-gardener-inbox-{{ $vault->id }}"
+                                        />
+
+                                        <flux:input
+                                            wire:model="vaultSettings.{{ $vault->id }}.gardener_debounce_minutes"
+                                            type="number"
+                                            min="1"
+                                            max="60"
+                                            :label="__('Debounce (Minutes)')"
+                                            data-test="ai-vault-gardener-debounce-{{ $vault->id }}"
+                                        />
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <flux:checkbox
+                                            wire:model="vaultSettings.{{ $vault->id }}.gardener_graph_linker"
+                                            :label="__('Graph Linker (suggest wikilinks to related notes)')"
+                                            data-test="ai-vault-gardener-linker-{{ $vault->id }}"
+                                        />
+                                        <flux:checkbox
+                                            wire:model="vaultSettings.{{ $vault->id }}.gardener_contradiction_check"
+                                            :label="__('Contradiction & Knowledge Drift detector')"
+                                            data-test="ai-vault-gardener-drift-{{ $vault->id }}"
+                                        />
+                                        <flux:checkbox
+                                            wire:model="vaultSettings.{{ $vault->id }}.allow_direct_inbox_frontmatter"
+                                            :label="__('Allow direct YAML frontmatter tags/summary writes in Inbox notes')"
+                                            data-test="ai-vault-gardener-direct-frontmatter-{{ $vault->id }}"
                                         />
                                     </div>
                                 </div>

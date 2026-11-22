@@ -22,3 +22,8 @@ Schedule::command('ai:generate-digests --period=weekly')
     ->weeklyOn(1, '08:00')
     ->withoutOverlapping(30)
     ->description('Generate weekly AI team digests for opted-in vaults');
+
+Schedule::command('ai:run-gardener')
+    ->dailyAt('02:30')
+    ->withoutOverlapping(60)
+    ->description('Run nightly Vault Gardener sweep for opted-in vaults');

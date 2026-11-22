@@ -13,6 +13,7 @@ use App\Models\Vault;
 use App\Services\Ai\AiProposalService;
 use App\Services\Ai\VaultAgentService;
 use App\Services\Ai\VaultDigestService;
+use App\Services\Ai\VaultGardenerService;
 use App\Services\DeviceVaultAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class VaultAiController extends Controller
         protected VaultAgentService $agentService,
         protected AiProposalService $proposalService,
         protected VaultDigestService $digestService,
+        protected VaultGardenerService $gardenerService,
     ) {}
 
     public function threads(Request $request, Vault $vault): JsonResponse
@@ -310,6 +312,57 @@ class VaultAiController extends Controller
             );
 
             return response()->json($result);
+        } catch (AiException $e) {
+            return response()->json(['error' => $e->errorCode, 'message' => $e->getMessage()], $e->statusCode);
+        }
+    }
+
+    public function runGardener(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if ($deviceToken->isMcpToken()) {
+            return response()->json(['error' => 'MCP tokens must use /api/v1/mcp.'], 403);
+        }
+
+        $this->vaultAccess->authorizeVaultAccess($deviceToken, $vault);
+
+        $validated = $request->validate([
+            'path' => ['nullable', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
+            'max_files' => ['nullable', 'integer', 'min:1', 'max:25'],
+        ]);
+
+        try {
+            if (isset($validated['path']) && trim((string) $validated['path']) !== '') {
+                $targetPath = $this->proposalService->normalizePath((string) $validated['path']);
+                $file = $vault->files()
+                    ->where('path', $targetPath)
+                    ->where('is_deleted', false)
+                    ->first();
+
+                if ($file === null) {
+                    return response()->json(['error' => 'NOT_FOUND', 'message' => "Note '{$targetPath}' not found."], 404);
+                }
+
+                $result = $this->gardenerService->runForFile($vault, $file, $deviceToken->user, force: true);
+
+                return response()->json([
+                    ...$result,
+                    'status' => 'ok',
+                ]);
+            }
+
+            $result = $this->gardenerService->runForVault(
+                vault: $vault,
+                triggeredBy: $deviceToken->user,
+                maxFiles: (int) ($validated['max_files'] ?? 10),
+                force: true,
+            );
+
+            return response()->json([
+                ...$result,
+                'status' => 'ok',
+            ]);
         } catch (AiException $e) {
             return response()->json(['error' => $e->errorCode, 'message' => $e->getMessage()], $e->statusCode);
         }

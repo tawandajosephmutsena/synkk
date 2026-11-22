@@ -88,6 +88,7 @@ Route::prefix('v1')
                 Route::post('proposals/{proposal}/approve', [VaultAiController::class, 'approveProposal'])->name('api.vaults.ai.proposals.approve');
                 Route::post('proposals/{proposal}/reject', [VaultAiController::class, 'rejectProposal'])->name('api.vaults.ai.proposals.reject');
                 Route::post('digests/generate', [VaultAiController::class, 'generateDigest'])->name('api.vaults.ai.digests.generate');
+                Route::post('gardener/run', [VaultAiController::class, 'runGardener'])->name('api.vaults.ai.gardener.run');
             });
         });
 

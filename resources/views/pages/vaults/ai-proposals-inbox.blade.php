@@ -5,6 +5,8 @@ use App\Models\AiProposal;
 use App\Models\User;
 use App\Models\Vault;
 use App\Services\Ai\AiProposalService;
+use App\Services\Ai\VaultGardenerService;
+use App\Services\PlanService;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -132,6 +134,41 @@ new class extends Component
         }
     }
 
+    #[Computed]
+    public function canRunGardener(): bool
+    {
+        return ! $this->vault->is_e2ee
+            && $this->vault->team->aiConfig?->is_enabled === true
+            && $this->vault->aiSetting?->ai_mode === 'server'
+            && app(PlanService::class)->hasFeature($this->vault->team, 'ai_gardener');
+    }
+
+    public function runGardenerNow(): void
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        abort_unless($user->can('view', $this->vault), 403);
+
+        try {
+            $result = app(VaultGardenerService::class)->runForVault(
+                vault: $this->vault,
+                triggeredBy: $user,
+                maxFiles: 10,
+                force: true,
+            );
+
+            unset($this->proposals);
+            $this->dispatch('vault-proposals-updated');
+
+            Flux::toast(variant: 'success', text: __('Vault Gardener scanned :files files and staged :proposals proposals.', [
+                'files' => $result['files_scanned'],
+                'proposals' => $result['proposals_created'],
+            ]));
+        } catch (AiException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+        }
+    }
+
     /**
      * @return Collection<int, AiProposal>
      */
@@ -165,25 +202,56 @@ new class extends Component
             </flux:subheading>
         </div>
 
-        <div class="w-44">
-            <flux:select wire:model.live="statusFilter" size="sm" data-test="ai-inbox-filter">
-                <flux:select.option value="pending">{{ __('Pending Review') }}</flux:select.option>
-                <flux:select.option value="approved">{{ __('Approved') }}</flux:select.option>
-                <flux:select.option value="rejected">{{ __('Rejected') }}</flux:select.option>
-                <flux:select.option value="all">{{ __('All History') }}</flux:select.option>
-            </flux:select>
+        <div class="flex flex-wrap items-center gap-2">
+            @if ($this->canRunGardener)
+                <flux:button
+                    variant="subtle"
+                    size="sm"
+                    type="button"
+                    wire:click="runGardenerNow"
+                    wire:loading.attr="disabled"
+                    data-test="inbox-run-gardener-button"
+                >
+                    <flux:icon icon="sparkles" class="size-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
+                    {{ __('Run Gardener Now') }}
+                </flux:button>
+            @endif
+
+            <div class="w-44">
+                <flux:select wire:model.live="statusFilter" size="sm" data-test="ai-inbox-filter">
+                    <flux:select.option value="pending">{{ __('Pending Review') }}</flux:select.option>
+                    <flux:select.option value="approved">{{ __('Approved') }}</flux:select.option>
+                    <flux:select.option value="rejected">{{ __('Rejected') }}</flux:select.option>
+                    <flux:select.option value="all">{{ __('All History') }}</flux:select.option>
+                </flux:select>
+            </div>
         </div>
     </div>
 
     <div class="space-y-3">
         @forelse ($this->proposals as $proposal)
+            @php
+                $sourceColor = match ($proposal->source) {
+                    'mcp' => 'indigo',
+                    'digest' => 'sky',
+                    'gardener_triage' => 'purple',
+                    'gardener_links' => 'teal',
+                    'gardener_drift' => 'rose',
+                    default => 'emerald',
+                };
+            @endphp
             <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 space-y-3" data-test="ai-proposal-card-{{ $proposal->id }}">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div class="space-y-1">
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="font-mono text-xs font-bold text-gray-900 dark:text-white">{{ $proposal->target_path }}</span>
+                            <span class="font-mono text-xs font-bold text-gray-900 dark:text-white">
+                                {{ $proposal->target_path }}
+                                @if ($proposal->action === 'move' && $proposal->destination_path)
+                                    <span class="text-purple-600 dark:text-purple-400"> → {{ $proposal->destination_path }}</span>
+                                @endif
+                            </span>
                             <flux:badge size="sm" color="zinc">{{ strtoupper($proposal->action) }}</flux:badge>
-                            <flux:badge size="sm" color="{{ $proposal->source === 'mcp' ? 'indigo' : ($proposal->source === 'digest' ? 'sky' : 'emerald') }}">{{ strtoupper($proposal->source) }}</flux:badge>
+                            <flux:badge size="sm" color="{{ $sourceColor }}">{{ strtoupper($proposal->source) }}</flux:badge>
                             <flux:badge size="sm" color="{{ $proposal->status === 'pending' ? 'amber' : ($proposal->status === 'approved' ? 'emerald' : 'zinc') }}">
                                 {{ ucfirst($proposal->status) }}
                             </flux:badge>
