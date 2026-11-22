@@ -183,7 +183,7 @@ new class extends Component
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="font-mono text-xs font-bold text-gray-900 dark:text-white">{{ $proposal->target_path }}</span>
                             <flux:badge size="sm" color="zinc">{{ strtoupper($proposal->action) }}</flux:badge>
-                            <flux:badge size="sm" color="{{ $proposal->source === 'mcp' ? 'indigo' : 'emerald' }}">{{ strtoupper($proposal->source) }}</flux:badge>
+                            <flux:badge size="sm" color="{{ $proposal->source === 'mcp' ? 'indigo' : ($proposal->source === 'digest' ? 'sky' : 'emerald') }}">{{ strtoupper($proposal->source) }}</flux:badge>
                             <flux:badge size="sm" color="{{ $proposal->status === 'pending' ? 'amber' : ($proposal->status === 'approved' ? 'emerald' : 'zinc') }}">
                                 {{ ucfirst($proposal->status) }}
                             </flux:badge>

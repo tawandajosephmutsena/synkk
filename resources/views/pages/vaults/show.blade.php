@@ -3,6 +3,7 @@
 use App\Actions\Vaults\ResolveConflictAction;
 use App\Actions\Vaults\RestoreFileVersionAction;
 use App\Actions\Vaults\SyncUploadAction;
+use App\Exceptions\AiException;
 use App\Models\AiProposal;
 use App\Models\Team;
 use App\Models\User;
@@ -12,6 +13,7 @@ use App\Models\VaultCollaborationDocument;
 use App\Models\VaultFile;
 use App\Models\VaultFileVersion;
 use App\Models\VaultPermission;
+use App\Services\Ai\AiConflictMergeService;
 use App\Services\CrdtCollabService;
 use App\Services\E2eeVaultService;
 use App\Services\GhostFileService;
@@ -81,6 +83,15 @@ new #[Title('Vault Details')] class extends Component
     public string $conflictCanonicalContent = '';
 
     public string $conflictTheirsContent = '';
+
+    public ?string $conflictAiSummary = null;
+
+    /** @var array<int, array{hunk_id: int, strategy: string, rationale: string}> */
+    public array $conflictAiResolutions = [];
+
+    public ?string $conflictAiModel = null;
+
+    public string $conflictAiInstructions = '';
 
     // CRDT Multiplayer State
     public ?int $collaborationDocumentId = null;
@@ -568,6 +579,10 @@ new #[Title('Vault Details')] class extends Component
         $this->conflictHasConflicts = $diff['has_conflicts'];
         $this->conflictCount = $diff['conflict_count'];
         $this->conflictReconciledContent = $diff['merged_content'];
+        $this->conflictAiSummary = null;
+        $this->conflictAiResolutions = [];
+        $this->conflictAiModel = null;
+        $this->conflictAiInstructions = '';
 
         $this->dispatch('modal-show', name: 'conflict-sandbox-modal');
     }
@@ -578,6 +593,35 @@ new #[Title('Vault Details')] class extends Component
         if (isset($this->conflictHunks[$hunkId])) {
             $this->conflictHunks[$hunkId]['choice'] = $choice;
             $this->conflictReconciledContent = $diffService->assemble($this->conflictHunks);
+        }
+    }
+
+    public function runSmartMerge(AiConflictMergeService $smartMergeService): void
+    {
+        abort_unless(Auth::user()->can('view', $this->vault), 403);
+
+        if (! $this->conflictPath) {
+            return;
+        }
+
+        try {
+            $result = $smartMergeService->suggestMerge(
+                vault: $this->vault,
+                user: Auth::user(),
+                conflictPath: $this->conflictPath,
+                canonicalPath: $this->conflictCanonicalPath,
+                instructions: filled($this->conflictAiInstructions) ? $this->conflictAiInstructions : null,
+            );
+
+            $this->conflictReconciledContent = $result['merged_content'];
+            $this->conflictAiSummary = $result['summary'];
+            $this->conflictAiResolutions = $result['resolutions'];
+            $this->conflictAiModel = $result['model'];
+            $this->conflictHasConflicts = $result['had_unmerged_markers'];
+
+            Flux::toast(variant: 'success', text: __('AI Smart Merge prepared a reconciled preview. Review carefully before saving.'));
+        } catch (AiException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
         }
     }
 
@@ -609,6 +653,10 @@ new #[Title('Vault Details')] class extends Component
             $this->conflictReconciledContent = '';
             $this->conflictCanonicalContent = '';
             $this->conflictTheirsContent = '';
+            $this->conflictAiSummary = null;
+            $this->conflictAiResolutions = [];
+            $this->conflictAiModel = null;
+            $this->conflictAiInstructions = '';
 
             Flux::toast(variant: 'success', text: __('Conflict reconciled and note updated to revision v:version.', ['version' => $result['version']]));
         } catch (\Throwable $e) {
@@ -1441,6 +1489,13 @@ new #[Title('Vault Details')] class extends Component
         return ! $this->vault->is_e2ee
             && $this->vault->team->aiConfig?->is_enabled === true
             && $this->vault->aiSetting?->ai_mode === 'server';
+    }
+
+    #[Computed]
+    public function canUseSmartMerge(): bool
+    {
+        return $this->isVaultServerAiActive
+            && app(PlanService::class)->hasFeature($this->vault->team, 'ai_smart_merge');
     }
 
     #[Computed]
@@ -4494,6 +4549,54 @@ new #[Title('Vault Details')] class extends Component
                     <pre class="text-xs font-mono text-zinc-300 max-h-48 overflow-y-auto bg-black/40 p-3 rounded-lg border border-zinc-800/80 whitespace-pre-wrap">{{ $conflictTheirsContent ?: __('(Empty note)') }}</pre>
                 </div>
             </div>
+
+            @if ($this->canUseSmartMerge)
+                <div class="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3.5 space-y-3" data-test="smart-merge-bar">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2.5">
+                        <div class="flex-1">
+                            <input
+                                type="text"
+                                wire:model="conflictAiInstructions"
+                                data-test="smart-merge-instructions"
+                                placeholder="{{ __('Optional merge guidance (e.g. Keep all completed tasks and prefer our YAML frontmatter)...') }}"
+                                class="w-full rounded-lg border border-emerald-500/30 bg-zinc-950/80 px-3 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-400 focus:outline-hidden"
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            wire:click="runSmartMerge"
+                            wire:loading.attr="disabled"
+                            data-test="smart-merge-button"
+                            class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50 cursor-pointer shrink-0"
+                        >
+                            <flux:icon icon="sparkles" class="size-3.5" />
+                            <span wire:loading.remove wire:target="runSmartMerge">{{ __('Smart Merge with AI') }}</span>
+                            <span wire:loading wire:target="runSmartMerge">{{ __('Merging...') }}</span>
+                        </button>
+                    </div>
+
+                    @if ($conflictAiSummary !== null)
+                        <div class="rounded-lg border border-emerald-500/20 bg-zinc-950/70 p-3 space-y-2" data-test="smart-merge-summary">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">{{ __('AI Merge Summary') }}</span>
+                                @if ($conflictAiModel)
+                                    <span class="font-mono text-[10px] text-zinc-400">{{ $conflictAiModel }}</span>
+                                @endif
+                            </div>
+                            <p class="text-xs text-zinc-200">{{ $conflictAiSummary }}</p>
+                            @if (! empty($conflictAiResolutions))
+                                <ul class="space-y-1 text-[11px] text-zinc-400">
+                                    @foreach ($conflictAiResolutions as $res)
+                                        <li>
+                                            <span class="font-mono text-emerald-300">#{{ $res['hunk_id'] + 1 }} [{{ $res['strategy'] }}]</span>: {{ $res['rationale'] }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            @endif
 
             <!-- Hunks Resolution Controls -->
             <div class="space-y-3">

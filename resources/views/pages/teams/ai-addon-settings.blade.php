@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\AiException;
 use App\Jobs\IndexVaultRagJob;
 use App\Models\DeviceToken;
 use App\Models\Team;
@@ -9,6 +10,7 @@ use App\Models\Vault;
 use App\Models\VaultAiSetting;
 use App\Services\Ai\AiGateway;
 use App\Services\Ai\AiQuotaService;
+use App\Services\Ai\VaultDigestService;
 use App\Services\DodoPaymentsService;
 use App\Services\PlanService;
 use Flux\Flux;
@@ -55,7 +57,7 @@ new class extends Component
 
     public string $monthlyBudgetUsd = '';
 
-    /** @var array<int, array{ai_mode: string, excluded_paths_text: string, allow_direct_mcp_writes: bool}> */
+    /** @var array<int, array{ai_mode: string, excluded_paths_text: string, allow_direct_mcp_writes: bool, digest_schedule: string, digest_folder: string, digest_vault_note: bool, digest_via_proposal: bool, digest_team_feed: bool, digest_email: bool}> */
     public array $vaultSettings = [];
 
     /** @var array{ok: bool, message: string, latency_ms: int, model: string}|null */
@@ -102,6 +104,7 @@ new class extends Component
             : '';
 
         $vaultSettings = [];
+        $digestService = app(VaultDigestService::class);
         foreach ($this->team->vaults()->with('aiSetting')->orderBy('name')->get() as $vault) {
             $setting = $vault->aiSetting;
             $mode = $setting?->ai_mode ?? 'off';
@@ -109,10 +112,22 @@ new class extends Component
                 $mode = 'off';
             }
 
+            $delivery = $digestService->normalizeDelivery($setting?->digest_delivery);
+            $digestSchedule = $setting?->digest_schedule ?? 'off';
+            if ($vault->is_e2ee || ! in_array($digestSchedule, ['off', 'daily', 'weekly'], true)) {
+                $digestSchedule = 'off';
+            }
+
             $vaultSettings[$vault->id] = [
                 'ai_mode' => $mode,
                 'excluded_paths_text' => implode(', ', $setting?->excluded_paths ?? []),
                 'allow_direct_mcp_writes' => (bool) ($setting?->allow_direct_mcp_writes ?? false),
+                'digest_schedule' => $digestSchedule,
+                'digest_folder' => (string) ($setting?->digest_folder ?: 'Digests'),
+                'digest_vault_note' => $delivery['vault_note'],
+                'digest_via_proposal' => $delivery['via_proposal'],
+                'digest_team_feed' => $delivery['team_feed'],
+                'digest_email' => $delivery['email'],
             ];
         }
         $this->vaultSettings = $vaultSettings;
@@ -294,19 +309,77 @@ new class extends Component
             $parts
         ), fn (string $item): bool => $item !== ''));
 
+        $digestSchedule = (string) ($entry['digest_schedule'] ?? 'off');
+        if ($vault->is_e2ee || ! $this->canUseTeamDigests || ! in_array($digestSchedule, ['off', 'daily', 'weekly'], true)) {
+            $digestSchedule = 'off';
+        }
+
+        $digestFolder = trim(str_replace('\\', '/', (string) ($entry['digest_folder'] ?? 'Digests')), '/');
+        if ($digestFolder === '' || str_contains($digestFolder, '..') || str_contains($digestFolder, "\0")) {
+            $digestFolder = 'Digests';
+        }
+
+        $digestDelivery = [
+            'vault_note' => (bool) ($entry['digest_vault_note'] ?? true),
+            'via_proposal' => (bool) ($entry['digest_via_proposal'] ?? true),
+            'team_feed' => (bool) ($entry['digest_team_feed'] ?? true),
+            'email' => (bool) ($entry['digest_email'] ?? false),
+        ];
+
         VaultAiSetting::query()->updateOrCreate(
             ['vault_id' => $vault->id],
             [
                 'ai_mode' => $mode,
                 'excluded_paths' => $excludedPaths,
                 'allow_direct_mcp_writes' => ! $vault->is_e2ee && (bool) ($entry['allow_direct_mcp_writes'] ?? false),
+                'digest_schedule' => $digestSchedule,
+                'digest_folder' => $digestFolder,
+                'digest_delivery' => $digestDelivery,
             ]
         );
 
         $this->vaultSettings[$vaultId]['excluded_paths_text'] = implode(', ', $excludedPaths);
         $this->vaultSettings[$vaultId]['allow_direct_mcp_writes'] = ! $vault->is_e2ee && (bool) ($entry['allow_direct_mcp_writes'] ?? false);
+        $this->vaultSettings[$vaultId]['digest_schedule'] = $digestSchedule;
+        $this->vaultSettings[$vaultId]['digest_folder'] = $digestFolder;
+        $this->vaultSettings[$vaultId]['digest_vault_note'] = $digestDelivery['vault_note'];
+        $this->vaultSettings[$vaultId]['digest_via_proposal'] = $digestDelivery['via_proposal'];
+        $this->vaultSettings[$vaultId]['digest_team_feed'] = $digestDelivery['team_feed'];
+        $this->vaultSettings[$vaultId]['digest_email'] = $digestDelivery['email'];
+        unset($this->vaults);
 
         Flux::toast(variant: 'success', text: __('Vault AI settings saved for :name.', ['name' => $vault->name]));
+    }
+
+    public function generateDigestNow(int $vaultId): void
+    {
+        Gate::authorize('update', $this->team);
+
+        /** @var Vault $vault */
+        $vault = $this->team->vaults()->findOrFail($vaultId);
+
+        try {
+            $result = app(VaultDigestService::class)->generateDigest(
+                vault: $vault,
+                triggeredBy: Auth::user(),
+                force: true,
+            );
+
+            unset($this->vaults, $this->usageSummary);
+
+            if ($result['status'] === 'no_changes') {
+                Flux::toast(variant: 'warning', text: __('No recent eligible changes found for :name digest.', ['name' => $vault->name]));
+
+                return;
+            }
+
+            Flux::toast(variant: 'success', text: __('Generated digest covering :changes changes across :files files.', [
+                'changes' => $result['changes_count'],
+                'files' => $result['files_touched'],
+            ]));
+        } catch (AiException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+        }
     }
 
     public function createMcpToken(): void
@@ -406,6 +479,12 @@ new class extends Component
     public function canUseManagedCloud(): bool
     {
         return app(PlanService::class)->hasFeature($this->team, 'ai_managed_cloud');
+    }
+
+    #[Computed]
+    public function canUseTeamDigests(): bool
+    {
+        return app(PlanService::class)->hasFeature($this->team, 'ai_team_digests');
     }
 
     #[Computed]
@@ -821,6 +900,77 @@ new class extends Component
                                     data-test="ai-vault-direct-mcp-{{ $vault->id }}"
                                 />
                             </div>
+
+                            @if ($this->canUseTeamDigests)
+                                <div class="border-t border-gray-200/80 dark:border-zinc-700/60 pt-3 mt-2 space-y-3" data-test="ai-vault-digest-section-{{ $vault->id }}">
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                        <div>
+                                            <div class="text-xs font-bold text-gray-800 dark:text-zinc-200">{{ __('Automated Team Digests') }}</div>
+                                            <div class="text-[11px] text-gray-500 dark:text-zinc-400">
+                                                @if ($vault->aiSetting?->last_digest_at)
+                                                    {{ __('Last digest generated :time', ['time' => $vault->aiSetting->last_digest_at->diffForHumans()]) }}
+                                                @else
+                                                    {{ __('No digests generated yet') }}
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <flux:button
+                                            variant="subtle"
+                                            size="xs"
+                                            type="button"
+                                            wire:click="generateDigestNow({{ $vault->id }})"
+                                            wire:loading.attr="disabled"
+                                            data-test="ai-vault-digest-now-{{ $vault->id }}"
+                                            class="!rounded-full text-xs font-semibold"
+                                        >
+                                            {{ __('Generate Digest Now') }}
+                                        </flux:button>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <flux:select
+                                            wire:model="vaultSettings.{{ $vault->id }}.digest_schedule"
+                                            :label="__('Digest Schedule')"
+                                            data-test="ai-vault-digest-schedule-{{ $vault->id }}"
+                                        >
+                                            <flux:select.option value="off">{{ __('Off (Manual only)') }}</flux:select.option>
+                                            <flux:select.option value="daily">{{ __('Daily (08:00)') }}</flux:select.option>
+                                            <flux:select.option value="weekly">{{ __('Weekly (Mondays 08:00)') }}</flux:select.option>
+                                        </flux:select>
+
+                                        <flux:input
+                                            wire:model="vaultSettings.{{ $vault->id }}.digest_folder"
+                                            :label="__('Digest Notes Folder')"
+                                            placeholder="Digests"
+                                            data-test="ai-vault-digest-folder-{{ $vault->id }}"
+                                        />
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <flux:checkbox
+                                            wire:model="vaultSettings.{{ $vault->id }}.digest_vault_note"
+                                            :label="__('Save Markdown digest note in vault')"
+                                            data-test="ai-vault-digest-note-{{ $vault->id }}"
+                                        />
+                                        <flux:checkbox
+                                            wire:model="vaultSettings.{{ $vault->id }}.digest_via_proposal"
+                                            :label="__('Stage vault note in Proposal Inbox (recommended)')"
+                                            data-test="ai-vault-digest-proposal-{{ $vault->id }}"
+                                        />
+                                        <flux:checkbox
+                                            wire:model="vaultSettings.{{ $vault->id }}.digest_team_feed"
+                                            :label="__('Post summary to Team Feed & Notifications')"
+                                            data-test="ai-vault-digest-feed-{{ $vault->id }}"
+                                        />
+                                        <flux:checkbox
+                                            wire:model="vaultSettings.{{ $vault->id }}.digest_email"
+                                            :label="__('Email digest to team members')"
+                                            data-test="ai-vault-digest-email-{{ $vault->id }}"
+                                        />
+                                    </div>
+                                </div>
+                            @endif
                         @endif
                     </div>
                 @empty

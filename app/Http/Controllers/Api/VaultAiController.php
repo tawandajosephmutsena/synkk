@@ -12,6 +12,7 @@ use App\Models\DeviceToken;
 use App\Models\Vault;
 use App\Services\Ai\AiProposalService;
 use App\Services\Ai\VaultAgentService;
+use App\Services\Ai\VaultDigestService;
 use App\Services\DeviceVaultAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ class VaultAiController extends Controller
         protected DeviceVaultAccess $vaultAccess,
         protected VaultAgentService $agentService,
         protected AiProposalService $proposalService,
+        protected VaultDigestService $digestService,
     ) {}
 
     public function threads(Request $request, Vault $vault): JsonResponse
@@ -280,6 +282,34 @@ class VaultAiController extends Controller
                 'status' => 'rejected',
                 'proposal' => $rejected,
             ]);
+        } catch (AiException $e) {
+            return response()->json(['error' => $e->errorCode, 'message' => $e->getMessage()], $e->statusCode);
+        }
+    }
+
+    public function generateDigest(Request $request, Vault $vault): JsonResponse
+    {
+        /** @var DeviceToken $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if ($deviceToken->isMcpToken()) {
+            return response()->json(['error' => 'MCP tokens must use /api/v1/mcp.'], 403);
+        }
+
+        $this->vaultAccess->authorizeVaultAccess($deviceToken, $vault);
+
+        $validated = $request->validate([
+            'period' => ['nullable', 'in:daily,weekly'],
+        ]);
+
+        try {
+            $result = $this->digestService->generateDigest(
+                vault: $vault,
+                triggeredBy: $deviceToken->user,
+                period: $validated['period'] ?? null,
+                force: true,
+            );
+
+            return response()->json($result);
         } catch (AiException $e) {
             return response()->json(['error' => $e->errorCode, 'message' => $e->getMessage()], $e->statusCode);
         }

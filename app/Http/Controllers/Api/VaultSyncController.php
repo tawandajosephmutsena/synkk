@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Actions\Vaults\BatchSyncAction;
 use App\Actions\Vaults\ResolveConflictAction;
 use App\Actions\Vaults\SyncUploadAction;
+use App\Exceptions\AiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\BatchSyncRequest;
 use App\Http\Requests\Api\UploadVaultFileRequest;
@@ -13,6 +14,7 @@ use App\Jobs\IndexVaultRagJob;
 use App\Models\DeviceToken;
 use App\Models\Vault;
 use App\Models\VaultFile;
+use App\Services\Ai\AiConflictMergeService;
 use App\Services\CrdtCollabService;
 use App\Services\DeviceVaultAccess;
 use App\Services\E2eeVaultService;
@@ -610,6 +612,69 @@ class VaultSyncController extends Controller
             'canonical_version' => $canonicalFile ? $canonicalFile->version : 0,
             'conflict_version' => $conflictFile->version,
         ]);
+    }
+
+    /**
+     * Generate an AI semantic 3-way conflict merge preview without modifying disk files.
+     */
+    public function smartMergeConflict(
+        Request $request,
+        Vault $vault,
+        AiConflictMergeService $smartMergeService,
+    ): JsonResponse {
+        /** @var DeviceToken|null $deviceToken */
+        $deviceToken = $request->attributes->get('device_token');
+        if ($deviceToken instanceof DeviceToken && $deviceToken->isMcpToken()) {
+            return response()->json(['error' => 'MCP tokens must use /api/v1/mcp.'], 403);
+        }
+
+        if ($authError = $this->authorizeDeviceForVault($deviceToken, $vault)) {
+            return $authError;
+        }
+
+        /** @var DeviceToken $deviceToken */
+        $validated = $request->validate([
+            'conflict_path' => ['required', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
+            'canonical_path' => ['nullable', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
+            'instructions' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $conflictPath = ltrim(str_replace('\\', '/', $validated['conflict_path']), '/');
+        $canonicalPath = isset($validated['canonical_path']) && filled($validated['canonical_path'])
+            ? ltrim(str_replace('\\', '/', $validated['canonical_path']), '/')
+            : (string) preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)(\.[^.]+)$/', '$2', $conflictPath);
+
+        if ($canonicalPath === $conflictPath) {
+            $canonicalPath = (string) preg_replace('/(\.conflict-[^.]+|\.sync-conflict-[^.]+)$/', '', $conflictPath);
+        }
+
+        try {
+            $this->vaultAccess->authorizeWrite($deviceToken, $vault, $conflictPath);
+            $this->vaultAccess->authorizeWrite($deviceToken, $vault, $canonicalPath);
+            $this->vaultAccess->validateConflictRelationship($canonicalPath, $conflictPath);
+        } catch (HttpException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
+        }
+
+        try {
+            $result = $smartMergeService->suggestMerge(
+                vault: $vault,
+                user: $deviceToken->user,
+                conflictPath: $conflictPath,
+                canonicalPath: $canonicalPath,
+                instructions: $validated['instructions'] ?? null,
+            );
+
+            return response()->json([
+                'status' => 'ok',
+                ...$result,
+            ]);
+        } catch (AiException $e) {
+            return response()->json([
+                'error' => $e->errorCode,
+                'message' => $e->getMessage(),
+            ], $e->statusCode);
+        }
     }
 
     /**

@@ -46,6 +46,7 @@ Route::prefix('v1')
             // Conflict Resolution & 3-Way Diff Sandbox
             Route::get('conflicts', [VaultSyncController::class, 'conflicts'])->name('api.vaults.conflicts.index');
             Route::post('conflicts/diff', [VaultSyncController::class, 'diffConflict'])->name('api.vaults.conflicts.diff');
+            Route::post('conflicts/smart-merge', [VaultSyncController::class, 'smartMergeConflict'])->name('api.vaults.conflicts.smart_merge');
             Route::post('conflicts/resolve', [VaultSyncController::class, 'resolveConflict'])->name('api.vaults.conflicts.resolve');
 
             // CRDT Multiplayer Collaboration & Real-Time Relays
@@ -86,6 +87,7 @@ Route::prefix('v1')
                 Route::get('proposals', [VaultAiController::class, 'proposals'])->name('api.vaults.ai.proposals.index');
                 Route::post('proposals/{proposal}/approve', [VaultAiController::class, 'approveProposal'])->name('api.vaults.ai.proposals.approve');
                 Route::post('proposals/{proposal}/reject', [VaultAiController::class, 'rejectProposal'])->name('api.vaults.ai.proposals.reject');
+                Route::post('digests/generate', [VaultAiController::class, 'generateDigest'])->name('api.vaults.ai.digests.generate');
             });
         });
 

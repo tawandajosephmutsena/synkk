@@ -12,3 +12,13 @@ Schedule::call(function () {
 
 Schedule::command('vaults:prune-deleted')->daily()->description('Prune soft-deleted vault files');
 Schedule::command('vaults:prune-collaboration')->daily()->description('Prune superseded collaboration journal updates');
+
+Schedule::command('ai:generate-digests --period=daily')
+    ->dailyAt('08:00')
+    ->withoutOverlapping(30)
+    ->description('Generate daily AI team digests for opted-in vaults');
+
+Schedule::command('ai:generate-digests --period=weekly')
+    ->weeklyOn(1, '08:00')
+    ->withoutOverlapping(30)
+    ->description('Generate weekly AI team digests for opted-in vaults');
