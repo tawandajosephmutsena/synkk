@@ -31,6 +31,8 @@ use Illuminate\Support\Str;
  * @property-read Collection<int, VaultChangeLog> $changeLogs
  * @property-read Collection<int, VaultFileEmbedding> $embeddings
  * @property-read VaultAiSetting|null $aiSetting
+ * @property-read Collection<int, AiProposal> $aiProposals
+ * @property-read Collection<int, AiThread> $aiThreads
  */
 #[Fillable(['team_id', 'name', 'slug', 'description', 'default_permission', 'created_by', 'is_e2ee', 'e2ee_salt', 'e2ee_test_cipher'])]
 class Vault extends Model
@@ -134,6 +136,26 @@ class Vault extends Model
     public function aiSetting(): HasOne
     {
         return $this->hasOne(VaultAiSetting::class);
+    }
+
+    /**
+     * Get AI change proposals staged for this vault.
+     *
+     * @return HasMany<AiProposal, $this>
+     */
+    public function aiProposals(): HasMany
+    {
+        return $this->hasMany(AiProposal::class);
+    }
+
+    /**
+     * Get AI conversation threads for this vault.
+     *
+     * @return HasMany<AiThread, $this>
+     */
+    public function aiThreads(): HasMany
+    {
+        return $this->hasMany(AiThread::class);
     }
 
     public function latestVersion(): int

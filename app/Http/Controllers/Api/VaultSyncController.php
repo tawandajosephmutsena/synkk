@@ -373,8 +373,8 @@ class VaultSyncController extends Controller
         try {
             $this->vaultAccess->authorizeVaultAccess($deviceToken, $vault);
 
-            if ($deviceToken->access_scope === 'read_only') {
-                abort(403, 'This device token has read-only access and cannot execute batch sync modifications.');
+            if ($deviceToken->isMcpToken() || in_array($deviceToken->access_scope, ['read_only', 'mcp_read', 'mcp_propose'], true)) {
+                abort(403, 'This token cannot execute batch sync modifications.');
             }
         } catch (HttpException $e) {
             $statusCode = $e->getStatusCode();
@@ -426,10 +426,10 @@ class VaultSyncController extends Controller
             return response()->json(['error' => 'Vault not found in current team or access not allowed for this device token'], 404);
         }
 
-        if ($deviceToken->access_scope === 'read_only') {
+        if ($deviceToken->isMcpToken() || in_array($deviceToken->access_scope, ['read_only', 'mcp_read', 'mcp_propose'], true)) {
             return response()->json([
                 'error' => 'Permission Denied',
-                'message' => 'This device token has read-only access and cannot delete vault files.',
+                'message' => 'This token cannot delete vault files.',
             ], 403);
         }
 

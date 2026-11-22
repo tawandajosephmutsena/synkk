@@ -102,7 +102,9 @@ class AuthenticateDeviceToken
 
         $heartbeatAt = now();
         $clientIp = $request->ip();
-        $clientPlatform = $request->header('X-Client-Platform', $deviceToken->client_platform);
+        $clientPlatform = $deviceToken->isMcpToken()
+            ? DeviceToken::PLATFORM_MCP
+            : $request->header('X-Client-Platform', $deviceToken->client_platform);
 
         if ($this->heartbeatShouldBeUpdated($deviceToken, $heartbeatAt, $clientIp, $clientPlatform)) {
             $deviceToken->updateQuietly([

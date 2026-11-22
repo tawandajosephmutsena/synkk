@@ -34,6 +34,11 @@ class DeviceToken extends Model
 {
     public const WEB_SESSION_TOKEN_PREVIEW = 'web_sess...';
 
+    public const PLATFORM_MCP = 'mcp';
+
+    /** @var array<int, string> */
+    public const MCP_SCOPES = ['mcp_read', 'mcp_propose', 'mcp_write'];
+
     protected function casts(): array
     {
         return [
@@ -67,7 +72,26 @@ class DeviceToken extends Model
      */
     public function scopeUserDevices(Builder $query): Builder
     {
-        return $query->where('token_preview', '!=', self::WEB_SESSION_TOKEN_PREVIEW);
+        return $query
+            ->where('token_preview', '!=', self::WEB_SESSION_TOKEN_PREVIEW)
+            ->where(function (Builder $q): void {
+                $q->whereNull('client_platform')
+                    ->orWhere('client_platform', '!=', self::PLATFORM_MCP);
+            });
+    }
+
+    /**
+     * @param  Builder<DeviceToken>  $query
+     * @return Builder<DeviceToken>
+     */
+    public function scopeMcpTokens(Builder $query): Builder
+    {
+        return $query->where('client_platform', self::PLATFORM_MCP);
+    }
+
+    public function isMcpToken(): bool
+    {
+        return $this->client_platform === self::PLATFORM_MCP;
     }
 
     public function triggerRemoteWipe(): void
@@ -106,6 +130,7 @@ class DeviceToken extends Model
      * Generate a new device token.
      *
      * @param  array<int, string>|null  $allowedIpSubnets
+     * @param  array<int, int>|null  $allowedVaultIds
      * @return array{plain_token: string, device_token: self}
      */
     public static function createToken(
@@ -114,7 +139,8 @@ class DeviceToken extends Model
         string $name,
         ?string $platform = null,
         string $accessScope = 'full_access',
-        ?array $allowedIpSubnets = null
+        ?array $allowedIpSubnets = null,
+        ?array $allowedVaultIds = null,
     ): array {
         $plainText = 'synkk_'.Str::random(40);
         $hash = hash('sha256', $plainText);
@@ -129,6 +155,7 @@ class DeviceToken extends Model
             'client_platform' => $platform,
             'access_scope' => $accessScope,
             'allowed_ip_subnets' => $allowedIpSubnets,
+            'allowed_vault_ids' => $allowedVaultIds,
         ]);
 
         return [

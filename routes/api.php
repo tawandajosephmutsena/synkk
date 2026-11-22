@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\McpServerController;
+use App\Http\Controllers\Api\VaultAiController;
 use App\Http\Controllers\Api\VaultCollaborationController;
 use App\Http\Controllers\Api\VaultPreflightController;
 use App\Http\Controllers\Api\VaultSyncController;
@@ -73,5 +75,20 @@ Route::prefix('v1')
             Route::post('rag/index', [VaultSyncController::class, 'ragIndex'])->name('api.vaults.rag.index');
             Route::get('rag/progress', [VaultSyncController::class, 'ragProgress'])->name('api.vaults.rag.progress');
             Route::get('rag/status', [VaultSyncController::class, 'ragStatus'])->name('api.vaults.rag.status');
+
+            // Opt-In Vault AI Agent, Streaming Runs & Proposal Diff Inbox
+            Route::prefix('ai')->group(function () {
+                Route::get('threads', [VaultAiController::class, 'threads'])->name('api.vaults.ai.threads.index');
+                Route::post('threads', [VaultAiController::class, 'createThread'])->name('api.vaults.ai.threads.store');
+                Route::get('threads/{thread}/messages', [VaultAiController::class, 'messages'])->name('api.vaults.ai.threads.messages');
+                Route::post('threads/{thread}/messages', [VaultAiController::class, 'sendMessage'])->name('api.vaults.ai.threads.send');
+                Route::get('runs/{run}', [VaultAiController::class, 'runStatus'])->name('api.vaults.ai.runs.show');
+                Route::get('proposals', [VaultAiController::class, 'proposals'])->name('api.vaults.ai.proposals.index');
+                Route::post('proposals/{proposal}/approve', [VaultAiController::class, 'approveProposal'])->name('api.vaults.ai.proposals.approve');
+                Route::post('proposals/{proposal}/reject', [VaultAiController::class, 'rejectProposal'])->name('api.vaults.ai.proposals.reject');
+            });
         });
+
+        // Permissioned Remote MCP Server (JSON-RPC 2.0 Streamable HTTP)
+        Route::post('mcp', [McpServerController::class, 'handle'])->name('api.mcp.handle');
     });

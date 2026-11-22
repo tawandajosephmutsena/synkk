@@ -1,8 +1,10 @@
 <?php
 
 use App\Jobs\IndexVaultRagJob;
+use App\Models\DeviceToken;
 use App\Models\Team;
 use App\Models\TeamAiConfig;
+use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultAiSetting;
 use App\Services\Ai\AiGateway;
@@ -11,6 +13,7 @@ use App\Services\DodoPaymentsService;
 use App\Services\PlanService;
 use Flux\Flux;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -52,7 +55,7 @@ new class extends Component
 
     public string $monthlyBudgetUsd = '';
 
-    /** @var array<int, array{ai_mode: string, excluded_paths_text: string}> */
+    /** @var array<int, array{ai_mode: string, excluded_paths_text: string, allow_direct_mcp_writes: bool}> */
     public array $vaultSettings = [];
 
     /** @var array{ok: bool, message: string, latency_ms: int, model: string}|null */
@@ -60,6 +63,14 @@ new class extends Component
 
     /** @var array{ok: bool, message: string, latency_ms: int, model: string}|null */
     public ?array $embeddingTestResult = null;
+
+    public string $mcpTokenName = '';
+
+    public string $mcpTokenScope = 'mcp_propose';
+
+    public string $mcpAllowedVaultId = '';
+
+    public ?string $newlyCreatedMcpToken = null;
 
     public function mount(Team $team): void
     {
@@ -101,6 +112,7 @@ new class extends Component
             $vaultSettings[$vault->id] = [
                 'ai_mode' => $mode,
                 'excluded_paths_text' => implode(', ', $setting?->excluded_paths ?? []),
+                'allow_direct_mcp_writes' => (bool) ($setting?->allow_direct_mcp_writes ?? false),
             ];
         }
         $this->vaultSettings = $vaultSettings;
@@ -287,12 +299,81 @@ new class extends Component
             [
                 'ai_mode' => $mode,
                 'excluded_paths' => $excludedPaths,
+                'allow_direct_mcp_writes' => ! $vault->is_e2ee && (bool) ($entry['allow_direct_mcp_writes'] ?? false),
             ]
         );
 
         $this->vaultSettings[$vaultId]['excluded_paths_text'] = implode(', ', $excludedPaths);
+        $this->vaultSettings[$vaultId]['allow_direct_mcp_writes'] = ! $vault->is_e2ee && (bool) ($entry['allow_direct_mcp_writes'] ?? false);
 
         Flux::toast(variant: 'success', text: __('Vault AI settings saved for :name.', ['name' => $vault->name]));
+    }
+
+    public function createMcpToken(): void
+    {
+        Gate::authorize('update', $this->team);
+
+        if (! app(PlanService::class)->hasFeature($this->team, 'ai_mcp_server')) {
+            Flux::toast(variant: 'danger', text: __('MCP server access is not available on your current plan.'));
+
+            return;
+        }
+
+        $this->validate([
+            'mcpTokenName' => ['required', 'string', 'min:2', 'max:80'],
+            'mcpTokenScope' => ['required', Rule::in(DeviceToken::MCP_SCOPES)],
+            'mcpAllowedVaultId' => ['nullable', 'string'],
+        ]);
+
+        $allowedVaultIds = null;
+        if (filled($this->mcpAllowedVaultId)) {
+            $scopedVault = $this->team->vaults()->findOrFail((int) $this->mcpAllowedVaultId);
+            $allowedVaultIds = [$scopedVault->id];
+        }
+
+        /** @var User $user */
+        $user = Auth::user();
+        $result = DeviceToken::createToken(
+            user: $user,
+            team: $this->team,
+            name: trim($this->mcpTokenName),
+            platform: DeviceToken::PLATFORM_MCP,
+            accessScope: $this->mcpTokenScope,
+            allowedIpSubnets: null,
+            allowedVaultIds: $allowedVaultIds,
+        );
+
+        $this->newlyCreatedMcpToken = $result['plain_token'];
+        $this->mcpTokenName = '';
+        $this->mcpAllowedVaultId = '';
+        unset($this->mcpTokens);
+
+        Flux::toast(variant: 'success', text: __('MCP token created. Copy it now — it will not be shown again.'));
+    }
+
+    public function revokeMcpToken(int $tokenId): void
+    {
+        Gate::authorize('update', $this->team);
+
+        $token = $this->team->deviceTokens()->mcpTokens()->findOrFail($tokenId);
+        $token->triggerRemoteWipe();
+        unset($this->mcpTokens);
+
+        Flux::toast(variant: 'warning', text: __('MCP token revoked.'));
+    }
+
+    /**
+     * @return Collection<int, DeviceToken>
+     */
+    #[Computed]
+    public function mcpTokens(): Collection
+    {
+        return $this->team->deviceTokens()
+            ->mcpTokens()
+            ->where('is_wiped', false)
+            ->with('user')
+            ->latest('id')
+            ->get();
     }
 
     public function reindexVault(int $vaultId): void
@@ -731,12 +812,125 @@ new class extends Component
                                 </flux:button>
                             </div>
                         </div>
+
+                        @if (! $vault->is_e2ee)
+                            <div class="pt-1">
+                                <flux:checkbox
+                                    wire:model="vaultSettings.{{ $vault->id }}.allow_direct_mcp_writes"
+                                    :label="__('Allow direct MCP writes for mcp_write tokens (bypass Proposal Inbox)')"
+                                    data-test="ai-vault-direct-mcp-{{ $vault->id }}"
+                                />
+                            </div>
+                        @endif
                     </div>
                 @empty
                     <div class="rounded-2xl border border-dashed border-gray-200 p-4 text-xs text-gray-500 dark:border-zinc-800 dark:text-zinc-400">
                         {{ __('Create a vault first to configure per-vault AI settings.') }}
                     </div>
                 @endforelse
+            </div>
+        </div>
+
+        <!-- Remote MCP Server & Scoped Agent Tokens -->
+        <div class="space-y-4 pt-2" data-test="ai-mcp-tokens-section">
+            <div>
+                <flux:heading size="sm">{{ __('Permissioned Remote MCP Server') }}</flux:heading>
+                <flux:subheading>{{ __('Connect Claude Desktop, Cursor, or Windsurf using a scoped MCP token. MCP tokens respect path ACLs and do not consume Obsidian device seats.') }}</flux:subheading>
+            </div>
+
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-gray-50 px-3.5 py-2.5 dark:bg-zinc-950 border border-gray-100 dark:border-zinc-800">
+                    <span class="text-xs font-semibold text-gray-500 dark:text-zinc-400">{{ __('MCP Streamable HTTP Endpoint') }}</span>
+                    <code class="text-xs font-mono text-gray-900 dark:text-emerald-400 select-all">{{ url('/api/v1/mcp') }}</code>
+                </div>
+
+                <form wire:submit="createMcpToken" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                    <div class="sm:col-span-4">
+                        <flux:input
+                            wire:model="mcpTokenName"
+                            :label="__('Agent / Client Name')"
+                            placeholder="Claude Desktop"
+                            data-test="mcp-token-name-input"
+                            required
+                        />
+                    </div>
+
+                    <div class="sm:col-span-4">
+                        <flux:select wire:model="mcpTokenScope" :label="__('Permission Scope')" data-test="mcp-token-scope-select">
+                            <flux:select.option value="mcp_read">{{ __('Read-Only (Search & Read)') }}</flux:select.option>
+                            <flux:select.option value="mcp_propose">{{ __('Propose-Only (Recommended · AI Inbox)') }}</flux:select.option>
+                            <flux:select.option value="mcp_write">{{ __('Direct Write (When Vault Opted In)') }}</flux:select.option>
+                        </flux:select>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <flux:select wire:model="mcpAllowedVaultId" :label="__('Vault Scope')">
+                            <flux:select.option value="">{{ __('All AI Vaults') }}</flux:select.option>
+                            @foreach ($this->vaults as $vault)
+                                <flux:select.option value="{{ $vault->id }}">{{ $vault->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <flux:button
+                            variant="primary"
+                            type="submit"
+                            data-test="mcp-token-create-button"
+                            class="w-full !bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 !rounded-full text-xs font-bold"
+                        >
+                            {{ __('Create Token') }}
+                        </flux:button>
+                    </div>
+                </form>
+
+                @if ($newlyCreatedMcpToken)
+                    <div class="rounded-xl border border-emerald-300 bg-emerald-50/60 p-4 dark:border-emerald-800 dark:bg-emerald-950/30 space-y-2.5" data-test="mcp-created-token-box">
+                        <div class="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                            {{ __('Copy your new MCP Bearer token now (shown once):') }}
+                        </div>
+                        <pre class="overflow-x-auto rounded-lg bg-zinc-950 p-3 text-xs font-mono text-emerald-300 select-all">{{ $newlyCreatedMcpToken }}</pre>
+                        <div class="text-[11px] font-semibold text-emerald-900 dark:text-emerald-300">{{ __('Claude Desktop / Cursor / Windsurf JSON snippet:') }}</div>
+                        <pre class="overflow-x-auto rounded-lg bg-zinc-950 p-3 text-[11px] font-mono text-zinc-200 select-all">{{ json_encode([
+    'mcpServers' => [
+        'synkk' => [
+            'url' => url('/api/v1/mcp'),
+            'headers' => [
+                'Authorization' => 'Bearer '.$newlyCreatedMcpToken,
+            ],
+        ],
+    ],
+], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                    </div>
+                @endif
+
+                <div class="space-y-2 pt-1">
+                    @forelse ($this->mcpTokens as $mcpToken)
+                        <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-[#FBFBFA] px-4 py-2.5 dark:border-zinc-800/80 dark:bg-zinc-800/40" data-test="mcp-token-row-{{ $mcpToken->id }}">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-gray-900 dark:text-white">{{ $mcpToken->name }}</span>
+                                    <flux:badge size="sm" color="indigo">{{ $mcpToken->access_scope }}</flux:badge>
+                                    <span class="font-mono text-[11px] text-gray-400">{{ $mcpToken->token_preview }}</span>
+                                </div>
+                                <div class="text-[11px] text-gray-500 dark:text-zinc-400 mt-0.5">
+                                    {{ $mcpToken->last_used_at ? __('Last used :time', ['time' => $mcpToken->last_used_at->diffForHumans()]) : __('Never used') }}
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                wire:click="revokeMcpToken({{ $mcpToken->id }})"
+                                data-test="mcp-token-revoke-{{ $mcpToken->id }}"
+                                class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400 cursor-pointer"
+                            >
+                                {{ __('Revoke') }}
+                            </button>
+                        </div>
+                    @empty
+                        <p class="text-xs text-gray-500 dark:text-zinc-400">{{ __('No MCP agent tokens created yet.') }}</p>
+                    @endforelse
+                </div>
             </div>
         </div>
     @endif

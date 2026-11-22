@@ -1,5 +1,6 @@
 <?php
 
+use App\Broadcasting\VaultAiChannel;
 use App\Broadcasting\VaultCollaborationChannel;
 use App\Http\Middleware\AuthenticateDeviceToken;
 use Illuminate\Support\Facades\Broadcast;
@@ -12,3 +13,4 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('vault-collaboration.{documentId}', VaultCollaborationChannel::class);
+Broadcast::channel('vault-ai.{vaultId}.{userId}', VaultAiChannel::class);

@@ -52,8 +52,8 @@ final class DeviceVaultAccess
     {
         $this->authorizeVaultAccess($token, $vault);
 
-        if ($token->access_scope === 'read_only') {
-            abort(403, 'This device token has read-only access and cannot modify vault resources.');
+        if ($token->isMcpToken() || in_array($token->access_scope, ['read_only', 'mcp_read', 'mcp_propose'], true)) {
+            abort(403, 'This token cannot execute direct sync write operations.');
         }
 
         $cleanPath = trim(str_replace('\\', '/', $path), '/');
@@ -75,8 +75,8 @@ final class DeviceVaultAccess
     {
         $this->authorizeVaultAccess($token, $vault);
 
-        if ($token->access_scope === 'read_only') {
-            abort(403, 'Read-only device tokens cannot perform administrative actions.');
+        if ($token->isMcpToken() || in_array($token->access_scope, ['read_only', 'mcp_read', 'mcp_propose'], true)) {
+            abort(403, 'This token cannot perform administrative actions.');
         }
 
         $user = $token->user;

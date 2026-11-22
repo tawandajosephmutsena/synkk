@@ -3,6 +3,7 @@
 use App\Actions\Vaults\ResolveConflictAction;
 use App\Actions\Vaults\RestoreFileVersionAction;
 use App\Actions\Vaults\SyncUploadAction;
+use App\Models\AiProposal;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Vault;
@@ -28,6 +29,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -1402,6 +1404,7 @@ new #[Title('Vault Details')] class extends Component
         $this->copilotStatusMessage = "Re-indexed {$result['files_indexed']} files ({$result['chunks_count']} chunks) in {$result['duration_ms']}ms.";
     }
 
+    #[On('open-citation-note')]
     public function openCitationNote(string $notePath): void
     {
         $targetFile = $this->vault->files()->where('path', $notePath)->where('is_deleted', false)->first();
@@ -1409,6 +1412,35 @@ new #[Title('Vault Details')] class extends Component
             $this->selectFile($targetFile->id);
             $this->activeTab = 'editor';
         }
+    }
+
+    #[On('switch-vault-tab')]
+    public function switchVaultTab(string $tab): void
+    {
+        $this->activeTab = $tab;
+    }
+
+    #[On('vault-proposals-updated')]
+    public function refreshProposalBadge(): void
+    {
+        unset($this->pendingAiProposalsCount);
+    }
+
+    #[Computed]
+    public function pendingAiProposalsCount(): int
+    {
+        return AiProposal::query()
+            ->where('vault_id', $this->vault->id)
+            ->pending()
+            ->count();
+    }
+
+    #[Computed]
+    public function isVaultServerAiActive(): bool
+    {
+        return ! $this->vault->is_e2ee
+            && $this->vault->team->aiConfig?->is_enabled === true
+            && $this->vault->aiSetting?->ai_mode === 'server';
     }
 
     #[Computed]
@@ -1600,6 +1632,17 @@ new #[Title('Vault Details')] class extends Component
                     <span>{{ __('Vault Copilot (RAG)') }}</span>
                 </span>
             </flux:radio>
+            @if ($this->isVaultServerAiActive || $this->pendingAiProposalsCount > 0)
+                <flux:radio value="ai-inbox">
+                    <span class="flex items-center gap-1.5 font-bold text-xs">
+                        <flux:icon icon="inbox-stack" class="size-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>{{ __('AI Inbox') }}</span>
+                        @if ($this->pendingAiProposalsCount > 0)
+                            <flux:badge size="sm" color="amber" rounded inset>{{ $this->pendingAiProposalsCount }}</flux:badge>
+                        @endif
+                    </span>
+                </flux:radio>
+            @endif
             <flux:radio value="settings">
                 <span class="flex items-center gap-1.5 font-bold text-xs">
                     <flux:icon icon="cog" class="size-4" />
@@ -3537,6 +3580,10 @@ new #[Title('Vault Details')] class extends Component
     <!-- TAB: Vault Copilot (Agentic Knowledge Graph & RAG Server) -->
     @if ($activeTab === 'copilot')
         <div class="space-y-6">
+            @if ($this->isVaultServerAiActive)
+                <livewire:pages::vaults.ai-agent-panel :vault="$vault" :key="'ai-agent-'.$vault->id" />
+            @endif
+
             <!-- Copilot Header & Telemetry Card -->
             <flux:card class="space-y-4">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -3729,6 +3776,10 @@ new #[Title('Vault Details')] class extends Component
     @endif
 
     <!-- TAB 4: Settings -->
+    @if ($activeTab === 'ai-inbox')
+        <livewire:pages::vaults.ai-proposals-inbox :vault="$vault" :key="'ai-inbox-'.$vault->id" />
+    @endif
+
     @if ($activeTab === 'settings')
         <div class="max-w-2xl space-y-6">
             <flux:card class="space-y-4">
