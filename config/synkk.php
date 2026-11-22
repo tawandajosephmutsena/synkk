@@ -78,6 +78,11 @@ return [
             'currency_symbol' => '$',
             'billing_label' => 'lifetime deal · pay once, own forever',
         ],
+        'ai_addon' => [
+            'amount' => (int) env('SYNKK_AI_ADDON_PRICE', 12),
+            'currency_symbol' => '$',
+            'billing_label' => 'per workspace / month',
+        ],
     ],
 
     /*
@@ -102,6 +107,8 @@ return [
                 'web_editor',
                 'interactive_graph',
                 'atomic_abort_guard',
+                'ai_byok_core',
+                'ai_mcp_server',
             ],
         ],
         'pro_ltd' => [
@@ -123,6 +130,12 @@ return [
                 'read_only_tokens',
                 'plugin_suite_sync',
                 'rag_vector_search',
+                'ai_byok_core',
+                'ai_mcp_server',
+                'ai_smart_merge',
+                'ai_gardener',
+                'ai_team_digests',
+                'ai_portal_assistant',
             ],
         ],
         'cloud_pro' => [
@@ -148,6 +161,13 @@ return [
                 'rag_vector_search',
                 'cloud_backup',
                 'priority_support',
+                'ai_byok_core',
+                'ai_mcp_server',
+                'ai_smart_merge',
+                'ai_gardener',
+                'ai_team_digests',
+                'ai_portal_assistant',
+                'ai_managed_cloud',
             ],
         ],
         'cloud_business' => [
@@ -173,6 +193,13 @@ return [
                 'rag_vector_search',
                 'cloud_backup',
                 'priority_support',
+                'ai_byok_core',
+                'ai_mcp_server',
+                'ai_smart_merge',
+                'ai_gardener',
+                'ai_team_digests',
+                'ai_portal_assistant',
+                'ai_managed_cloud',
             ],
         ],
         'cloud' => [
@@ -198,6 +225,13 @@ return [
                 'rag_vector_search',
                 'cloud_backup',
                 'priority_support',
+                'ai_byok_core',
+                'ai_mcp_server',
+                'ai_smart_merge',
+                'ai_gardener',
+                'ai_team_digests',
+                'ai_portal_assistant',
+                'ai_managed_cloud',
             ],
         ],
     ],
@@ -220,5 +254,49 @@ return [
         'openai_api_key' => env('SYNKK_RAG_OPENAI_API_KEY', env('OPENAI_API_KEY')),
         'openai_model' => env('SYNKK_RAG_OPENAI_MODEL', 'gpt-4o-mini'),
         'dimensions' => 128,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Opt-In AI Add-On (Managed Cloud Inference & Credit Allowances)
+    |--------------------------------------------------------------------------
+    |
+    | Settings for Synkk Managed Cloud AI, trial/monthly credit allowances,
+    | and per-1M token microcent pricing estimates for quota accounting.
+    |
+    */
+    'ai' => [
+        'managed' => [
+            'provider' => env('SYNKK_AI_MANAGED_PROVIDER', 'openai_compatible'),
+            'base_url' => env('SYNKK_AI_MANAGED_BASE_URL', 'https://openrouter.ai/api/v1'),
+            'api_key' => env('SYNKK_AI_MANAGED_API_KEY'),
+            'chat_model' => env('SYNKK_AI_MANAGED_CHAT_MODEL', 'openai/gpt-4o-mini'),
+            'fast_model' => env('SYNKK_AI_MANAGED_FAST_MODEL', 'openai/gpt-4o-mini'),
+            'embedding_provider' => env('SYNKK_AI_MANAGED_EMBEDDING_PROVIDER', 'openai_compatible'),
+            'embedding_base_url' => env('SYNKK_AI_MANAGED_EMBEDDING_BASE_URL', 'https://api.openai.com/v1'),
+            'embedding_api_key' => env('SYNKK_AI_MANAGED_EMBEDDING_API_KEY', env('SYNKK_AI_MANAGED_API_KEY')),
+            'embedding_model' => env('SYNKK_AI_MANAGED_EMBEDDING_MODEL', 'text-embedding-3-small'),
+        ],
+        'credits' => [
+            'trial_microcents' => (int) env('SYNKK_AI_TRIAL_MICROCENTS', 200_000_000),
+            'monthly_microcents' => (int) env('SYNKK_AI_MONTHLY_MICROCENTS', 1_200_000_000),
+        ],
+        'pricing_microcents_per_1m' => [
+            'default_input' => 15_000_000,
+            'default_output' => 60_000_000,
+            'default_embedding' => 2_000_000,
+            'models' => [
+                'gpt-4o-mini' => ['input' => 15_000_000, 'output' => 60_000_000],
+                'openai/gpt-4o-mini' => ['input' => 15_000_000, 'output' => 60_000_000],
+                'gpt-4o' => ['input' => 250_000_000, 'output' => 1_000_000_000],
+                'openai/gpt-4o' => ['input' => 250_000_000, 'output' => 1_000_000_000],
+                'claude-3-5-sonnet' => ['input' => 300_000_000, 'output' => 1_500_000_000],
+                'claude-3-5-sonnet-latest' => ['input' => 300_000_000, 'output' => 1_500_000_000],
+                'anthropic/claude-3.5-sonnet' => ['input' => 300_000_000, 'output' => 1_500_000_000],
+                'gemini-2.0-flash' => ['input' => 10_000_000, 'output' => 40_000_000],
+                'google/gemini-2.0-flash-001' => ['input' => 10_000_000, 'output' => 40_000_000],
+                'text-embedding-3-small' => ['input' => 2_000_000, 'output' => 0],
+            ],
+        ],
     ],
 ];

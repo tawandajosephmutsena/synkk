@@ -104,6 +104,8 @@ Route::prefix('{current_team}')
         Route::livewire('docs', 'pages::docs.index')->name('docs');
         Route::post('billing/dodo/checkout', [DodoBillingController::class, 'checkout'])
             ->name('billing.dodo.checkout');
+        Route::post('billing/dodo/ai-addon/checkout', [DodoBillingController::class, 'aiAddonCheckout'])
+            ->name('billing.dodo.ai_addon.checkout');
         Route::post('billing/dodo/portal', [DodoBillingController::class, 'portal'])
             ->name('billing.dodo.portal');
         Route::get('billing/dodo/return', [DodoBillingController::class, 'checkoutReturn'])

@@ -48,6 +48,7 @@ return [
         'cloud_product_id' => env('DODO_PAYMENTS_CLOUD_PRODUCT_ID'),
         'cloud_business_product_id' => env('DODO_PAYMENTS_CLOUD_BUSINESS_PRODUCT_ID'),
         'pro_product_id' => env('DODO_PAYMENTS_PRO_PRODUCT_ID'),
+        'ai_addon_product_id' => env('DODO_PAYMENTS_AI_ADDON_PRODUCT_ID'),
         'pro_checkout_url' => env('DODO_PAYMENTS_PRO_CHECKOUT_URL'),
         'currency' => env('DODO_PAYMENTS_CURRENCY', 'USD'),
         'grace_period_days' => (int) env('DODO_PAYMENTS_GRACE_PERIOD_DAYS', 7),

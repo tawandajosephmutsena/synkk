@@ -245,6 +245,211 @@ test('a signed Dodo payment.succeeded webhook activates a Pro LTD license', func
         ->and($freshTeam->billing_provider)->toBe('dodo');
 });
 
+test('rejects pro_ltd and cloud_business checkouts when their product ids are not configured', function (string $plan) {
+    config()->set([
+        'services.dodo.api_key' => 'test-api-key',
+        'services.dodo.base_url' => 'https://test.dodopayments.com',
+        'services.dodo.cloud_product_id' => 'pdt_cloud_monthly',
+        'services.dodo.cloud_business_product_id' => '',
+        'services.dodo.pro_product_id' => '',
+    ]);
+
+    Http::fake();
+
+    $user = User::factory()->create();
+    $team = Team::factory()->create(['plan' => 'free']);
+    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+    $response = $this
+        ->actingAs($user)
+        ->post(route('billing.dodo.checkout', ['current_team' => $team->slug]), [
+            'plan' => $plan,
+        ]);
+
+    $response->assertRedirect()->assertSessionHasErrors('billing');
+    Http::assertNothingSent();
+})->with(['pro_ltd', 'cloud_business']);
+
+test('rejects invalid plan names on checkout', function () {
+    config()->set([
+        'services.dodo.api_key' => 'test-api-key',
+        'services.dodo.cloud_product_id' => 'pdt_cloud_monthly',
+    ]);
+
+    Http::fake();
+
+    $user = User::factory()->create();
+    $team = Team::factory()->create(['plan' => 'free']);
+    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+    $response = $this
+        ->actingAs($user)
+        ->post(route('billing.dodo.checkout', ['current_team' => $team->slug]), [
+            'plan' => 'enterprise_free',
+        ]);
+
+    $response->assertRedirect()->assertSessionHasErrors('plan');
+    Http::assertNothingSent();
+});
+
+test('creates checkouts with exact product ids for pro_ltd and cloud_business', function (string $plan, string $expectedProductId) {
+    config()->set([
+        'services.dodo.api_key' => 'test-api-key',
+        'services.dodo.base_url' => 'https://test.dodopayments.com',
+        'services.dodo.cloud_product_id' => 'pdt_cloud_pro',
+        'services.dodo.cloud_business_product_id' => 'pdt_cloud_business',
+        'services.dodo.pro_product_id' => 'pdt_pro_ltd',
+        'services.dodo.currency' => 'USD',
+    ]);
+
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://test.dodopayments.com/checkouts' => Http::response([
+            'session_id' => 'cks_plan_123',
+            'checkout_url' => 'https://test.checkout.dodopayments.com/session/cks_plan_123',
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+    $team = Team::factory()->create(['plan' => 'free']);
+    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+    $response = $this
+        ->actingAs($user)
+        ->post(route('billing.dodo.checkout', ['current_team' => $team->slug]), [
+            'plan' => $plan,
+        ]);
+
+    $response->assertRedirect('https://test.checkout.dodopayments.com/session/cks_plan_123');
+
+    Http::assertSent(function (HttpRequest $request) use ($plan, $expectedProductId): bool {
+        $data = $request->data();
+
+        return $data['product_cart'][0]['product_id'] === $expectedProductId
+            && $data['metadata']['plan'] === $plan;
+    });
+})->with([
+    ['pro_ltd', 'pdt_pro_ltd'],
+    ['cloud_business', 'pdt_cloud_business'],
+]);
+
+test('activates cloud_business subscription with correct plan name and grace-period suspension', function () {
+    $secret = 'dodo-test-secret';
+    config()->set([
+        'services.dodo.webhook_key' => 'whsec_'.base64_encode($secret),
+        'services.dodo.webhook_tolerance_seconds' => 300,
+        'services.dodo.cloud_business_product_id' => 'pdt_cloud_business',
+    ]);
+
+    $team = Team::factory()->create(['plan' => 'free']);
+    $payload = [
+        'business_id' => 'biz_123',
+        'timestamp' => now()->toIso8601String(),
+        'type' => 'subscription.active',
+        'data' => [
+            'subscription_id' => 'sub_biz_123',
+            'status' => 'active',
+            'product_id' => 'pdt_cloud_business',
+            'next_billing_date' => now()->addMonth()->toIso8601String(),
+            'metadata' => ['team_id' => (string) $team->id, 'plan' => 'cloud_business'],
+            'customer' => ['customer_id' => 'cus_biz_123'],
+        ],
+    ];
+    $request = signedDodoWebhookRequest($payload, 'msg_biz_active', $secret);
+
+    $this->call('POST', route('api.billing.dodo.webhook'), [], [], [], $request['headers'], $request['raw'])
+        ->assertOk();
+
+    $freshTeam = $team->fresh();
+    expect($freshTeam->plan)->toBe('cloud_business')
+        ->and($freshTeam->planName())->toBe('Synkk Cloud Business')
+        ->and($freshTeam->isCloudPlan())->toBeTrue()
+        ->and($freshTeam->isSuspended())->toBeFalse();
+
+    $freshTeam->forceFill(['billing_access_until' => now()->subMinute()])->save();
+    expect($freshTeam->fresh()->isSuspended())->toBeTrue();
+});
+
+test('ignores payment.succeeded for subscription invoices so active Dodo subscriptions stay active', function () {
+    $secret = 'dodo-test-secret';
+    config()->set([
+        'services.dodo.webhook_key' => 'whsec_'.base64_encode($secret),
+        'services.dodo.webhook_tolerance_seconds' => 300,
+        'services.dodo.cloud_product_id' => 'pdt_cloud_pro',
+    ]);
+
+    $team = Team::factory()->create(['plan' => 'free']);
+
+    $subRequest = signedDodoWebhookRequest([
+        'type' => 'subscription.active',
+        'timestamp' => now()->subMinute()->toIso8601String(),
+        'data' => [
+            'subscription_id' => 'sub_keep_active',
+            'status' => 'active',
+            'product_id' => 'pdt_cloud_pro',
+            'metadata' => ['team_id' => (string) $team->id, 'plan' => 'cloud_pro'],
+            'customer' => ['customer_id' => 'cus_keep_active'],
+        ],
+    ], 'msg_sub_first', $secret);
+
+    $this->call('POST', route('api.billing.dodo.webhook'), [], [], [], $subRequest['headers'], $subRequest['raw'])
+        ->assertOk();
+
+    $payRequest = signedDodoWebhookRequest([
+        'type' => 'payment.succeeded',
+        'timestamp' => now()->toIso8601String(),
+        'data' => [
+            'payment_id' => 'pay_sub_invoice_1',
+            'subscription_id' => 'sub_keep_active',
+            'product_id' => 'pdt_cloud_pro',
+            'customer' => ['customer_id' => 'cus_keep_active'],
+            'metadata' => ['team_id' => (string) $team->id, 'plan' => 'cloud_pro'],
+        ],
+    ], 'msg_pay_sub_invoice', $secret);
+
+    $this->call('POST', route('api.billing.dodo.webhook'), [], [], [], $payRequest['headers'], $payRequest['raw'])
+        ->assertOk();
+
+    $freshTeam = $team->fresh();
+    expect($freshTeam->plan)->toBe('cloud_pro')
+        ->and($freshTeam->billing_status)->toBe('active')
+        ->and($freshTeam->hasActiveDodoSubscription())->toBeTrue();
+});
+
+test('generates a SYNK-PRO license key when a one-time pro_ltd payment succeeds', function () {
+    $secret = 'dodo-test-secret';
+    config()->set([
+        'services.dodo.webhook_key' => 'whsec_'.base64_encode($secret),
+        'services.dodo.webhook_tolerance_seconds' => 300,
+        'services.dodo.pro_product_id' => 'pdt_pro_ltd',
+    ]);
+
+    $team = Team::factory()->create([
+        'plan' => 'free',
+        'license_key' => null,
+        'license_status' => 'expired',
+    ]);
+
+    $request = signedDodoWebhookRequest([
+        'type' => 'payment.succeeded',
+        'timestamp' => now()->toIso8601String(),
+        'data' => [
+            'payment_id' => 'pay_ltd_key_999',
+            'product_id' => 'pdt_pro_ltd',
+            'customer' => ['customer_id' => 'cus_ltd_999'],
+            'metadata' => ['team_id' => (string) $team->id, 'plan' => 'pro_ltd'],
+        ],
+    ], 'msg_pay_ltd_key', $secret);
+
+    $this->call('POST', route('api.billing.dodo.webhook'), [], [], [], $request['headers'], $request['raw'])
+        ->assertOk();
+
+    $freshTeam = $team->fresh();
+    expect($freshTeam->plan)->toBe('pro_ltd')
+        ->and($freshTeam->license_status)->toBe('active')
+        ->and($freshTeam->license_key)->toMatch('/^SYNK-PRO-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}$/');
+});
+
 /**
  * @return array{raw: string, headers: array<string, string>}
  */

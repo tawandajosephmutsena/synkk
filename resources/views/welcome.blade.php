@@ -1684,7 +1684,7 @@
                         </div>
                         @if ($storeReady && filled($storeUrl))
                             <a href="{{ $storeUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-button synkk-button--accent">Get Pro LTD ({{ $proPrice }}) <span aria-hidden="true">→</span></a>
-                        @elseif ($userTeam)
+                        @elseif ($userTeam && filled(config('services.dodo.api_key')) && filled(config('services.dodo.pro_product_id')))
                             <form method="POST" action="{{ route('billing.dodo.checkout', ['current_team' => $userTeam->slug]) }}" class="inline">
                                 @csrf
                                 <input type="hidden" name="plan" value="pro_ltd">

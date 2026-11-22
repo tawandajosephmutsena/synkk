@@ -20,19 +20,112 @@ class DodoPaymentsService
     }
 
     /**
+     * Determine whether the server is configured to sell the Managed AI Add-On via Dodo.
+     */
+    public function isAiAddonConfigured(): bool
+    {
+        return filled(config('services.dodo.api_key'))
+            && filled(config('services.dodo.ai_addon_product_id'));
+    }
+
+    /**
+     * Create a hosted checkout session for the workspace Managed AI Add-On.
+     *
+     * @throws DodoPaymentsException
+     */
+    public function createAiAddonCheckoutSession(Team $team, User $user): string
+    {
+        if (! $this->isAiAddonConfigured()) {
+            throw new DodoPaymentsException('Dodo Payments AI add-on product is not configured.');
+        }
+
+        $productId = (string) config('services.dodo.ai_addon_product_id');
+
+        $customer = filled($team->billing_customer_id)
+            ? ['customer_id' => $team->billing_customer_id]
+            : [
+                'email' => $user->email,
+                'name' => $user->name,
+            ];
+
+        $response = $this->client()->post('/checkouts', [
+            'product_cart' => [[
+                'product_id' => $productId,
+                'quantity' => 1,
+            ]],
+            'billing_currency' => config('services.dodo.currency', 'USD'),
+            'customer' => $customer,
+            'metadata' => [
+                'team_id' => (string) $team->id,
+                'user_id' => (string) $user->id,
+                'addon' => 'ai',
+            ],
+            'return_url' => route('teams.edit', ['team' => $team->slug]),
+            'cancel_url' => route('teams.edit', ['team' => $team->slug]),
+        ]);
+
+        if (! $response->successful()) {
+            throw new DodoPaymentsException(
+                'Dodo Payments rejected the AI add-on checkout request.',
+                $response->status(),
+            );
+        }
+
+        $checkoutUrl = $response->json('checkout_url');
+
+        if (! is_string($checkoutUrl) || ! str_starts_with($checkoutUrl, 'https://')) {
+            throw new DodoPaymentsException('Dodo Payments returned an invalid AI add-on checkout URL.');
+        }
+
+        return $checkoutUrl;
+    }
+
+    /**
+     * Determine whether Dodo checkout is configured for a specific plan.
+     */
+    public function isPlanConfigured(string $plan): bool
+    {
+        return filled(config('services.dodo.api_key'))
+            && filled($this->productIdForPlan($plan));
+    }
+
+    /**
+     * Resolve the configured Dodo product ID for a specific plan without silent fallback.
+     */
+    public function productIdForPlan(string $plan): ?string
+    {
+        $configKey = match ($plan) {
+            'cloud', 'cloud_pro' => 'services.dodo.cloud_product_id',
+            'cloud_business' => 'services.dodo.cloud_business_product_id',
+            'pro_ltd' => 'services.dodo.pro_product_id',
+            default => null,
+        };
+
+        if ($configKey === null) {
+            return null;
+        }
+
+        $productId = config($configKey);
+
+        return is_string($productId) && filled($productId) ? $productId : null;
+    }
+
+    /**
      * Create a hosted checkout session for the team's Cloud subscription or Pro license.
      *
      * @throws DodoPaymentsException
      */
     public function createCheckoutSession(Team $team, User $user, string $plan = 'cloud'): string
     {
-        $this->ensureConfigured();
+        if (! filled(config('services.dodo.api_key'))) {
+            throw new DodoPaymentsException('Dodo Payments is not configured.');
+        }
 
-        $productId = match ($plan) {
-            'pro_ltd' => (string) (config('services.dodo.pro_product_id') ?: config('services.dodo.cloud_product_id')),
-            'cloud_business' => (string) (config('services.dodo.cloud_business_product_id') ?: config('services.dodo.cloud_product_id')),
-            default => (string) config('services.dodo.cloud_product_id'),
-        };
+        $productId = $this->productIdForPlan($plan);
+
+        if ($productId === null) {
+            throw new DodoPaymentsException("Dodo Payments product is not configured for plan [{$plan}].");
+        }
 
         $customer = filled($team->billing_customer_id)
             ? ['customer_id' => $team->billing_customer_id]
@@ -80,7 +173,9 @@ class DodoPaymentsService
      */
     public function createCustomerPortalSession(Team $team): string
     {
-        $this->ensureConfigured();
+        if (! filled(config('services.dodo.api_key'))) {
+            throw new DodoPaymentsException('Dodo Payments is not configured.');
+        }
 
         if (blank($team->billing_customer_id)) {
             throw new DodoPaymentsException('No Dodo customer is linked to this workspace.');

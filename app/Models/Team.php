@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -44,6 +45,8 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, TeamInvitation> $invitations
  * @property-read Collection<int, Membership> $memberships
  * @property-read Collection<int, User> $members
+ * @property-read TeamAiConfig|null $aiConfig
+ * @property-read Collection<int, AiUsageLog> $aiUsageLogs
  */
 #[Fillable([
     'name',
@@ -74,10 +77,15 @@ class Team extends Model
     /** @use HasFactory<TeamFactory> */
     use GeneratesUniqueTeamSlugs, HasFactory, SoftDeletes;
 
+    public function isCloudPlan(): bool
+    {
+        return in_array($this->plan, ['cloud', 'cloud_pro', 'cloud_business'], true);
+    }
+
     public function isSuspended(): bool
     {
         return $this->status === 'suspended'
-            || ($this->plan === 'cloud' && $this->billing_access_until?->isPast());
+            || ($this->isCloudPlan() && $this->billing_access_until?->isPast());
     }
 
     public function isActive(): bool
@@ -89,6 +97,8 @@ class Team extends Model
     {
         return match ($this->plan) {
             'pro_ltd' => 'Pro Lifetime',
+            'cloud_pro' => 'Synkk Cloud Pro',
+            'cloud_business' => 'Synkk Cloud Business',
             'cloud' => 'Synkk Cloud',
             default => 'Community Free',
         };
@@ -253,6 +263,26 @@ class Team extends Model
     public function deviceTokens(): HasMany
     {
         return $this->hasMany(DeviceToken::class);
+    }
+
+    /**
+     * Get the team's AI add-on configuration.
+     *
+     * @return HasOne<TeamAiConfig, $this>
+     */
+    public function aiConfig(): HasOne
+    {
+        return $this->hasOne(TeamAiConfig::class);
+    }
+
+    /**
+     * Get AI usage logs for this team.
+     *
+     * @return HasMany<AiUsageLog, $this>
+     */
+    public function aiUsageLogs(): HasMany
+    {
+        return $this->hasMany(AiUsageLog::class);
     }
 
     /**

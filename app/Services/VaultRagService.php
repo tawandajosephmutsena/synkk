@@ -6,6 +6,9 @@ use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultFile;
 use App\Models\VaultFileEmbedding;
+use App\Services\Ai\AiGateway;
+use App\Services\Ai\HybridVaultSearchService;
+use App\Services\Ai\VaultIndexService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +17,10 @@ class VaultRagService
 {
     public function __construct(
         protected EmbeddingService $embeddingService,
-        protected KnowledgeGraphService $graphService
+        protected KnowledgeGraphService $graphService,
+        protected ?VaultIndexService $indexService = null,
+        protected ?HybridVaultSearchService $hybridSearch = null,
+        protected ?AiGateway $aiGateway = null,
     ) {}
 
     /**
@@ -24,148 +30,13 @@ class VaultRagService
      *     status: string,
      *     files_indexed: int,
      *     chunks_count: int,
-     *     duration_ms: int
+     *     duration_ms: int,
+     *     message?: string
      * }
      */
     public function indexVault(Vault $vault, bool $force = false): array
     {
-        if ($vault->is_e2ee) {
-            Cache::put("vault_rag_progress_{$vault->id}", [
-                'status' => 'skipped',
-                'percentage' => 100,
-                'total_files' => 0,
-                'indexed_files' => 0,
-                'current_file' => null,
-                'chunks_count' => 0,
-                'duration_ms' => 0,
-                'message' => 'Vault has Zero-Knowledge E2EE enabled. Server-side RAG indexing is disabled.',
-                'updated_at' => now()->toIso8601String(),
-            ], now()->addHours(2));
-
-            return [
-                'status' => 'skipped',
-                'files_indexed' => 0,
-                'chunks_count' => 0,
-                'duration_ms' => 0,
-                'message' => 'Vault has Zero-Knowledge E2EE enabled. Server-side RAG indexing is disabled.',
-            ];
-        }
-
-        $startTime = microtime(true);
-
-        $markdownFiles = VaultFile::where('vault_id', $vault->id)
-            ->where('is_deleted', false)
-            ->where('path', 'like', '%.md')
-            ->get();
-
-        $totalFiles = $markdownFiles->count();
-
-        Cache::put("vault_rag_progress_{$vault->id}", [
-            'status' => 'indexing',
-            'percentage' => $totalFiles > 0 ? 0 : 100,
-            'total_files' => $totalFiles,
-            'indexed_files' => 0,
-            'current_file' => null,
-            'chunks_count' => 0,
-            'duration_ms' => 0,
-            'updated_at' => now()->toIso8601String(),
-        ], now()->addHours(2));
-
-        // 1. Remove orphaned embeddings for deleted files
-        $activeFileIds = $markdownFiles->pluck('id')->all();
-        VaultFileEmbedding::where('vault_id', $vault->id)
-            ->whereNotIn('vault_file_id', $activeFileIds)
-            ->delete();
-
-        $totalChunksCount = 0;
-        $filesIndexed = 0;
-
-        foreach ($markdownFiles as $file) {
-            if ($file->is_encrypted) {
-                continue;
-            }
-
-            $content = $file->getContents();
-            if ($content === null || trim($content) === '') {
-                VaultFileEmbedding::where('vault_file_id', $file->id)->delete();
-
-                continue;
-            }
-
-            $chunks = $this->embeddingService->chunkMarkdown($content);
-            $validChunkIndexes = [];
-
-            foreach ($chunks as $chunk) {
-                $validChunkIndexes[] = $chunk['chunk_index'];
-                $totalChunksCount++;
-
-                $existing = VaultFileEmbedding::where('vault_file_id', $file->id)
-                    ->where('chunk_index', $chunk['chunk_index'])
-                    ->first();
-
-                if (! $force && $existing && $existing->content_hash === $chunk['content_hash']) {
-                    continue;
-                }
-
-                $vector = $this->embeddingService->generate($chunk['content']);
-
-                VaultFileEmbedding::updateOrCreate(
-                    [
-                        'vault_file_id' => $file->id,
-                        'chunk_index' => $chunk['chunk_index'],
-                    ],
-                    [
-                        'vault_id' => $vault->id,
-                        'heading' => $chunk['heading'],
-                        'start_line' => $chunk['start_line'],
-                        'content' => $chunk['content'],
-                        'token_count' => $chunk['token_count'],
-                        'embedding' => $vector,
-                        'content_hash' => $chunk['content_hash'],
-                        'wikilinks' => $chunk['wikilinks'],
-                    ]
-                );
-            }
-
-            // Remove chunks that no longer exist in the file
-            VaultFileEmbedding::where('vault_file_id', $file->id)
-                ->whereNotIn('chunk_index', $validChunkIndexes)
-                ->delete();
-
-            $filesIndexed++;
-
-            $currentPct = $totalFiles > 0 ? (int) round(($filesIndexed / $totalFiles) * 100) : 100;
-            Cache::put("vault_rag_progress_{$vault->id}", [
-                'status' => 'indexing',
-                'percentage' => $currentPct,
-                'total_files' => $totalFiles,
-                'indexed_files' => $filesIndexed,
-                'current_file' => $file->path,
-                'chunks_count' => $totalChunksCount,
-                'duration_ms' => (int) round((microtime(true) - $startTime) * 1000),
-                'updated_at' => now()->toIso8601String(),
-            ], now()->addHours(2));
-        }
-
-        $durationMs = (int) round((microtime(true) - $startTime) * 1000);
-
-        Cache::put("vault_rag_progress_{$vault->id}", [
-            'status' => 'completed',
-            'percentage' => 100,
-            'total_files' => $totalFiles,
-            'indexed_files' => $filesIndexed,
-            'current_file' => null,
-            'chunks_count' => $totalChunksCount,
-            'duration_ms' => $durationMs,
-            'updated_at' => now()->toIso8601String(),
-        ], now()->addHours(2));
-
-        return [
-            'status' => 'indexed',
-            'files_indexed' => $filesIndexed,
-            'chunks_count' => $totalChunksCount,
-            'duration_ms' => $durationMs,
-        ];
+        return ($this->indexService ?? app(VaultIndexService::class))->indexVault($vault, $force);
     }
 
     /**
@@ -350,99 +221,8 @@ class VaultRagService
      */
     public function search(Vault $vault, string $query, int $limit = 5, ?User $user = null): array
     {
-        if ($vault->is_e2ee) {
-            return [];
-        }
-
-        $cleanQuery = trim($query);
-        if ($cleanQuery === '') {
-            return [];
-        }
-
-        $queryVector = $this->embeddingService->generate($cleanQuery);
-        $queryKeywords = $this->extractQueryKeywords($cleanQuery);
-
-        $embeddings = VaultFileEmbedding::with('file')
-            ->where('vault_id', $vault->id)
-            ->whereHas('file', fn ($q) => $q->where('is_deleted', false))
-            ->get();
-
-        $scored = [];
-
-        foreach ($embeddings as $record) {
-            if ($record->file->is_deleted) {
-                continue;
-            }
-
-            if ($user && $vault->permissionForPath($user, $record->file->path) === 'hidden') {
-                continue;
-            }
-
-            $vectorSimilarity = $this->embeddingService->cosineSimilarity($queryVector, $record->embedding ?? []);
-
-            // Sparse Lexical Hit Score
-            $chunkLower = strtolower($record->content);
-            $headingLower = strtolower($record->heading ?? '');
-            $pathLower = strtolower($record->file->path);
-
-            $rawHits = 0.0;
-            $matchedKeywords = 0;
-            if (! empty($queryKeywords)) {
-                foreach ($queryKeywords as $kw) {
-                    $matched = false;
-                    if (str_contains($headingLower, $kw)) {
-                        $rawHits += 2.5;
-                        $matched = true;
-                    }
-                    if (str_contains($pathLower, $kw)) {
-                        $rawHits += 2.0;
-                        $matched = true;
-                    }
-                    if (str_contains($chunkLower, $kw)) {
-                        $rawHits += 1.2;
-                        $matched = true;
-                    }
-                    if ($matched) {
-                        $matchedKeywords++;
-                    }
-                }
-            }
-
-            $coverage = ! empty($queryKeywords) ? ($matchedKeywords / count($queryKeywords)) : 0.0;
-            $lexicalScore = ! empty($queryKeywords) ? min(1.0, $rawHits / (count($queryKeywords) * 2.0)) : 0.0;
-
-            if (! empty($queryKeywords)) {
-                if ($matchedKeywords > 0) {
-                    $composite = ($vectorSimilarity * 0.40) + ($lexicalScore * 0.35) + ($coverage * 0.25);
-                    if (str_contains($chunkLower, strtolower($cleanQuery))) {
-                        $composite = min(1.0, $composite + 0.15);
-                    }
-                } else {
-                    // Suppress dense vector baseline noise for documents with 0 keyword matches
-                    $composite = $vectorSimilarity * 0.40;
-                }
-            } else {
-                $composite = $vectorSimilarity;
-            }
-
-            $composite = max(0.0, min(1.0, $composite));
-
-            $scored[] = [
-                'file_id' => $record->vault_file_id,
-                'path' => $record->file->path,
-                'heading' => $record->heading,
-                'start_line' => $record->start_line,
-                'similarity' => round($vectorSimilarity, 4),
-                'score' => $composite,
-                'score_pct' => (int) round($composite * 100),
-                'content' => $record->content,
-                'wikilinks' => $record->wikilinks ?? [],
-            ];
-        }
-
-        usort($scored, fn ($a, $b) => $b['score'] <=> $a['score']);
-
-        return array_slice($scored, 0, $limit);
+        return ($this->hybridSearch ?? app(HybridVaultSearchService::class))
+            ->search($vault, $query, $limit, $user);
     }
 
     /**
@@ -514,8 +294,8 @@ class VaultRagService
             ];
         }
 
-        // 4. Synthesize Answer (Local LLM / Cloud LLM / Refined Deterministic Reasoning)
-        $llmResult = $this->synthesizeWithLlm($query, $topChunks, $graphNodes);
+        // 4. Synthesize Answer (Configured Workspace AI / Local Ollama / Cloud LLM / Refined Deterministic Reasoning)
+        $llmResult = $this->synthesizeWithLlm($query, $topChunks, $graphNodes, $vault, $user);
 
         if ($llmResult !== null) {
             $answer = $llmResult['answer'];
@@ -544,7 +324,7 @@ class VaultRagService
      * @param  array<int, mixed>  $graphNodes
      * @return array{answer: string, model: string}|null
      */
-    protected function synthesizeWithLlm(string $query, array $chunks, array $graphNodes): ?array
+    protected function synthesizeWithLlm(string $query, array $chunks, array $graphNodes, ?Vault $vault = null, ?User $user = null): ?array
     {
         if (empty($chunks)) {
             return null;
@@ -560,6 +340,39 @@ class VaultRagService
             $contextParts[] = '--- Connected Graph Context (Backlinks) ---';
             foreach (array_slice($graphNodes, 0, 3) as $g) {
                 $contextParts[] = "Connected Note [[{$g['path']}]] (via {$g['via']}): {$g['excerpt']}";
+            }
+        }
+
+        $systemPrompt = "You are Synkk Vault Copilot, an AI assistant answering questions about the user's private Obsidian vault. Synthesize answers strictly based on the provided vault context. Cite relevant notes using [[NoteName]] syntax.";
+        $userPrompt = "Context retrieved from vault:\n".implode("\n\n", $contextParts)."\n\nQuestion: {$query}";
+
+        // 0. Try Workspace AI Add-On Gateway if explicitly opted-in for this team & vault
+        if ($vault !== null
+            && $vault->team->aiConfig?->is_enabled === true
+            && $vault->aiSetting?->ai_mode === 'server') {
+            try {
+                $aiResponse = ($this->aiGateway ?? app(AiGateway::class))->chat(
+                    $vault->team,
+                    [
+                        ['role' => 'system', 'content' => $systemPrompt],
+                        ['role' => 'user', 'content' => $userPrompt],
+                    ],
+                    [
+                        'feature' => 'copilot',
+                        'vault' => $vault,
+                        'user_id' => $user?->id,
+                        'temperature' => 0.2,
+                    ]
+                );
+
+                if (trim($aiResponse->content) !== '') {
+                    return [
+                        'answer' => trim($aiResponse->content),
+                        'model' => "{$aiResponse->provider}/{$aiResponse->model}",
+                    ];
+                }
+            } catch (\Throwable $e) {
+                Log::debug('Workspace AI Gateway synthesis skipped: '.$e->getMessage());
             }
         }
 

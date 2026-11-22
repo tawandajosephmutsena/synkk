@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -29,6 +30,7 @@ use Illuminate\Support\Str;
  * @property-read Collection<int, VaultPermission> $permissions
  * @property-read Collection<int, VaultChangeLog> $changeLogs
  * @property-read Collection<int, VaultFileEmbedding> $embeddings
+ * @property-read VaultAiSetting|null $aiSetting
  */
 #[Fillable(['team_id', 'name', 'slug', 'description', 'default_permission', 'created_by', 'is_e2ee', 'e2ee_salt', 'e2ee_test_cipher'])]
 class Vault extends Model
@@ -122,6 +124,16 @@ class Vault extends Model
     public function embeddings(): HasMany
     {
         return $this->hasMany(VaultFileEmbedding::class);
+    }
+
+    /**
+     * Get the vault's AI add-on settings.
+     *
+     * @return HasOne<VaultAiSetting, $this>
+     */
+    public function aiSetting(): HasOne
+    {
+        return $this->hasOne(VaultAiSetting::class);
     }
 
     public function latestVersion(): int

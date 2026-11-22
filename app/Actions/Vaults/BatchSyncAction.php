@@ -2,6 +2,7 @@
 
 namespace App\Actions\Vaults;
 
+use App\Jobs\IndexVaultFileJob;
 use App\Models\User;
 use App\Models\Vault;
 use App\ValueObjects\VaultContentEnvelope;
@@ -31,8 +32,10 @@ class BatchSyncAction
         $deleted = 0;
         $conflicts = 0;
         $errors = 0;
+        /** @var array<int, array{id: int, path: string}> $deletedMarkdownFiles */
+        $deletedMarkdownFiles = [];
 
-        DB::transaction(function () use ($vault, $user, $deviceName, $items, &$results, &$pushed, &$deleted, &$conflicts, &$errors) {
+        DB::transaction(function () use ($vault, $user, $deviceName, $items, &$results, &$pushed, &$deleted, &$conflicts, &$errors, &$deletedMarkdownFiles) {
             foreach ($items as $item) {
                 $action = $item['action'] ?? 'upload';
                 $path = trim($item['path'] ?? '', '/');
@@ -88,6 +91,10 @@ class BatchSyncAction
                         'action' => 'deleted',
                         'version' => $nextVersion,
                     ]);
+
+                    if (str_ends_with(strtolower($path), '.md')) {
+                        $deletedMarkdownFiles[] = ['id' => $file->id, 'path' => $path];
+                    }
 
                     $deleted++;
                     $results[] = [
@@ -147,6 +154,15 @@ class BatchSyncAction
                 }
             }
         });
+
+        if (! empty($deletedMarkdownFiles)
+            && ! $vault->is_e2ee
+            && $vault->team->aiConfig?->is_enabled === true
+            && $vault->aiSetting?->ai_mode === 'server') {
+            foreach ($deletedMarkdownFiles as $deletedFile) {
+                IndexVaultFileJob::dispatch($vault->id, $deletedFile['id'], deleted: true);
+            }
+        }
 
         return [
             'status' => 'ok',

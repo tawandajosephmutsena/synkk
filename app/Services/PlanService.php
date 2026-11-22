@@ -51,6 +51,13 @@ class PlanService
                     'rag_vector_search',
                     'cloud_backup',
                     'priority_support',
+                    'ai_byok_core',
+                    'ai_mcp_server',
+                    'ai_smart_merge',
+                    'ai_gardener',
+                    'ai_team_digests',
+                    'ai_portal_assistant',
+                    'ai_managed_cloud',
                 ],
             ];
         }

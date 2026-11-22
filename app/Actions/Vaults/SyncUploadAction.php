@@ -2,9 +2,11 @@
 
 namespace App\Actions\Vaults;
 
+use App\Jobs\IndexVaultFileJob;
 use App\Models\User;
 use App\Models\Vault;
 use App\Models\VaultFileVersion;
+use App\Services\Ai\VaultIndexService;
 use App\Services\SecretScannerService;
 use App\ValueObjects\VaultContentEnvelope;
 use Illuminate\Support\Facades\DB;
@@ -66,7 +68,9 @@ class SyncUploadAction
         $hasSecrets = $scanResult['has_secrets'];
         $detectedSecrets = $scanResult['detected'];
 
-        return DB::transaction(function () use (
+        $indexedFileId = null;
+
+        $result = DB::transaction(function () use (
             $vault,
             $user,
             $deviceName,
@@ -83,7 +87,8 @@ class SyncUploadAction
             $tag,
             $isGhost,
             $originalSize,
-            $mimeType
+            $mimeType,
+            &$indexedFileId
         ) {
             $existing = $vault->files()->where('path', $cleanPath)->lockForUpdate()->first();
             $latestVaultVersion = $vault->latestVersion();
@@ -227,6 +232,10 @@ class SyncUploadAction
                     'mime_type' => $mimeType,
                 ]);
 
+                if (! $isEncrypted) {
+                    $indexedFileId = $existing->id;
+                }
+
                 $vault->changeLogs()->create([
                     'user_id' => $user->id,
                     'device_name' => $deviceName,
@@ -256,7 +265,7 @@ class SyncUploadAction
             }
 
             // Scenario 4: Create new file record
-            $vault->files()->create([
+            $createdFile = $vault->files()->create([
                 'path' => $cleanPath,
                 'storage_path' => $storagePath,
                 'sha256' => $sha256,
@@ -271,6 +280,10 @@ class SyncUploadAction
                 'original_size' => $originalSize,
                 'mime_type' => $mimeType,
             ]);
+
+            if (! $isEncrypted) {
+                $indexedFileId = $createdFile->id;
+            }
 
             $vault->changeLogs()->create([
                 'user_id' => $user->id,
@@ -299,6 +312,12 @@ class SyncUploadAction
                 'detected_secrets' => $detectedSecrets,
             ];
         });
+
+        if ($indexedFileId !== null && app(VaultIndexService::class)->shouldAutoIndex($vault, $cleanPath)) {
+            IndexVaultFileJob::dispatch($vault->id, $indexedFileId, deleted: false);
+        }
+
+        return $result;
     }
 
     protected function generateConflictPath(string $path, string $userName): string

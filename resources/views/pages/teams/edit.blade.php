@@ -219,8 +219,8 @@ new class extends Component
                         <flux:subheading>{{ __('Monitor storage & device fleet quotas or activate lifetime commercial licenses') }}</flux:subheading>
                     </div>
 
-                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider {{ $this->teamData['plan'] === 'cloud' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800' : ($this->teamData['plan'] === 'pro_ltd' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300') }}">
-                        <span class="size-2 rounded-full {{ in_array($this->teamData['plan'], ['cloud', 'pro_ltd']) ? 'bg-emerald-500' : 'bg-slate-500' }}"></span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider {{ in_array($this->teamData['plan'], ['cloud', 'cloud_pro', 'cloud_business'], true) ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800' : ($this->teamData['plan'] === 'pro_ltd' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-200/80 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300') }}">
+                        <span class="size-2 rounded-full {{ in_array($this->teamData['plan'], ['cloud', 'cloud_pro', 'cloud_business', 'pro_ltd'], true) ? 'bg-emerald-500' : 'bg-slate-500' }}"></span>
                         {{ $this->planSummary['plan_badge'] }}
                     </span>
                 </div>
@@ -286,6 +286,27 @@ new class extends Component
 
                 <!-- License Status or Redemption Box -->
                 @if ($this->permissions->canUpdateTeam)
+                    @if ($this->teamModel->hasActiveDodoSubscription())
+                        <div class="rounded-2xl border border-teal-200/80 bg-teal-50/40 p-5 dark:border-teal-900/40 dark:bg-teal-950/20">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div>
+                                    <div class="font-bold text-sm text-teal-950 dark:text-teal-200">
+                                        {{ __('Dodo Cloud Subscription') }} ({{ $this->planSummary['plan_name'] }})
+                                    </div>
+                                    <p class="text-xs text-teal-800/80 dark:text-teal-300/80 mt-0.5">
+                                        {{ __('Status: :status', ['status' => strtoupper((string) $this->teamModel->billing_status)]) }}
+                                    </p>
+                                </div>
+                                <form method="POST" action="{{ route('billing.dodo.portal', ['current_team' => $this->teamModel->slug]) }}">
+                                    @csrf
+                                    <flux:button type="submit" variant="primary" class="!rounded-full !bg-teal-700 !text-white hover:!bg-teal-800 px-5 font-bold text-xs">
+                                        {{ __('Manage Billing') }}
+                                    </flux:button>
+                                </form>
+                            </div>
+                        </div>
+                    @endif
+
                     @if ($this->teamData['license_status'] === 'active' && filled($this->teamData['license_key']))
                         <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -356,6 +377,9 @@ new class extends Component
                     @endif
                 @endif
             </div>
+
+            <!-- OPT-IN AI ADD-ON SECTION -->
+            <livewire:pages::teams.ai-addon-settings :team="$teamModel" :key="'team-ai-addon-'.$teamModel->id" />
 
             <div class="space-y-6">
                 <div class="flex items-center justify-between">

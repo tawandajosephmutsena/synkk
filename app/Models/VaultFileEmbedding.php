@@ -17,6 +17,9 @@ use Illuminate\Support\Carbon;
  * @property string $content
  * @property int $token_count
  * @property array<int, float> $embedding
+ * @property string|null $embedding_blob
+ * @property string|null $embedding_model
+ * @property int $embedding_dimensions
  * @property string $content_hash
  * @property array<int, string>|null $wikilinks
  * @property Carbon|null $created_at
@@ -33,6 +36,9 @@ use Illuminate\Support\Carbon;
     'content',
     'token_count',
     'embedding',
+    'embedding_blob',
+    'embedding_model',
+    'embedding_dimensions',
     'content_hash',
     'wikilinks',
 ])]
@@ -48,6 +54,7 @@ class VaultFileEmbedding extends Model
             'start_line' => 'integer',
             'token_count' => 'integer',
             'embedding' => 'array',
+            'embedding_dimensions' => 'integer',
             'wikilinks' => 'array',
         ];
     }

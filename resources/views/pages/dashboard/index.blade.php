@@ -1498,14 +1498,24 @@ new #[Title('Dashboard')] class extends Component {
                         <div>• <strong>In-App DLP Secret Scan</strong></div>
                         <div>• <strong>Granular Path ACLs</strong></div>
                     </div>
+
+                    @if ($this->team && filled(config('services.dodo.api_key')) && filled(config('services.dodo.pro_product_id')) && $this->team->plan !== 'pro_ltd')
+                        <form method="POST" action="{{ route('billing.dodo.checkout', ['current_team' => $this->team->slug]) }}" class="mt-4">
+                            @csrf
+                            <input type="hidden" name="plan" value="pro_ltd">
+                            <flux:button type="submit" variant="primary" class="w-full !rounded-full !bg-[#0D3B29] !text-white hover:!bg-[#0D3B29]/90 text-xs font-bold">
+                                {{ __('Buy Pro Lifetime') }}
+                            </flux:button>
+                        </form>
+                    @endif
                 </div>
 
                 <!-- Cloud SaaS -->
                 <div class="rounded-2xl border border-teal-200 p-4 bg-teal-50/30 dark:border-teal-800/60 dark:bg-teal-950/20">
                     <div class="font-bold text-sm text-teal-950 dark:text-teal-200">{{ __('Cloud Managed') }}</div>
                     <div class="text-xl font-black text-teal-900 dark:text-white mt-1">
-                        {{ config('synkk.pricing.cloud.currency_symbol', '$') }}{{ number_format((float) config('synkk.pricing.cloud.amount', 12), 0) }}
-                        <span class="text-xs font-normal text-slate-500">{{ config('synkk.pricing.cloud.billing_label', 'per workspace / month') }}</span>
+                        {{ config('synkk.pricing.cloud_pro.currency_symbol', '$') }}{{ number_format((float) config('synkk.pricing.cloud_pro.amount', 12), 0) }}
+                        <span class="text-xs font-normal text-slate-500">{{ config('synkk.pricing.cloud_pro.billing_label', 'per workspace / month') }}</span>
                     </div>
                     <div class="text-[11px] text-slate-600 dark:text-zinc-300 mt-2 space-y-1">
                         <div>• <strong>50+ Vaults</strong></div>
@@ -1522,13 +1532,25 @@ new #[Title('Dashboard')] class extends Component {
                                 {{ __('Manage billing') }}
                             </flux:button>
                         </form>
-                    @elseif (filled(config('services.dodo.api_key')) && filled(config('services.dodo.cloud_product_id')))
-                        <form method="POST" action="{{ route('billing.dodo.checkout', ['current_team' => $this->team->slug]) }}" class="mt-4">
-                            @csrf
-                            <flux:button type="submit" variant="primary" class="w-full !rounded-full !bg-teal-700 !text-white hover:!bg-teal-800 text-xs font-bold">
-                                {{ __('Subscribe with Dodo') }}
-                            </flux:button>
-                        </form>
+                    @elseif ($this->team && filled(config('services.dodo.api_key')) && filled(config('services.dodo.cloud_product_id')))
+                        <div class="mt-4 space-y-2">
+                            <form method="POST" action="{{ route('billing.dodo.checkout', ['current_team' => $this->team->slug]) }}">
+                                @csrf
+                                <input type="hidden" name="plan" value="cloud_pro">
+                                <flux:button type="submit" variant="primary" class="w-full !rounded-full !bg-teal-700 !text-white hover:!bg-teal-800 text-xs font-bold">
+                                    {{ __('Subscribe Cloud Pro') }}
+                                </flux:button>
+                            </form>
+                            @if (filled(config('services.dodo.cloud_business_product_id')))
+                                <form method="POST" action="{{ route('billing.dodo.checkout', ['current_team' => $this->team->slug]) }}">
+                                    @csrf
+                                    <input type="hidden" name="plan" value="cloud_business">
+                                    <flux:button type="submit" variant="outline" class="w-full !rounded-full text-xs font-bold">
+                                        {{ __('Subscribe Cloud Business ($25/mo)') }}
+                                    </flux:button>
+                                </form>
+                            @endif
+                        </div>
                     @else
                         <p class="mt-4 text-[10px] font-semibold text-teal-800/70 dark:text-teal-200/70">
                             {{ __('Cloud checkout will appear after Dodo Payments is connected.') }}

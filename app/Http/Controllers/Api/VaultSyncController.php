@@ -8,6 +8,7 @@ use App\Actions\Vaults\SyncUploadAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\BatchSyncRequest;
 use App\Http\Requests\Api\UploadVaultFileRequest;
+use App\Jobs\IndexVaultFileJob;
 use App\Jobs\IndexVaultRagJob;
 use App\Models\DeviceToken;
 use App\Models\Vault;
@@ -479,6 +480,13 @@ class VaultSyncController extends Controller
             'sha256' => $file->sha256,
             'size' => 0,
         ]);
+
+        if (! $vault->is_e2ee
+            && str_ends_with(strtolower($path), '.md')
+            && $vault->team->aiConfig?->is_enabled === true
+            && $vault->aiSetting?->ai_mode === 'server') {
+            IndexVaultFileJob::dispatch($vault->id, $file->id, deleted: true);
+        }
 
         return response()->json([
             'status' => 'deleted',
