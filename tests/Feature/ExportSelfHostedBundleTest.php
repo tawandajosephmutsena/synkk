@@ -20,3 +20,8 @@ test('artisan command synkk:export-bundle generates distribution zip file', func
 
     File::delete($outputPath);
 });
+
+test('artisan command synkk:export-bundle rejects a non-string output path', function () {
+    $this->artisan('synkk:export-bundle', ['--output' => ['invalid']])
+        ->assertFailed();
+});

@@ -66,3 +66,8 @@ test('synkk:package-ce successfully packages and sanitizes community edition', f
     // Cleanup
     File::delete($testZipPath);
 });
+
+test('synkk:package-ce rejects a non-string output path', function () {
+    $this->artisan('synkk:package-ce', ['--output' => ['invalid']])
+        ->assertFailed();
+});

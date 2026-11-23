@@ -33,8 +33,15 @@ class PublishDocsVaultCommand extends Command
     {
         $this->info('🚀 Seeding and publishing Synkk Documentation Vault...');
 
-        $teamId = $this->option('team');
-        $team = $teamId ? Team::find($teamId) : Team::first();
+        $teamOption = $this->option('team');
+        if ($teamOption !== null && $teamOption !== false && ! is_string($teamOption) && ! is_int($teamOption)) {
+            $this->error('The team ID must be a string or integer.');
+
+            return self::FAILURE;
+        }
+
+        $teamId = is_string($teamOption) || is_int($teamOption) ? $teamOption : null;
+        $team = $teamId ? Team::query()->whereKey($teamId)->first() : Team::query()->first();
 
         if (! $team) {
             $this->error('No team found in database. Please run migrations and create a team first.');

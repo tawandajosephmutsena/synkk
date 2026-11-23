@@ -5,6 +5,7 @@ RUN apk add --no-cache \
     supervisor \
     su-exec \
     curl \
+    openssl \
     libzip-dev \
     sqlite-dev \
     zip \

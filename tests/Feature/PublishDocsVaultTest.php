@@ -31,3 +31,9 @@ test('artisan command publishes documentation vault and creates public portal', 
     $response->assertOk();
     $response->assertSee('Synkk');
 });
+
+test('artisan command rejects a non-scalar team selector', function () {
+    $exitCode = Artisan::call('synkk:publish-docs-vault', ['--team' => ['1']]);
+
+    expect($exitCode)->toBe(1);
+});

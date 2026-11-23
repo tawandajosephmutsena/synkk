@@ -33,7 +33,16 @@ class ExportSelfHostedBundle extends Command
             mkdir($exportDir, 0755, true);
         }
 
-        $outputPath = $this->option('output') ?: "{$exportDir}/synkk-self-hosted-v1.0.0.zip";
+        $outputOption = $this->option('output');
+        if ($outputOption !== null && ! is_string($outputOption)) {
+            $this->error('The output path must be a string.');
+
+            return self::FAILURE;
+        }
+
+        $outputPath = is_string($outputOption) && $outputOption !== ''
+            ? $outputOption
+            : "{$exportDir}/synkk-self-hosted-v1.0.0.zip";
 
         $zip = new ZipArchive;
         if ($zip->open($outputPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
