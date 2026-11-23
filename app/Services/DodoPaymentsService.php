@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\DodoPaymentsException;
+use App\Models\PendingSaasCheckout;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Http\Client\PendingRequest;
@@ -13,10 +14,10 @@ class DodoPaymentsService
     /**
      * Determine whether the server has enough configuration to create Dodo sessions.
      */
-    public function isConfigured(): bool
+    public function isConfigured(?string $plan = null): bool
     {
         return filled(config('services.dodo.api_key'))
-            && filled(config('services.dodo.cloud_product_id'));
+            && filled($this->productIdForPlan($plan ?? 'cloud'));
     }
 
     /**
@@ -94,20 +95,80 @@ class DodoPaymentsService
      */
     public function productIdForPlan(string $plan): ?string
     {
-        $configKey = match ($plan) {
-            'cloud', 'cloud_pro' => 'services.dodo.cloud_product_id',
-            'cloud_business' => 'services.dodo.cloud_business_product_id',
-            'pro_ltd' => 'services.dodo.pro_product_id',
+        $productId = match ($plan) {
+            'cloud', 'cloud_pro' => config('services.dodo.cloud_product_id'),
+            'business' => config('services.dodo.business_product_id') ?: config('services.dodo.cloud_business_product_id'),
+            'cloud_business' => config('services.dodo.cloud_business_product_id') ?: config('services.dodo.business_product_id'),
+            'pro_ltd' => config('services.dodo.pro_product_id'),
             default => null,
         };
 
-        if ($configKey === null) {
-            return null;
+        return is_string($productId) && filled($productId) ? $productId : null;
+    }
+
+    /**
+     * Create a hosted checkout session before a SaaS account exists.
+     *
+     * @return array{session_id: string, checkout_url: string}
+     *
+     * @throws DodoPaymentsException
+     */
+    public function createSignupCheckoutSession(
+        PendingSaasCheckout $pending,
+        string $name,
+        string $email,
+        string $token,
+    ): array {
+        if (! filled(config('services.dodo.api_key'))) {
+            throw new DodoPaymentsException('Dodo Payments is not configured.');
         }
 
-        $productId = config($configKey);
+        $productId = $this->productIdForPlan($pending->plan);
 
-        return is_string($productId) && filled($productId) ? $productId : null;
+        if ($productId === null) {
+            throw new DodoPaymentsException("Dodo Payments product is not configured for plan [{$pending->plan}].");
+        }
+
+        $response = $this->client()->post('/checkouts', [
+            'product_cart' => [[
+                'product_id' => $productId,
+                'quantity' => 1,
+            ]],
+            'billing_currency' => config('services.dodo.currency', 'USD'),
+            'customer' => [
+                'email' => $email,
+                'name' => $name,
+            ],
+            'metadata' => [
+                'pending_checkout_id' => (string) $pending->id,
+                'plan' => $pending->plan,
+            ],
+            'return_url' => route('saas.subscribe.return', ['pending_token' => $token]),
+            'cancel_url' => route('saas.subscribe'),
+        ]);
+
+        if (! $response->successful()) {
+            throw new DodoPaymentsException(
+                'Dodo Payments rejected the SaaS checkout request.',
+                $response->status(),
+            );
+        }
+
+        $sessionId = $response->json('session_id');
+        $checkoutUrl = $response->json('checkout_url');
+
+        if (! is_string($sessionId) || blank($sessionId)) {
+            throw new DodoPaymentsException('Dodo Payments returned an invalid checkout session ID.');
+        }
+
+        if (! is_string($checkoutUrl) || ! str_starts_with($checkoutUrl, 'https://')) {
+            throw new DodoPaymentsException('Dodo Payments returned an invalid checkout URL.');
+        }
+
+        return [
+            'session_id' => $sessionId,
+            'checkout_url' => $checkoutUrl,
+        ];
     }
 
     /**

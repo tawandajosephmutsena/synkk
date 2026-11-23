@@ -79,7 +79,7 @@ class Team extends Model
 
     public function isCloudPlan(): bool
     {
-        return in_array($this->plan, ['cloud', 'cloud_pro', 'cloud_business'], true);
+        return in_array($this->plan, ['cloud', 'cloud_pro', 'cloud_business', 'business'], true);
     }
 
     public function isSuspended(): bool
@@ -98,7 +98,7 @@ class Team extends Model
         return match ($this->plan) {
             'pro_ltd' => 'Pro Lifetime',
             'cloud_pro' => 'Synkk Cloud Pro',
-            'cloud_business' => 'Synkk Cloud Business',
+            'cloud_business', 'business' => 'Synkk Cloud Business',
             'cloud' => 'Synkk Cloud',
             default => 'Community Free',
         };

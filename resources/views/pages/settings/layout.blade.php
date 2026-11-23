@@ -22,6 +22,15 @@
                 </a>
 
                 <a
+                    href="{{ route('billing.edit') }}"
+                    wire:navigate
+                    class="{{ request()->routeIs('billing.edit') ? 'bg-[#0D3B29] text-white shadow-xs dark:bg-emerald-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white' }} flex items-center gap-3 rounded-full px-4 py-2.5 text-xs font-bold transition-colors"
+                >
+                    <flux:icon icon="credit-card" class="size-4 shrink-0" />
+                    <span>{{ __('Billing') }}</span>
+                </a>
+
+                <a
                     href="{{ route('teams.index') }}"
                     wire:navigate
                     class="{{ request()->routeIs('teams.*') ? 'bg-[#0D3B29] text-white shadow-xs dark:bg-emerald-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white' }} flex items-center gap-3 rounded-full px-4 py-2.5 text-xs font-bold transition-colors"

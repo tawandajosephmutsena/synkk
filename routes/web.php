@@ -4,8 +4,11 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Billing\DodoBillingController;
 use App\Http\Controllers\PairingBridgeController;
 use App\Http\Controllers\PortalLlmsController;
+use App\Http\Controllers\SaasSignupController;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureTeamMembership;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -14,6 +17,28 @@ Route::view('/privacy', 'privacy')->name('privacy');
 Route::view('/terms', 'terms')->name('terms');
 Route::view('/security', 'security')->name('security');
 Route::get('/pair', [PairingBridgeController::class, 'show'])->name('pairing.bridge');
+
+Route::get('register', function (Request $request): RedirectResponse {
+    $plan = $request->query('plan');
+
+    return redirect()->route('saas.subscribe', is_string($plan) ? ['plan' => $plan] : []);
+})->name('register');
+
+Route::post('register', function (): RedirectResponse {
+    return redirect()->route('saas.subscribe')->withErrors([
+        'registration' => __('Create your account after adding a card for the 30-day trial.'),
+    ]);
+})->name('register.store');
+
+Route::get('subscribe', [SaasSignupController::class, 'create'])->name('saas.subscribe');
+Route::post('subscribe/checkout', [SaasSignupController::class, 'checkout'])
+    ->middleware('throttle:saas-signup')
+    ->name('saas.subscribe.checkout');
+Route::get('subscribe/return', [SaasSignupController::class, 'checkoutReturn'])
+    ->name('saas.subscribe.return');
+Route::post('subscribe/complete', [SaasSignupController::class, 'complete'])
+    ->middleware('throttle:saas-complete')
+    ->name('saas.subscribe.complete');
 
 if (app()->environment('local')) {
     Route::get('dev-login', function () {

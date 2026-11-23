@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DodoWebhookEvent;
+use App\Models\PendingSaasCheckout;
 use App\Models\Team;
 use App\Models\TeamAiConfig;
 use Carbon\CarbonImmutable;
@@ -135,6 +136,10 @@ class DodoWebhookProcessor
 
         $team = $this->resolveTeam($data, $subscriptionId);
         if (! $team) {
+            if ($this->applyPendingSignupEvent($eventType, $data, $eventAt)) {
+                return;
+            }
+
             Log::warning('Ignoring Dodo subscription webhook without a linked Synkk team.', [
                 'event_type' => $eventType,
                 'subscription_id' => $subscriptionId,
@@ -321,21 +326,101 @@ class DodoWebhookProcessor
      */
     protected function resolveSubscriptionPlan(array $data): string
     {
-        $productId = $data['product_id'] ?? null;
-        $businessProductId = config('services.dodo.cloud_business_product_id');
-
-        if (is_string($productId) && filled($productId) && is_string($businessProductId) && filled($businessProductId) && $productId === $businessProductId) {
-            return 'cloud_business';
-        }
-
         $metadata = $this->mergedMetadata($data);
         $metadataPlan = $metadata['plan'] ?? null;
+        $productId = $data['product_id'] ?? null;
+        $cloudBusinessProductId = config('services.dodo.cloud_business_product_id');
+        $saasBusinessProductId = config('services.dodo.business_product_id');
 
-        if (is_string($metadataPlan) && in_array($metadataPlan, ['cloud', 'cloud_pro', 'cloud_business'], true)) {
+        if (is_string($productId) && filled($productId)) {
+            if (is_string($saasBusinessProductId) && filled($saasBusinessProductId) && $productId === $saasBusinessProductId && $metadataPlan === 'business') {
+                return 'business';
+            }
+
+            if (is_string($cloudBusinessProductId) && filled($cloudBusinessProductId) && $productId === $cloudBusinessProductId) {
+                return $metadataPlan === 'business' ? 'business' : 'cloud_business';
+            }
+
+            if (is_string($saasBusinessProductId) && filled($saasBusinessProductId) && $productId === $saasBusinessProductId) {
+                return 'business';
+            }
+        }
+
+        if (is_string($metadataPlan) && in_array($metadataPlan, ['cloud', 'cloud_pro', 'cloud_business', 'business'], true)) {
             return $metadataPlan;
         }
 
         return 'cloud';
+    }
+
+    /**
+     * Apply the first subscription event to a checkout that has no account yet.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function applyPendingSignupEvent(string $eventType, array $data, CarbonImmutable $eventAt): bool
+    {
+        $metadata = $this->mergedMetadata($data);
+        $pendingId = $metadata['pending_checkout_id'] ?? null;
+
+        if (! (is_int($pendingId) || is_string($pendingId) && ctype_digit($pendingId))) {
+            return false;
+        }
+
+        $pending = PendingSaasCheckout::query()
+            ->lockForUpdate()
+            ->find((int) $pendingId);
+
+        if (! $pending) {
+            return false;
+        }
+
+        $subscriptionId = $data['subscription_id'] ?? null;
+        if (! is_string($subscriptionId) || blank($subscriptionId)) {
+            return true;
+        }
+
+        if ($pending->billing_subscription_id !== null
+            && $pending->billing_subscription_id !== $subscriptionId) {
+            Log::warning('Ignoring Dodo webhook for a different pending subscription.', [
+                'event_type' => $eventType,
+                'pending_checkout_id' => $pending->id,
+                'subscription_id' => $subscriptionId,
+            ]);
+
+            return true;
+        }
+
+        if ($pending->billing_last_event_at !== null && $eventAt->lessThanOrEqualTo($pending->billing_last_event_at)) {
+            return true;
+        }
+
+        $status = is_string($data['status'] ?? null)
+            ? $data['status']
+            : $this->statusForEvent($eventType);
+        $nextBillingAt = $this->parseDate($data['next_billing_date'] ?? null);
+        $customer = is_array($data['customer'] ?? null) ? $data['customer'] : [];
+        $customerId = $customer['customer_id'] ?? null;
+        $isCancelledWithAccess = $eventType === 'subscription.cancelled'
+            && $nextBillingAt?->isFuture();
+        $isReady = in_array($status, ['active', 'past_due', 'on_hold', 'paused'], true)
+            || $isCancelledWithAccess
+            || in_array($eventType, ['subscription.active', 'subscription.renewed'], true);
+
+        $pending->forceFill([
+            'billing_customer_id' => is_string($customerId) ? $customerId : $pending->billing_customer_id,
+            'billing_subscription_id' => $subscriptionId,
+            'billing_product_id' => is_string($data['product_id'] ?? null)
+                ? $data['product_id']
+                : $pending->billing_product_id,
+            'billing_status' => $status,
+            'billing_next_billing_at' => $nextBillingAt,
+            'billing_last_event_at' => $eventAt,
+            'paid_at' => $isReady ? ($pending->paid_at ?? CarbonImmutable::now()) : $pending->paid_at,
+            'status' => $isReady ? 'active' : $status,
+        ])->save();
+
+        return true;
     }
 
     /**
@@ -546,7 +631,7 @@ class DodoWebhookProcessor
      */
     protected function planToRestore(Team $team): string
     {
-        if (in_array($team->billing_previous_plan, ['free', 'pro_ltd', 'cloud', 'cloud_pro', 'cloud_business'], true)) {
+        if (in_array($team->billing_previous_plan, ['free', 'pro_ltd', 'cloud', 'cloud_pro', 'cloud_business', 'business'], true)) {
             return $team->billing_previous_plan;
         }
 

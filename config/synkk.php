@@ -63,6 +63,16 @@ return [
             'currency_symbol' => '$',
             'billing_label' => 'free forever · full source code',
         ],
+        'cloud' => [
+            'amount' => 12,
+            'currency_symbol' => '$',
+            'billing_label' => 'per workspace / month',
+        ],
+        'business' => [
+            'amount' => 25,
+            'currency_symbol' => '$',
+            'billing_label' => 'per workspace / month',
+        ],
         'cloud_pro' => [
             'amount' => 12,
             'currency_symbol' => '$',
@@ -203,12 +213,12 @@ return [
             ],
         ],
         'cloud' => [
-            'name' => 'Synkk Cloud Managed SaaS',
-            'badge' => 'Cloud SaaS',
-            'max_devices' => env('SYNKK_CLOUD_MAX_DEVICES', 100),
-            'max_vaults' => env('SYNKK_CLOUD_MAX_VAULTS', 50),
-            'max_members' => env('SYNKK_CLOUD_MAX_MEMBERS', 50),
-            'storage_limit_mb' => env('SYNKK_CLOUD_STORAGE_LIMIT_MB', 50000), // 50 GB
+            'name' => 'Synkk Cloud Pro',
+            'badge' => 'Cloud Pro',
+            'max_devices' => env('SYNKK_CLOUD_MAX_DEVICES', 25),
+            'max_vaults' => env('SYNKK_CLOUD_MAX_VAULTS', 5),
+            'max_members' => env('SYNKK_CLOUD_MAX_MEMBERS', 5),
+            'storage_limit_mb' => env('SYNKK_CLOUD_STORAGE_LIMIT_MB', 5000), // 5 GB
             'features' => [
                 'basic_sync',
                 'web_editor',
@@ -234,6 +244,43 @@ return [
                 'ai_managed_cloud',
             ],
         ],
+        'business' => [
+            'name' => 'Synkk Cloud Business',
+            'badge' => 'Business SaaS',
+            'max_devices' => env('SYNKK_BUSINESS_MAX_DEVICES', 100),
+            'max_vaults' => env('SYNKK_BUSINESS_MAX_VAULTS', 25),
+            'max_members' => env('SYNKK_BUSINESS_MAX_MEMBERS', 25),
+            'storage_limit_mb' => env('SYNKK_BUSINESS_STORAGE_LIMIT_MB', 25000), // 25 GB
+            'features' => [
+                'basic_sync',
+                'web_editor',
+                'interactive_graph',
+                'atomic_abort_guard',
+                'path_acls',
+                'dlp_scan',
+                'remote_wipe',
+                'ip_whitelisting',
+                'read_only_tokens',
+                'plugin_suite_sync',
+                'crdt_multiplayer',
+                'e2ee_team',
+                'rag_vector_search',
+                'cloud_backup',
+                'priority_support',
+                'ai_byok_core',
+                'ai_mcp_server',
+                'ai_smart_merge',
+                'ai_gardener',
+                'ai_team_digests',
+                'ai_portal_assistant',
+                'ai_managed_cloud',
+            ],
+        ],
+    ],
+
+    'saas_signup' => [
+        'plans' => ['cloud', 'business'],
+        'pending_checkout_ttl_hours' => (int) env('SYNKK_PENDING_CHECKOUT_TTL_HOURS', 24),
     ],
 
     /*

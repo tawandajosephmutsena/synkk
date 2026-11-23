@@ -156,6 +156,9 @@
                         <flux:menu.item :href="route('security.edit')" icon="shield-check" wire:navigate>
                             {{ __('Security & 2FA') }}
                         </flux:menu.item>
+                        <flux:menu.item :href="route('billing.edit')" icon="credit-card" wire:navigate>
+                            {{ __('Billing') }}
+                        </flux:menu.item>
                     </flux:menu.radio.group>
 
                     <flux:menu.separator />
