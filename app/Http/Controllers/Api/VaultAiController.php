@@ -140,6 +140,8 @@ class VaultAiController extends Controller
 
         $validated = $request->validate([
             'prompt' => ['required', 'string', 'max:8000'],
+            'context_paths' => ['nullable', 'array', 'max:5'],
+            'context_paths.*' => ['string', 'max:500', 'not_regex:/(^|\/)\.\.($|\/)/'],
         ]);
 
         $run = AiRun::query()->create([
@@ -150,7 +152,10 @@ class VaultAiController extends Controller
             'partial_content' => '',
         ]);
 
-        RunVaultAgentTurnJob::dispatch($run->id, $thread->id, $user->id, $validated['prompt']);
+        /** @var array<int, string> $contextPaths */
+        $contextPaths = $validated['context_paths'] ?? [];
+
+        RunVaultAgentTurnJob::dispatch($run->id, $thread->id, $user->id, $validated['prompt'], $contextPaths);
 
         $freshRun = $run->fresh(['assistantMessage']);
 

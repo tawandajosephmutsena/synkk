@@ -23,11 +23,15 @@ class RunVaultAgentTurnJob implements ShouldQueue
 
     public int $timeout = 180;
 
+    /**
+     * @param  array<int, string>  $contextPaths
+     */
     public function __construct(
         public string $runId,
         public int $threadId,
         public int $userId,
         public string $prompt,
+        public array $contextPaths = [],
     ) {
         $this->onQueue('ai-stream');
     }
@@ -90,7 +94,8 @@ class RunVaultAgentTurnJob implements ShouldQueue
                             statusNote: $note,
                         ));
                     }
-                }
+                },
+                $this->contextPaths,
             );
 
             if ($pendingDelta !== '') {

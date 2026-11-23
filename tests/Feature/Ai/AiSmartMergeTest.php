@@ -333,3 +333,68 @@ test('conflict sandbox modal runs Smart Merge with AI, allows reconciliation, an
         ->assertSet('canUseSmartMerge', false)
         ->assertDontSee('Smart Merge with AI');
 });
+
+test('smart-merge API merges unsynced local conflict snapshots and still blocks E2EE vaults', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://api.openai.com/v1/chat/completions' => Http::response([
+            'model' => 'gpt-4o-mini',
+            'choices' => [[
+                'message' => [
+                    'role' => 'assistant',
+                    'content' => json_encode([
+                        'summary' => 'Reconciled local unsynced conflict edits.',
+                        'hunks' => [[
+                            'hunk_id' => 1,
+                            'strategy' => 'combine_both',
+                            'resolved_text' => "- Keep server goal\n- Add local milestone",
+                            'rationale' => 'Preserved both changes.',
+                        ]],
+                    ]),
+                ],
+                'finish_reason' => 'stop',
+            ]],
+            'usage' => ['prompt_tokens' => 25, 'completion_tokens' => 20],
+        ], 200),
+    ]);
+
+    ['owner' => $owner, 'team' => $team, 'vault' => $vault] = createSmartMergeFixture();
+    $sync = app(SyncUploadAction::class);
+    $v1 = $sync->execute($vault, $owner, 'Mac', 'Plans/Sprint.md', "# Sprint Plan\n- Base", baseVersion: 0);
+    $sync->execute($vault, $owner, 'Mac', 'Plans/Sprint.md', "# Sprint Plan\n- Keep server goal", baseVersion: (int) $v1['version']);
+
+    $writeToken = DeviceToken::createToken($owner, $team, 'Desktop Obsidian', 'mac', 'read_write')['plain_token'];
+
+    // Conflict copy does NOT exist on server yet, but local content is provided cleanly
+    $this->withHeader('Authorization', "Bearer {$writeToken}")
+        ->postJson("/api/v1/vaults/{$vault->slug}/conflicts/smart-merge", [
+            'conflict_path' => 'Plans/Sprint.sync-conflict-20261122.md',
+            'canonical_path' => 'Plans/Sprint.md',
+            'canonical_content' => "# Sprint Plan\n- Keep server goal",
+            'conflict_content' => "# Sprint Plan\n- Add local milestone",
+            'instructions' => 'Preserve both items',
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', 'ok')
+        ->assertJsonPath('used_ai', true)
+        ->assertJsonPath('merged_content', "# Sprint Plan\n- Keep server goal\n- Add local milestone");
+
+    // E2EE vault MUST STILL block server smart-merge even when inline content is provided
+    $e2eeVault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'Encrypted Smart Merge Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $owner->id,
+        'is_e2ee' => true,
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$writeToken}")
+        ->postJson("/api/v1/vaults/{$e2eeVault->slug}/conflicts/smart-merge", [
+            'conflict_path' => 'Plans/Sprint.sync-conflict-20261122.md',
+            'canonical_path' => 'Plans/Sprint.md',
+            'canonical_content' => 'ciphertext',
+            'conflict_content' => 'ciphertext 2',
+        ])
+        ->assertForbidden()
+        ->assertJsonPath('error', 'E2EE_BLOCKED');
+});

@@ -201,3 +201,218 @@ test('Vault AI API runs streaming job over Reverb channel and isolates private t
     expect($channel->join($userA, $vault->id, $userA->id))->toBeTrue()
         ->and($channel->join($userB, $vault->id, $userA->id))->toBeFalse();
 });
+
+test('Vault AI HTTP API supports thread listing, context_paths security gating, proposal diff inbox, and broadcasting auth', function () {
+    Http::preventStrayRequests();
+    $capturedMessages = [];
+    Http::fake([
+        'http://localhost:11434/api/chat' => function (HttpRequest $request) use (&$capturedMessages) {
+            $capturedMessages = $request->data()['messages'] ?? [];
+
+            return Http::response(
+                json_encode([
+                    'model' => 'llama3.2',
+                    'message' => ['role' => 'assistant', 'content' => 'Reviewed [[Notes/Active.md]] safely.'],
+                    'done' => true,
+                    'prompt_eval_count' => 12,
+                    'eval_count' => 14,
+                ])."\n",
+                200
+            );
+        },
+    ]);
+
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $team = Team::factory()->create(['plan' => 'pro_ltd']);
+    $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+    $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+
+    TeamAiConfig::create([
+        'team_id' => $team->id,
+        'is_enabled' => true,
+        'provider_mode' => 'ollama',
+        'chat_provider' => 'ollama',
+        'chat_model' => 'llama3.2',
+    ]);
+
+    $vault = Vault::create([
+        'team_id' => $team->id,
+        'name' => 'HTTP Contract Vault',
+        'default_permission' => 'read_write',
+        'created_by' => $owner->id,
+    ]);
+
+    VaultAiSetting::create([
+        'vault_id' => $vault->id,
+        'ai_mode' => 'server',
+        'excluded_paths' => ['Private/**'],
+    ]);
+
+    VaultPermission::create([
+        'vault_id' => $vault->id,
+        'user_id' => $member->id,
+        'path' => 'Executive',
+        'permission' => 'hidden',
+        'is_folder' => true,
+    ]);
+
+    $sync = app(SyncUploadAction::class);
+    $sync->execute($vault, $owner, 'Mac', 'Notes/Active.md', "# Active Note\nAccessible team details.");
+    $sync->execute($vault, $owner, 'Mac', 'Executive/Hidden.md', '# ExecutiveHiddenSecret');
+    $sync->execute($vault, $owner, 'Mac', 'Private/Excluded.md', '# ExcludedPrivateSecret');
+
+    $ownerPrivate = AiThread::create([
+        'team_id' => $team->id,
+        'vault_id' => $vault->id,
+        'user_id' => $owner->id,
+        'title' => 'Owner Only Thread',
+        'is_shared_with_team' => false,
+        'last_message_at' => now(),
+    ]);
+    $sharedThread = AiThread::create([
+        'team_id' => $team->id,
+        'vault_id' => $vault->id,
+        'user_id' => $owner->id,
+        'title' => 'Shared Team Thread',
+        'is_shared_with_team' => true,
+        'last_message_at' => now(),
+    ]);
+
+    $ownerToken = DeviceToken::createToken($owner, $team, 'Owner Mac', 'mac')['plain_token'];
+    $memberToken = DeviceToken::createToken($member, $team, 'Member Mac', 'mac')['plain_token'];
+
+    // Member sees shared thread, not owner's private thread
+    $listRes = $this->withHeader('Authorization', "Bearer {$memberToken}")
+        ->getJson("/api/v1/vaults/{$vault->slug}/ai/threads")
+        ->assertOk();
+
+    $threadIds = collect($listRes->json('threads'))->pluck('id')->all();
+    expect($threadIds)->toContain($sharedThread->id)
+        ->and($threadIds)->not->toContain($ownerPrivate->id);
+
+    // Create member's own thread & send message with context_paths (including unauthorized paths)
+    $created = $this->withHeader('Authorization', "Bearer {$memberToken}")
+        ->postJson("/api/v1/vaults/{$vault->slug}/ai/threads", ['title' => 'Active Note Query'])
+        ->assertCreated();
+
+    $memberThreadId = (int) $created->json('thread.id');
+
+    $sendRes = $this->withHeader('Authorization', "Bearer {$memberToken}")
+        ->postJson("/api/v1/vaults/{$vault->slug}/ai/threads/{$memberThreadId}/messages", [
+            'prompt' => 'Summarize my active note',
+            'context_paths' => ['Notes/Active.md', 'Executive/Hidden.md', 'Private/Excluded.md'],
+        ])
+        ->assertStatus(202);
+
+    $serializedPrompt = json_encode($capturedMessages) ?: '';
+    expect($serializedPrompt)->toContain('Accessible team details.')
+        ->and($serializedPrompt)->not->toContain('ExecutiveHiddenSecret')
+        ->and($serializedPrompt)->not->toContain('ExcludedPrivateSecret');
+
+    $runRes = $this->withHeader('Authorization', "Bearer {$memberToken}")
+        ->getJson("/api/v1/vaults/{$vault->slug}/ai/runs/".$sendRes->json('run_id'))
+        ->assertOk()
+        ->assertJsonPath('run.status', 'completed')
+        ->assertJsonPath('run.assistant_message.citations.0.note', 'Notes/Active.md');
+
+    expect($runRes->json('run.assistant_message.content'))->toContain('Notes/Active.md');
+
+    // Stage stale update, move, and hidden proposals to verify exact proposals?with_diff=1 contract
+    $initialStale = $sync->execute($vault, $owner, 'Mac', 'Notes/Stale.md', "# Stale\nLine 1\nLine 2\nLine 3", baseVersion: 0);
+    $staleBaseVersion = (int) $initialStale['version'];
+
+    $staleProposal = AiProposal::create([
+        'team_id' => $team->id,
+        'vault_id' => $vault->id,
+        'created_by_user_id' => $owner->id,
+        'source' => 'gardener_links',
+        'action' => 'update',
+        'target_path' => 'Notes/Stale.md',
+        'base_version' => $staleBaseVersion,
+        'proposed_content' => "# Stale\nLine 1\nLine 2\nLine 3 (AI Link)",
+        'rationale' => 'Add related link',
+        'status' => 'pending',
+    ]);
+    // Advance canonical note to make proposal stale
+    $sync->execute($vault, $owner, 'Laptop', 'Notes/Stale.md', "# Stale\nLine 1 (Human Edit)\nLine 2\nLine 3", baseVersion: $staleBaseVersion);
+
+    $hiddenProposal = AiProposal::create([
+        'team_id' => $team->id,
+        'vault_id' => $vault->id,
+        'created_by_user_id' => $owner->id,
+        'source' => 'copilot',
+        'action' => 'update',
+        'target_path' => 'Executive/Hidden.md',
+        'proposed_content' => '# Secret update',
+        'status' => 'pending',
+    ]);
+
+    $rejectTarget = AiProposal::create([
+        'team_id' => $team->id,
+        'vault_id' => $vault->id,
+        'created_by_user_id' => $owner->id,
+        'source' => 'copilot',
+        'action' => 'create',
+        'target_path' => 'Notes/DraftReject.md',
+        'proposed_content' => '# Reject me',
+        'status' => 'pending',
+    ]);
+
+    $proposalsRes = $this->withHeader('Authorization', "Bearer {$memberToken}")
+        ->getJson("/api/v1/vaults/{$vault->slug}/ai/proposals?status=pending&with_diff=1")
+        ->assertOk();
+
+    $proposalIds = collect($proposalsRes->json('proposals'))->pluck('id')->all();
+    expect($proposalIds)->toContain($staleProposal->id)
+        ->and($proposalIds)->toContain($rejectTarget->id)
+        ->and($proposalIds)->not->toContain($hiddenProposal->id);
+
+    $staleRow = collect($proposalsRes->json('proposals'))->firstWhere('id', $staleProposal->id);
+    expect($staleRow)
+        ->toHaveKey('target_path', 'Notes/Stale.md')
+        ->toHaveKey('source', 'gardener_links')
+        ->toHaveKey('preview.is_stale', true)
+        ->and($staleRow['preview']['diff']['hunks'])->toBeArray()->not->toBeEmpty()
+        ->and($staleRow['preview']['diff']['merged_content'])->toContain('Human Edit');
+
+    // Approve with explicit override_content and reject second proposal
+    $this->withHeader('Authorization', "Bearer {$memberToken}")
+        ->postJson("/api/v1/vaults/{$vault->slug}/ai/proposals/{$staleProposal->id}/approve", [
+            'override_content' => "# Stale\nApproved custom override content.",
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', 'approved');
+
+    expect($vault->files()->where('path', 'Notes/Stale.md')->firstOrFail()->getContents())
+        ->toBe("# Stale\nApproved custom override content.");
+
+    $this->withHeader('Authorization', "Bearer {$memberToken}")
+        ->postJson("/api/v1/vaults/{$vault->slug}/ai/proposals/{$rejectTarget->id}/reject")
+        ->assertOk()
+        ->assertJsonPath('status', 'rejected');
+
+    // Broadcasting auth with Reverb config & device token
+    config([
+        'broadcasting.default' => 'reverb',
+        'broadcasting.connections.reverb.key' => 'test-reverb-key',
+        'broadcasting.connections.reverb.secret' => 'test-reverb-secret',
+        'broadcasting.connections.reverb.app_id' => 'test-app-id',
+    ]);
+    require base_path('routes/channels.php');
+
+    $this->withHeader('Authorization', "Bearer {$memberToken}")
+        ->postJson('/api/v1/broadcasting/auth', [
+            'socket_id' => '1234.5678',
+            'channel_name' => "private-vault-ai.{$vault->id}.{$member->id}",
+        ])
+        ->assertOk()
+        ->assertJsonStructure(['auth']);
+
+    $this->withHeader('Authorization', "Bearer {$memberToken}")
+        ->postJson('/api/v1/broadcasting/auth', [
+            'socket_id' => '1234.5678',
+            'channel_name' => "private-vault-ai.{$vault->id}.{$owner->id}",
+        ])
+        ->assertForbidden();
+});

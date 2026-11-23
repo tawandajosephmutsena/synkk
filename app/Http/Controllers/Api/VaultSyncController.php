@@ -637,6 +637,8 @@ class VaultSyncController extends Controller
             'conflict_path' => ['required', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
             'canonical_path' => ['nullable', 'string', 'not_regex:/(^|\/)\.\.($|\/)/'],
             'instructions' => ['nullable', 'string', 'max:1000'],
+            'canonical_content' => ['nullable', 'string', 'max:200000'],
+            'conflict_content' => ['nullable', 'string', 'max:200000'],
         ]);
 
         $conflictPath = ltrim(str_replace('\\', '/', $validated['conflict_path']), '/');
@@ -663,6 +665,8 @@ class VaultSyncController extends Controller
                 conflictPath: $conflictPath,
                 canonicalPath: $canonicalPath,
                 instructions: $validated['instructions'] ?? null,
+                canonicalContentOverride: $validated['canonical_content'] ?? null,
+                conflictContentOverride: $validated['conflict_content'] ?? null,
             );
 
             return response()->json([

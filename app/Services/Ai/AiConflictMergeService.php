@@ -41,6 +41,8 @@ class AiConflictMergeService
         string $conflictPath,
         ?string $canonicalPath = null,
         ?string $instructions = null,
+        ?string $canonicalContentOverride = null,
+        ?string $conflictContentOverride = null,
     ): array {
         if ($vault->is_e2ee) {
             throw new AiException(
@@ -109,7 +111,7 @@ class AiConflictMergeService
             ->where('is_deleted', false)
             ->first();
 
-        if ($conflictFile === null) {
+        if ($conflictFile === null && $conflictContentOverride === null) {
             throw new AiException("Conflict file '{$cleanConflictPath}' not found.", 'NOT_FOUND', 404);
         }
 
@@ -118,8 +120,8 @@ class AiConflictMergeService
             ->where('is_deleted', false)
             ->first();
 
-        $theirs = $conflictFile->getContents() ?? '';
-        $ours = $canonicalFile !== null ? ($canonicalFile->getContents() ?? '') : '';
+        $theirs = $conflictContentOverride ?? ($conflictFile->getContents() ?? '');
+        $ours = $canonicalContentOverride ?? ($canonicalFile !== null ? ($canonicalFile->getContents() ?? '') : '');
 
         $base = '';
         if ($canonicalFile !== null) {

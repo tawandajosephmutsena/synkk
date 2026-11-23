@@ -58,11 +58,17 @@ class VaultAgentService
      * Execute one tool-calling turn for a user inside an AI thread.
      *
      * @param  callable(string, string): void|null  $onEvent
+     * @param  array<int, string>  $contextPaths
      *
      * @throws AiException
      */
-    public function runTurn(AiThread $thread, User $user, string $prompt, ?callable $onEvent = null): AiMessage
-    {
+    public function runTurn(
+        AiThread $thread,
+        User $user,
+        string $prompt,
+        ?callable $onEvent = null,
+        array $contextPaths = [],
+    ): AiMessage {
         $vault = $thread->vault;
         $this->assertVaultServerAiReady($vault, $user);
 
@@ -110,17 +116,22 @@ class VaultAgentService
             ];
         }
 
-        $conversation[] = [
-            'role' => 'user',
-            'content' => $cleanPrompt,
-        ];
-
         /** @var array<string, array<string, mixed>> $citationsByKey */
         $citationsByKey = [];
         /** @var array<int, array<string, mixed>> $executedTools */
         $executedTools = [];
         /** @var array<int, int> $proposalIds */
         $proposalIds = [];
+
+        $attachedContext = $this->buildAttachedContextBlock($vault, $user, $contextPaths, $citationsByKey);
+        $userPromptForModel = $attachedContext !== ''
+            ? $attachedContext."\n\nUser request:\n".$cleanPrompt
+            : $cleanPrompt;
+
+        $conversation[] = [
+            'role' => 'user',
+            'content' => $userPromptForModel,
+        ];
 
         $totalInputTokens = 0;
         $totalOutputTokens = 0;
@@ -247,6 +258,70 @@ class VaultAgentService
         $thread->forceFill(['last_message_at' => now()])->save();
 
         return $assistantMessage;
+    }
+
+    /**
+     * Build a bounded untrusted context block for explicitly attached active notes.
+     *
+     * @param  array<int, string>  $contextPaths
+     * @param  array<string, array<string, mixed>>  $citationsByKey
+     */
+    protected function buildAttachedContextBlock(
+        Vault $vault,
+        User $user,
+        array $contextPaths,
+        array &$citationsByKey,
+    ): string {
+        if (empty($contextPaths)) {
+            return '';
+        }
+
+        $blocks = [];
+        $seen = [];
+
+        foreach (array_slice($contextPaths, 0, 5) as $rawPath) {
+            $clean = trim(str_replace('\\', '/', (string) $rawPath), '/');
+            if ($clean === '' || str_contains($clean, '..')) {
+                continue;
+            }
+
+            $file = $vault->files()
+                ->where('is_deleted', false)
+                ->where(function ($q) use ($clean): void {
+                    $q->where('path', $clean)
+                        ->orWhere('path', $clean.'.md');
+                })
+                ->first();
+
+            if (! $file || $file->is_encrypted || isset($seen[$file->path])) {
+                continue;
+            }
+
+            if (
+                $vault->permissionForPath($user, $file->path) === 'hidden'
+                || ($vault->aiSetting?->isPathExcluded($file->path) ?? false)
+            ) {
+                continue;
+            }
+
+            $seen[$file->path] = true;
+            $bounded = mb_substr((string) ($file->getContents() ?? ''), 0, 4000);
+            $blocks[] = "<vault_note path=\"{$file->path}\" trust=\"untrusted_data\">\n{$bounded}\n</vault_note>";
+
+            $citationsByKey[$file->path.'#'] = [
+                'note' => $file->path,
+                'heading' => null,
+                'start_line' => 1,
+                'score_pct' => 100,
+                'excerpt' => Str::limit(trim((string) preg_replace('/\s+/', ' ', $bounded)), 180),
+            ];
+        }
+
+        if (empty($blocks)) {
+            return '';
+        }
+
+        return "Attached active note context:\n".implode("\n\n", $blocks);
     }
 
     /**
