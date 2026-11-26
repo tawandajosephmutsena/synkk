@@ -82,12 +82,13 @@ This Compose file serves HTTP on host loopback port 8000. Put a trusted HTTPS re
 ## What you can do with Synkk
 
 - **Self-hosted sync:** Keep the server, database, and vault files on infrastructure you manage.
-- **Obsidian plugin:** Sync from desktop and mobile with manual, startup, and scheduled sync, plus QR and deep-link pairing.
-- **Conflict and version recovery:** Preserve file history, detect concurrent edits, and restore earlier versions.
-- **Team workspace:** Manage members, devices, and vault access from the web dashboard. The free and paid plans have different limits and controls.
-- **First-sync checks:** Review a vault's files and storage before its first upload, with safeguards for risky changes.
-- **Web access:** Browse and edit Markdown, explore linked notes in a graph, and optionally publish a vault portal.
-- **Optional security controls:** Paid plans include path permissions, device restrictions, remote revocation, and plaintext secret scanning. Client-side encryption is available for supported workflows; the server cannot inspect encrypted content.
+- **Obsidian plugin (`v1.1.1`):** Sync from macOS, Windows, Linux, iOS, and Android (Obsidian `1.7.2+`) with startup, file-change, and scheduled sync, adaptive background relay, QR/deep-link pairing, Ghost Files, and an in-app AI Sidebar & Change Inbox.
+- **Conflict and version recovery:** Retain up to 25 server versions per file, detect concurrent edits without silent overwrites, reconcile in the Visual Conflict Sandbox (with optional AI Smart Merge), or toggle opt-in Yjs CRDT collaboration over Reverb.
+- **Team workspace & authentication:** Manage teams (`Owner`, `Admin`, `Member`), WebAuthn Passkeys, TOTP 2FA, devices, and vault access from the web dashboard. Free and paid plans have different quotas and controls.
+- **First-sync checks:** Run the 4-step Pre-Flight Migration Wizard to sanitize cross-platform filenames, simulate storage quotas without transferring bytes, and guard against bulk deletions with the Atomic Safety Shield (10% default threshold).
+- **Web access & Portals:** Browse and edit Markdown (CodeMirror 6), explore linked notes in a 2D graph, export vaults as ZIP, and publish Livewire 4 Vault Portals at `/p/{slug}` (4 layouts, 5 themes, password protection, Portal AI, and `/llms.txt`).
+- **Opt-in Vault AI & Remote MCP Server:** Connect local Ollama (works even on E2EE vaults), BYOK (OpenAI, Anthropic, Gemini, OpenRouter), or the optional Managed Cloud AI Add-On ($12/workspace/mo) for Hybrid FTS5 + vector search, human-approved AI Proposal Diff Inbox, Vault Gardener, Team Digests, and a 7-tool permissioned Remote MCP Server (`POST /api/v1/mcp`).
+- **Optional security controls:** Paid plans include path permissions (`read_write`, `read_only`, `hidden`), IP allowlisting, read-only tokens, and remote device wipe (HTTP 410). Plaintext uploads are scanned server-side for leaked secrets and redacted before external AI calls. Client-side WebCrypto AES-256-GCM E2EE is available per vault; the server stores opaque ciphertext blobs and disables server-side search, Portals, DLP, MCP, and cloud AI on E2EE vaults.
 
 ## Launch Links
 
@@ -133,7 +134,7 @@ Synkk is created by [Ottomate](https://ottomate.space). Product direction and en
 
 ## Security
 
-Do not include credentials, device tokens, or vault content in public issues. Until a dedicated security reporting address is published, report suspected vulnerabilities privately through GitHub's private reporting channel when available.
+Do not include credentials, device tokens, or vault content in public issues. Report suspected vulnerabilities privately by emailing [security@synkk.space](mailto:security@synkk.space) or using [GitHub Security Advisories](https://github.com/tawandajosephmutsena/synkk/security/advisories). See our [Security & Vulnerability Disclosure Policy](https://synkk.space/security) for Safe Harbor terms and response SLAs.
 
 ## License
 

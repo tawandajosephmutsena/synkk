@@ -63,7 +63,7 @@
                     <span>Legal &amp; Terms</span>
                 </div>
                 <h1 class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-zinc-900 dark:text-white">Terms of Service</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400">Effective Date: September 17, 2026 · Version 1.1</p>
+                <p class="text-sm text-zinc-500 dark:text-zinc-400">Effective Date: November 26, 2026 · Version 1.2</p>
             </div>
 
             <div class="synkk-prose space-y-10 text-zinc-700 dark:text-zinc-300 leading-relaxed">
@@ -77,8 +77,9 @@
                     <ul class="space-y-3">
                         <li><strong>Synkk Obsidian Plugin:</strong> Distributed under the open-source MIT License. It is free forever and can be used on unlimited devices.</li>
                         <li><strong>Synkk Community Server (Free &amp; Open Source):</strong> Distributed under the MIT License included with the source code.</li>
-                        <li><strong>Self-Host Pro Commercial License ($79 LTD):</strong> Grants a perpetual, non-exclusive license to the separately distributed Pro software for internal business use. Includes 1 year of software updates and support, subject to the commercial license supplied at purchase.</li>
-                        <li><strong>Synkk Cloud Workspaces ($12/mo Pro / $25/mo Business):</strong> A managed SaaS subscription providing fully hosted, backed-up sync infrastructure with zero server maintenance. A valid payment card is required upfront to initiate the 30-day trial to protect server pools from abuse.</li>
+                        <li><strong>Self-Host Pro Commercial License ($79 LTD):</strong> Grants a perpetual, non-exclusive license to Pro self-hosted features (Path ACLs, Remote Wipe, IP Allowlisting, Read-Only Tokens, AI Smart Merge, Vault Gardener, Team Digests, and Portal AI Assistant) with default plan quotas of 15 vaults, 10 members, 25 devices, and 15 GB (adjustable by self-hosted administrators). Includes 1 year of software updates and support, subject to the commercial license supplied at purchase.</li>
+                        <li><strong>Synkk Cloud Workspaces ($12/mo Pro / $25/mo Business):</strong> A managed SaaS subscription providing fully hosted, backed-up sync infrastructure with zero server maintenance (Pro: 5 GB, 5 vaults, 5 members, 25 devices; Business: 25 GB, 25 vaults, 25 members, 100 devices). A valid payment card is required upfront to initiate the 30-day trial to protect server pools from abuse.</li>
+                        <li><strong>Synkk Managed AI Add-On ($12/workspace/mo, optional):</strong> Optional managed cloud AI credit pool ($12/mo allowance; Cloud plans include a one-time $2 trial credit) powering server-side Vault AI Agent, Hybrid Search, Gardener, Digests, and Portal AI without supplying external API keys. Connecting your own API keys (BYOK) or local Ollama does not require the Managed AI Add-On.</li>
                     </ul>
                 </section>
 

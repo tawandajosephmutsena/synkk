@@ -1,107 +1,65 @@
 ---
 title: "REST API Protocol v2"
-description: "Complete technical reference for the Synkk HTTP sync protocol, preflight simulation, and RAG endpoints."
+description: "Complete technical reference for the Synkk HTTP Sync Protocol v2, Collaboration, Conflicts, Ghost Files, Vault AI, and Remote MCP endpoints."
 tags:
   - api
   - rest
   - developers
   - protocol-v2
+  - mcp
 ---
 
 # 🔌 REST API Protocol v2 Reference
 
-All requests to the Synkk Sync API must include:
-- `Authorization: Bearer <device_token>`
+All authenticated requests to `/api/v1/*` include:
+- `Authorization: Bearer <synkk_token>`
 - `Accept: application/json`
-- `X-Synkk-Protocol: 2`
+- `X-Synkk-Protocol: 2` (required; older/missing headers return `HTTP 426`)
 - `X-Client-Platform: mac | windows | linux | ios | android`
 
----
-
-## 🛫 Pre-Flight Simulation API (Option C)
-
-Simulates sync deltas and checks storage quota without moving file data.
-
-`POST /api/v1/vaults/{vault:slug}/preflight`
-
-### Request Payload
-```json
-{
-  "total_files": 340,
-  "total_bytes": 48291000,
-  "categories": {
-    "markdown": { "count": 310, "bytes": 1200000 },
-    "images": { "count": 30, "bytes": 47091000 }
-  },
-  "files": [
-    { "path": "Daily/2026-09-16.md", "size": 3400, "sha256": "a3f5..." }
-  ]
-}
-```
-
-### Success Response (`200 OK`)
-```json
-{
-  "status": "ready",
-  "authorized": true,
-  "vault": {
-    "id": 1,
-    "slug": "engineering",
-    "name": "Engineering Vault",
-    "server_files_count": 320,
-    "server_bytes": 45100000
-  },
-  "quota": {
-    "allowed": true,
-    "current_storage_bytes": 524288000,
-    "storage_limit_bytes": 10737418240,
-    "remaining_bytes": 10213130240
-  },
-  "simulation": {
-    "to_upload_count": 25,
-    "to_download_count": 5,
-    "identical_skipped_count": 315,
-    "bandwidth_saved_bytes": 42100000
-  },
-  "safety": {
-    "atomic_shield_active": true,
-    "max_deletion_threshold_percent": 20
-  }
-}
-```
-
-### Quota Exceeded Response (`422 Unprocessable Entity`)
-```json
-{
-  "status": "quota_exceeded",
-  "authorized": false,
-  "message": "Vault pre-flight check failed: Proposed sync payload exceeds team storage quota.",
-  "quota": {
-    "allowed": false,
-    "current_storage_bytes": 10485760000,
-    "additional_bytes": 524288000,
-    "storage_limit_bytes": 10737418240,
-    "deficit_bytes": 272630760
-  },
-  "recommendation": "Upgrade to Synkk Pro LTD or Synkk Cloud to expand team storage limit."
-}
-```
+Rate limit: **300 requests/minute** per bearer token or IP.
 
 ---
 
-## 📦 Sync Manifest & Batch Endpoints
+## 🔐 Auth & Pairing
 
-- `GET /api/v1/vaults/{vault:slug}/manifest?since_version={n}`
-- `POST /api/v1/vaults/{vault:slug}/upload/batch`
-- `GET /api/v1/vaults/{vault:slug}/download?path={path}&ghost={bool}`
-- `DELETE /api/v1/vaults/{vault:slug}/files?path={path}`
-- `GET /api/v1/vaults/{vault:slug}/transport/status`
+- `GET /api/v1/auth/verify` — Verify token, team, plan, and Reverb broadcasting config.
+- `POST /api/v1/pairing/session` — Create a 10-minute single-use QR/deep-link pairing session.
+- `POST /api/v1/pairing/exchange` *(public)* — Exchange a pairing session for a scoped device token (`HTTP 410` if expired/used).
+- `GET /api/v1/pairing/status` *(public)* — Poll pairing session state (`pending`, `paired`, `expired`, `revoked`).
 
 ---
 
-## 🤖 Vault Copilot & RAG Endpoints
+## 📦 Sync, Manifest, Pre-Flight & Ghost Files
 
-- `POST /api/v1/vaults/{vault:slug}/rag/query` (takes `{ query, expand_graph, max_citations }`)
-- `POST /api/v1/vaults/{vault:slug}/rag/search` (takes `{ query, limit }`)
-- `POST /api/v1/vaults/{vault:slug}/rag/index` (takes `{ force }`)
-- `GET /api/v1/vaults/{vault:slug}/rag/status`
+- `GET /api/v1/vaults` — List vaults accessible to the device token.
+- `POST /api/v1/vaults/{slug}/preflight` — Dry-run quota check & upload/download/skip simulation without uploading bytes.
+- `GET /api/v1/vaults/{slug}/manifest?since_version={n}` — ACL-filtered file manifest + deleted tombstones.
+- `GET /api/v1/vaults/{slug}/changes?since_version={n}` — Up to 500 incremental change log entries.
+- `GET /api/v1/vaults/{slug}/download?path={path}&ghost={0|1}` — Stream file blob (or Ghost stub) with `X-Synkk-Sha256` & E2EE headers.
+- `POST /api/v1/vaults/{slug}/upload` — Upload a single file (`file`, `content`, or `content_base64`, `base_version`, optional E2EE fields).
+- `POST /api/v1/vaults/{slug}/batch-sync` — Atomic DB transaction of up to 100 upload/delete operations.
+- `POST /api/v1/vaults/{slug}/delete` — Soft-delete a file path (tombstone pruned after 30 days).
+- `POST /api/v1/vaults/{slug}/files/hydrate` & `POST /api/v1/vaults/{slug}/files/dehydrate` — On-demand Ghost File hydration/dehydration.
+- `POST /api/v1/vaults/{slug}/e2ee/enable` & `GET /api/v1/vaults/{slug}/e2ee/status` — Enable/inspect client-side AES-256-GCM vault encryption.
+- `GET /api/v1/vaults/{slug}/transport/status?client_version={n}` — Lightweight mobile background relay heartbeat.
+
+---
+
+## 🔀 Conflicts & Real-Time CRDT Collaboration
+
+- `GET /api/v1/vaults/{slug}/conflicts` — List active conflict copies.
+- `POST /api/v1/vaults/{slug}/conflicts/diff` — Compute 3-way line diff against ancestor version.
+- `POST /api/v1/vaults/{slug}/conflicts/smart-merge` — Preview semantic AI merge without mutating disk.
+- `POST /api/v1/vaults/{slug}/conflicts/resolve` — Commit reconciled note and soft-delete conflict copy.
+- `POST /api/v1/vaults/{slug}/collab/join`, `GET .../collab/catch-up`, `POST .../collab/append`, `POST .../collab/checkpoint`, `POST .../collab/leave`, `GET .../collab/presence` — Durable Yjs collaboration journal + Reverb broadcast.
+
+---
+
+## 🤖 Vault AI, RAG & Remote MCP
+
+- `POST /api/v1/vaults/{slug}/rag/query`, `POST .../rag/search`, `POST .../rag/index`, `GET .../rag/progress`, `GET .../rag/status`
+- `GET/POST /api/v1/vaults/{slug}/ai/threads`, `POST .../ai/threads/{id}/messages`, `GET .../ai/runs/{run}`
+- `GET /api/v1/vaults/{slug}/ai/proposals`, `POST .../ai/proposals/{id}/approve`, `POST .../ai/proposals/{id}/reject`
+- `POST /api/v1/vaults/{slug}/ai/gardener/run`, `POST /api/v1/vaults/{slug}/ai/digests/generate`
+- `POST /api/v1/mcp` — JSON-RPC 2.0 Streamable HTTP Remote MCP Server (`mcp_read`, `mcp_propose`, `mcp_write`).

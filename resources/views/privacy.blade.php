@@ -63,7 +63,7 @@
                     <span>Legal &amp; Compliance</span>
                 </div>
                 <h1 class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-zinc-900 dark:text-white">Privacy Policy</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400">Effective Date: September 17, 2026 · Version 1.1</p>
+                <p class="text-sm text-zinc-500 dark:text-zinc-400">Effective Date: November 26, 2026 · Version 1.2</p>
             </div>
 
             <div class="synkk-prose space-y-10 text-zinc-700 dark:text-zinc-300 leading-relaxed">
@@ -82,7 +82,7 @@
 
                 <section class="space-y-4">
                     <h2 class="text-xl font-bold text-zinc-900 dark:text-white">3. Zero-Knowledge Encryption (E2EE)</h2>
-                    <p>When you enable End-to-End Encryption (E2EE) on a vault, all notes, frontmatter, and attachments are encrypted directly on your local client device using <strong>AES-256-GCM</strong> with 100,000 PBKDF2 iterations via the standard <strong>WebCrypto API</strong> before network transmission. Master passphrases are kept in ephemeral memory and <strong>are never saved to disk or transmitted to our servers</strong>. Synkk Cloud servers only ever store and relay opaque binary ciphertext blobs.</p>
+                    <p>When you enable End-to-End Encryption (E2EE) on a vault, note contents, binary attachments, and Yjs collaboration updates are encrypted directly on your local client device using <strong>AES-256-GCM</strong> with 100,000 PBKDF2-SHA-256 iterations via the standard <strong>WebCrypto API</strong> before network transmission. Vault passphrases are kept in volatile memory and <strong>are never saved to disk or transmitted to our servers</strong>. Synkk servers store and relay opaque ciphertext blobs for file contents, while file paths, sizes, and version numbers remain plaintext metadata required for sync manifests and path permissions.</p>
                 </section>
 
                 <section class="space-y-4">
@@ -90,15 +90,15 @@
                     <ul class="list-disc pl-6 space-y-2">
                         <li><strong>Account Identification:</strong> Name, email address, and argon2id-hashed passwords for authentication and account recovery.</li>
                         <li><strong>Payment Information:</strong> Subscription and license transactions are processed through our Merchant of Record, <strong>Dodo Payments Inc.</strong> Ottomate does not collect, process, or store payment card numbers or banking credentials.</li>
-                        <li><strong>Device Tokens &amp; Pairing Telemetry:</strong> Cryptographically generated high-entropy bearer tokens (`synkk_live_...`) to authorize individual Obsidian client devices and enforce team access permissions.</li>
+                        <li><strong>Device &amp; MCP Tokens:</strong> Cryptographically generated bearer tokens (<code>synkk_...</code>), stored as SHA-256 hashes, to authorize Obsidian devices and permissioned MCP clients and enforce team access boundaries.</li>
                         <li><strong>System Logs:</strong> HTTP access and security logs may include IP addresses, request timestamps, and user-agent information. Retention is limited according to the documented production policy and infrastructure configuration.</li>
-                        <li><strong>Optional AI Processing:</strong> Vault excerpts and prompts are sent to an external AI provider only when an operator configures that provider and enables the applicable RAG workflow. End-to-end encrypted vault content cannot be processed by server-side RAG while it remains encrypted.</li>
+                        <li><strong>Optional AI &amp; MCP Processing:</strong> Vault excerpts and prompts are sent to an external AI provider only when a workspace administrator enables the opt-in AI Add-On (Managed Cloud AI or BYOK) and enables server AI on a non-E2EE vault. Detected credential patterns are redacted before outbound non-local AI requests. End-to-end encrypted vaults are blocked from server-side AI, RAG indexing, and MCP tools; E2EE vaults can use local Ollama or user-configured local endpoints directly from the Obsidian plugin.</li>
                     </ul>
                 </section>
 
                 <section class="space-y-4">
                     <h2 class="text-xl font-bold text-zinc-900 dark:text-white">5. Cookies and Tracking</h2>
-                    <p>Synkk does <strong>not</strong> use third-party tracking pixels, advertising cookies, or behavioral analytics cookies. We use only strictly necessary first-party HTTP-only session cookies (`synkk_session`, CSRF validation tokens, and portal password unlock grants) required for authentication and security.</p>
+                    <p>Synkk does <strong>not</strong> use third-party tracking pixels, advertising cookies, or behavioral analytics cookies. We use only strictly necessary first-party HTTP-only session cookies (<code>synkk_session</code>, CSRF validation tokens, and portal password unlock grants) required for authentication and security.</p>
                 </section>
 
                 <section class="space-y-4">
@@ -120,8 +120,13 @@
                                     <td class="p-3 border border-zinc-200 dark:border-zinc-800">European Union (Germany)</td>
                                 </tr>
                                 <tr>
+                                    <td class="p-3 border border-zinc-200 dark:border-zinc-800 font-medium">OpenRouter, Inc. (optional)</td>
+                                    <td class="p-3 border border-zinc-200 dark:border-zinc-800">Managed Cloud AI model routing only when the optional Managed AI Add-On or an OpenRouter BYOK key is enabled on non-E2EE vaults</td>
+                                    <td class="p-3 border border-zinc-200 dark:border-zinc-800">United States / routed model providers</td>
+                                </tr>
+                                <tr>
                                     <td class="p-3 border border-zinc-200 dark:border-zinc-800 font-medium">OpenAI, L.L.C. (optional)</td>
-                                    <td class="p-3 border border-zinc-200 dark:border-zinc-800">AI response generation only when an operator configures an OpenAI API key</td>
+                                    <td class="p-3 border border-zinc-200 dark:border-zinc-800">Vector embeddings (Managed Cloud AI) or AI generation when an operator configures an OpenAI BYOK key</td>
                                     <td class="p-3 border border-zinc-200 dark:border-zinc-800">United States / provider-selected processing regions</td>
                                 </tr>
                                 <tr>

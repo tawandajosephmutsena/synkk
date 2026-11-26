@@ -391,11 +391,11 @@
                                 <span class="synkk-status-dot" aria-hidden="true"></span> Pillar 04 · Private Intelligence
                             </div>
                             <h3>Intelligent &amp; Agentic on Your Hardware.</h3>
-                            <p>Turn your personal knowledge base into a private AI assistant. Synkk combines sublinear character TF-IDF vector embeddings and local Ollama LLMs with bidirectional wikilink graph traversal. Local processing is the default; operators can optionally configure OpenAI for answer generation.</p>
+                            <p>Turn your personal knowledge base into a private AI assistant. Synkk combines hybrid SQLite FTS5 + vector search, bidirectional <code>[[wikilink]]</code> graph traversal, an opt-in Vault AI Agent with a human-approved Proposal Diff Inbox, and a permissioned Remote MCP Server (<code>POST /api/v1/mcp</code>). Connect local Ollama, bring your own API keys (OpenAI, Anthropic, Gemini, OpenRouter), or opt into Synkk Managed Cloud AI. On E2EE vaults, server AI is blocked and the plugin routes Q&amp;A and conflict merges directly to your local Ollama or OpenAI-compatible server.</p>
                             <ul class="synkk-feature-card__list">
-                                <li><strong>Local Ollama Integration:</strong> Run Llama 3.2 or Nomic Embeddings directly on your machine.</li>
-                                <li><strong>Graph-Augmented RAG:</strong> Traverses backlink connections (<code>[[wikilinks]]</code>) for deep contextual answers.</li>
-                                <li><strong>Local-First Processing:</strong> Deterministic retrieval and Ollama stay on operator-controlled infrastructure unless an external AI provider is explicitly configured.</li>
+                                <li><strong>Local Ollama &amp; BYOK:</strong> Run Llama 3.2 locally (even on E2EE vaults) or connect OpenAI, Anthropic, Gemini, or OpenRouter on standard vaults.</li>
+                                <li><strong>Graph-Augmented Hybrid Search &amp; MCP:</strong> Combines FTS5 BM25 + vector cosine similarity with <code>[[wikilink]]</code> traversal and exposes 7 ACL-aware MCP tools to Claude Desktop, Cursor, and Windsurf.</li>
+                                <li><strong>Human-in-the-Loop Proposals:</strong> AI edits, Vault Gardener suggestions, and Team Digests stage cleanly in a diff approval inbox before touching your notes.</li>
                             </ul>
                         </div>
                         <div class="synkk-feature-card__media">
@@ -531,15 +531,15 @@
                                 <td><span class="text-amber-500 font-bold">~</span> Complex Workspace ACLs</td>
                             </tr>
                             <tr>
-                                <td><strong>In-Flight DLP Secret Scanner</strong></td>
-                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Intercepts AWS / API keys</td>
+                                <td><strong>Server-Side Plaintext DLP</strong></td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Flags AWS / API / PEM keys &amp; redacts AI prompts</td>
                                 <td><span class="text-red-500 font-bold">✗</span> None</td>
                                 <td><span class="text-red-500 font-bold">✗</span> None (Committed to Git)</td>
-                                <td><span class="text-red-500 font-bold">✗</span> Scanned for AI Training</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Closed cloud storage</td>
                             </tr>
                             <tr>
                                 <td><strong>Merge Conflict Safety</strong></td>
-                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> 3-Way Visual Diff Sandbox</td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Visual Conflict Sandbox + AI Smart Merge</td>
                                 <td><span class="text-amber-500 font-bold">~</span> Duplicate conflict copies</td>
                                 <td><span class="text-red-500 font-bold">✗</span> Destructive Git markers</td>
                                 <td><span class="text-red-500 font-bold">✗</span> Last-write-wins overwrites</td>
@@ -552,11 +552,11 @@
                                 <td><span class="text-amber-500 font-bold">~</span> Cloud streaming</td>
                             </tr>
                             <tr>
-                                <td><strong>Local Private RAG &amp; AI Graph</strong></td>
-                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Local Ollama + Embeddings</td>
+                                <td><strong>Private AI, RAG &amp; Remote MCP</strong></td>
+                                <td class="is-synkk"><span class="text-emerald-500 font-bold">✓</span> Local Ollama, BYOK, Managed AI &amp; MCP Server</td>
                                 <td><span class="text-red-500 font-bold">✗</span> None</td>
                                 <td><span class="text-red-500 font-bold">✗</span> None</td>
-                                <td><span class="text-red-500 font-bold">✗</span> Third-party cloud LLMs</td>
+                                <td><span class="text-red-500 font-bold">✗</span> Proprietary cloud-only AI</td>
                             </tr>
                             <tr>
                                 <td><strong>Self-Hosted Infrastructure</strong></td>
@@ -589,35 +589,35 @@
 
                 <div class="synkk-safety-grid">
                     <article class="synkk-safety-card synkk-safety-card--primary">
-                        <div class="synkk-safety-card__top"><span>CORE SERVER</span><strong>PHP 8.5 / LARAVEL 12</strong></div>
+                        <div class="synkk-safety-card__top"><span>CORE SERVER</span><strong>PHP 8.5 / LARAVEL 13</strong></div>
                         <h3>High-Throughput Sync API &amp; Web Workspace</h3>
-                        <p>Powered by Laravel 13 on PHP 8.5 with a SQLite WAL engine. Uses atomic cache locks for multiplayer coordination and soft-delete tombstones for synchronization history.</p>
+                        <p>Powered by Laravel 13, Livewire 4, and Laravel Reverb on PHP 8.5 with an embedded SQLite WAL + FTS5 engine. Uses atomic database locks for synchronization and soft-delete tombstones for change tracking.</p>
                         <div class="synkk-hash-readout">
                             <span>STORAGE ENGINE</span>
-                            <code>SQLite WAL / Postgres 15+</code>
-                            <small>Single-command Docker container</small>
+                            <code>SQLite WAL + FTS5</code>
+                            <small>All-in-one Docker container (Nginx + PHP-FPM + Reverb)</small>
                         </div>
                     </article>
 
                     <article class="synkk-safety-card">
                         <div class="synkk-safety-card__top"><span>NATIVE PLUGIN</span><strong>TYPESCRIPT / CM6</strong></div>
-                        <h3>Obsidian ViewPlugin &amp; Live Decorators</h3>
-                        <p>Written in TypeScript with CodeMirror 6 ViewPlugins. Injects live presence carets, handles pre-sync backups, renders the visual 3-way diff sandbox, and supports instant 2-second QR pairing.</p>
+                        <h3>Obsidian Plugin, AI Sidebar &amp; Collab Relay</h3>
+                        <p>Written in TypeScript for Desktop and Mobile (Obsidian 1.7.2+). Ships with Pre-Flight Migration Wizard, Visual Conflict Sandbox, Local E2EE AI Sidebar, opt-in CodeMirror 6 Yjs CRDT collaboration, and Instant QR pairing.</p>
                         <div class="synkk-rule-list">
-                            <p><span>Plugin Release</span><strong>v1.0.7 Community</strong></p>
-                            <p><span>Pairing Latency</span><strong>&lt; 2.0s via QR</strong></p>
-                            <p><span>Diff Engine</span><strong>3-Way Sandbox</strong></p>
+                            <p><span>Plugin Release</span><strong>v1.1.1 Community</strong></p>
+                            <p><span>Pairing Flow</span><strong>One-Scan QR / Deep Link</strong></p>
+                            <p><span>Diff Engine</span><strong>Visual Sandbox + AI Merge</strong></p>
                         </div>
                     </article>
 
                     <article class="synkk-safety-card">
-                        <div class="synkk-safety-card__top"><span>COMMUNITY &amp; OPEN CORE</span><strong>GPL / COMMERCIAL</strong></div>
+                        <div class="synkk-safety-card__top"><span>COMMUNITY &amp; OPEN CORE</span><strong>MIT / COMMERCIAL</strong></div>
                         <h3>Sustainable Open Source Innovation</h3>
-                        <p>Synkk Community is 100% free and open-source forever. Commercial Pro licenses and managed cloud workspaces fund continuous research without investor pressure to commercialize private data.</p>
+                        <p>Synkk Community and the Obsidian plugin are MIT-licensed and open-source. Commercial Pro LTD licenses, managed Cloud workspaces, and the optional Managed AI Add-On fund continuous engineering without investor pressure to monetize private data.</p>
                         <ol class="synkk-version-list">
-                            <li><i></i><span><strong>Free Community CE</strong><small>Self-hosted, full source</small></span></li>
-                            <li><i></i><span><strong>Pro Lifetime Deal</strong><small>Commercial team server</small></span></li>
-                            <li><i></i><span><strong>Managed Cloud SaaS</strong><small>Zero-maintenance hosting</small></span></li>
+                            <li><i></i><span><strong>Free Community CE (MIT)</strong><small>Self-hosted, full source</small></span></li>
+                            <li><i></i><span><strong>Pro Lifetime Deal ($79)</strong><small>Commercial team controls</small></span></li>
+                            <li><i></i><span><strong>Managed Cloud ($12 / $25)</strong><small>Zero-maintenance hosting</small></span></li>
                         </ol>
                     </article>
                 </div>
@@ -629,27 +629,27 @@
                         <div class="synkk-pipeline-step">
                             <span class="synkk-pipeline-step__num">01 · CLIENT EDIT</span>
                             <strong>Obsidian Event Trigger</strong>
-                            <p>File modification detected locally; pre-sync snapshot archived to .synkk/snapshots/.</p>
+                            <p>File modification detected locally (2.5s debounce); local pre-mutation snapshots archived to <code>.synkk/snapshots/</code> before remote overwrites.</p>
                         </div>
                         <div class="synkk-pipeline-step">
                             <span class="synkk-pipeline-step__num">02 · CRYPTO TRANSIT</span>
-                            <strong>SHA-256 Fingerprint</strong>
-                            <p>Content hashed and encrypted via client-side AES-256-GCM before transport dispatch.</p>
+                            <strong>SHA-256 &amp; Optional E2EE</strong>
+                            <p>Content is hashed with SHA-256 over HTTPS. On E2EE vaults, file bytes are encrypted client-side via WebCrypto AES-256-GCM before dispatch.</p>
                         </div>
                         <div class="synkk-pipeline-step">
-                            <span class="synkk-pipeline-step__num">03 · DLP GATEWAY</span>
-                            <strong>In-Flight Secret Inspection</strong>
-                            <p>Regex scanner checks for leaked tokens (AWS, GitHub, Slack) to prevent credential propagation.</p>
+                            <span class="synkk-pipeline-step__num">03 · PLAINTEXT DLP</span>
+                            <strong>Server Secret Inspection</strong>
+                            <p>On standard (non-E2EE) vaults, regex scanning flags leaked AWS, GitHub, Slack, OpenAI, and PEM keys in audit logs and redacts them before external AI calls. E2EE ciphertext is never inspected.</p>
                         </div>
                         <div class="synkk-pipeline-step">
                             <span class="synkk-pipeline-step__num">04 · OCC VERIFICATION</span>
                             <strong>Atomic WAL Ingestion</strong>
-                            <p>Server executes lockForUpdate(); checks baseVersion. Rejects overwrites; creates conflict files.</p>
+                            <p>Server verifies device token, path ACL, and <code>base_version</code>. Stale concurrent writes preserve non-destructive conflict copies instead of overwriting.</p>
                         </div>
                         <div class="synkk-pipeline-step">
                             <span class="synkk-pipeline-step__num">05 · VERSION ARCHIVE</span>
                             <strong>Historical Retention</strong>
-                            <p>Prior version archived into VaultFileVersion for 1-click historical rollback anytime.</p>
+                            <p>Prior file revisions (up to 25 per file by default) are archived into <code>VaultFileVersion</code> for 1-click historical rollback anytime.</p>
                         </div>
                     </div>
                 </div>
@@ -662,11 +662,11 @@
                     <div class="synkk-final-cta__copy">
                         <div class="synkk-cta-badge">
                             <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
-                            <span>Join The Sovereign Sync Movement · v1.0.7 Live</span>
+                            <span>Join The Sovereign Sync Movement · v1.1.1 Live</span>
                         </div>
                         <p class="synkk-eyebrow">Your thoughts. Your rules.</p>
                         <h2 id="cta-heading">Own your team brain today.</h2>
-                        <p>Deploy your private Synkk server with Docker in 30 seconds, install the open-source Obsidian plugin, and experience team collaboration without cloud compromise.</p>
+                        <p>Deploy your private Synkk server with Docker Compose or our VPS installer, install the open-source Obsidian plugin, and experience team collaboration without cloud compromise.</p>
                         <div class="synkk-final-cta__actions">
                             <a href="obsidian://show-plugin?id=synkk-sync" class="synkk-button synkk-button--accent">Install Plugin in Obsidian <span aria-hidden="true">↗</span></a>
                             <a href="{{ route('public.docs') }}" class="synkk-button synkk-button--paper">Read Documentation <span aria-hidden="true">→</span></a>
@@ -675,7 +675,7 @@
                             <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> 100% Plain Markdown</span>
                             <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Zero Telemetry</span>
                             <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Self-Hosted Docker</span>
-                            <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> Free Forever CE</span>
+                            <span><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg> MIT Open Source</span>
                         </div>
                     </div>
 
@@ -693,12 +693,12 @@
                             </button>
                         </div>
                         <div class="synkk-cta-terminal__body">
-                            <div class="synkk-code-line"><span class="synkk-prompt">$</span> <span class="synkk-cmd">git clone https://github.com/tawandajosephmutsena/synkk.git</span></div>
-                            <div class="synkk-code-line"><span class="synkk-prompt">$</span> <span class="synkk-cmd">docker compose up -d</span></div>
-                            <div class="synkk-code-output"><span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span> Synkk sovereign server running at http://127.0.0.1:8080</div>
-                            <div class="synkk-code-line synkk-code-line--comment"># Scan dashboard QR code in Obsidian mobile to pair in 2 seconds</div>
-                            <div class="synkk-code-line"><span class="synkk-prompt">$</span> <span class="synkk-cmd">curl -X GET http://127.0.0.1:8080/api/v1/auth/verify</span></div>
-                            <div class="synkk-code-output"><span class="synkk-status-dot" aria-hidden="true"></span> {"status": "authenticated", "mode": "sovereign", "e2ee": true}</div>
+                            <div class="synkk-code-line"><span class="synkk-prompt">$</span> <span class="synkk-cmd">git clone --recurse-submodules https://github.com/tawandajosephmutsena/synkk.git</span></div>
+                            <div class="synkk-code-line"><span class="synkk-prompt">$</span> <span class="synkk-cmd">cp .env.production.example .env.production &amp;&amp; docker compose -f docker-compose.prod.yml up -d --build</span></div>
+                            <div class="synkk-code-output"><span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span> Synkk sovereign server listening on http://127.0.0.1:8000</div>
+                            <div class="synkk-code-line synkk-code-line--comment"># Pair Obsidian desktop or mobile via QR code or obsidian://synkk-pair</div>
+                            <div class="synkk-code-line"><span class="synkk-prompt">$</span> <span class="synkk-cmd">curl -H "Authorization: Bearer synkk_..." http://127.0.0.1:8000/api/v1/auth/verify</span></div>
+                            <div class="synkk-code-output"><span class="synkk-status-dot" aria-hidden="true"></span> {"authenticated": true, "protocol_version": 2}</div>
                         </div>
                     </div>
                 </div>
@@ -712,7 +712,7 @@
                     <div class="synkk-footer-telemetry__status">
                         <span class="synkk-status-dot synkk-status-dot--pulse" aria-hidden="true"></span>
                         <strong>SYSTEM STATUS:</strong>
-                        <span>Sync Engine v1.0.7 · Local-First Architecture · Systems Operational</span>
+                        <span>Obsidian Plugin v1.1.1 · Laravel 13 · Local-First Architecture</span>
                     </div>
                     <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer" class="synkk-footer-telemetry__link">Public Repository ↗</a>
                 </div>
@@ -731,6 +731,9 @@
                         <a href="{{ route('home') }}#roadmap">Roadmap</a>
                         <a href="{{ route('about') }}">About</a>
                         <a href="{{ route('public.docs') }}">Documentation</a>
+                        <a href="{{ route('privacy') }}">Privacy</a>
+                        <a href="{{ route('terms') }}">Terms</a>
+                        <a href="{{ route('security') }}">Security</a>
                         <a href="{{ $pluginUrl }}" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
                     </nav>
                 </div>
@@ -801,7 +804,7 @@
                 const copyBtn = document.getElementById('copy-deploy-btn');
                 if (copyBtn) {
                     copyBtn.addEventListener('click', async () => {
-                        const cmd = 'git clone https://github.com/tawandajosephmutsena/synkk.git && cd synkk && docker compose up -d';
+                        const cmd = 'git clone --recurse-submodules https://github.com/tawandajosephmutsena/synkk.git && cd synkk && cp .env.production.example .env.production';
                         try {
                             await navigator.clipboard.writeText(cmd);
                             const originalHtml = copyBtn.innerHTML;

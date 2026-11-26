@@ -1,36 +1,38 @@
 ---
 title: "Live Multiplayer CRDT & Carets"
-description: "Real-time conflict-free co-authoring with CodeMirror 6 carets and Yjs."
+description: "Opt-in real-time Yjs co-authoring over Laravel Reverb plus Visual Conflict Sandbox and AI Smart Merge."
 tags:
   - crdt
   - collaboration
   - realtime
   - yjs
+  - conflicts
 ---
 
-# 👥 Live Multiplayer CRDT & Carets
+# 👥 Live Multiplayer CRDT & Visual Conflict Sandbox
 
-Synkk is not just a file synchronization utility—it is a **real-time collaborative workspace**.
-
-When two team members open the same note simultaneously—one in the Obsidian desktop client, another in the mobile app, and a third in the Synkk Web Editor—they can co-author simultaneously without conflicts.
-
----
-
-## ⚡ How Synkk Multiplayer Works
-
-1. **Yjs State Vectors**: Notes are represented as Conflict-Free Replicated Data Types (CRDTs). Each keystroke produces a deterministic binary update vector.
-2. **CodeMirror 6 Presence Extension**: Team members' live cursors, selections, and user avatars appear directly inside Obsidian with custom color badges.
-3. **Laravel Echo & Reverb WebSockets**: Updates broadcast over low-latency WebSockets directly to active peers in milliseconds.
-4. **Snapshot Consolidation**: When all peers leave a note, the CRDT document state is automatically serialized into standard Markdown plaintext and saved to disk.
+Synkk defaults to rock-solid **whole-file SHA-256 synchronization** with a Visual Conflict Sandbox for offline edits, and offers **opt-in real-time Yjs CRDT collaboration** when teammates want to co-author Markdown notes simultaneously.
 
 ---
 
-## 🔀 3-Way Merge Conflict Sandbox
+## ⚡ How Opt-In Real-Time Collaboration Works
 
-In the rare event that two devices edit a note completely offline and reconnect simultaneously, Synkk's **3-Way Conflict Sandbox** protects both sides:
-- Preserves the common base ancestor revision.
-- Analyzes hunks from local and remote edits.
-- Auto-resolves non-overlapping blocks cleanly.
-- If overlapping lines conflict, Synkk preserves the original note and forks the second version into a named conflict copy (`note.sync-conflict-TIMESTAMP.md`), ensuring **zero data is ever overwritten or lost**.
+> [!NOTE] Opt-In in Obsidian Plugin (`v1.1.1`)
+> Inside Obsidian, **Enable Real-Time Collaboration (CRDT)** is **off by default** (`realtimeCollaboration: false`) to guarantee maximum atomic whole-file stability. Toggle it on in **Settings → Synkk Vault Sync → Real-Time Multiplayer Collaboration** whenever your team needs live co-editing.
 
-Next: Learn how mobile devices handle multi-gigabyte media with [[02-Core-Sync/Mobile Ghost Files & Streaming|Mobile Ghost Files & Streaming]].
+1. **Durable Yjs Journal**: Opening a `.md` note joins a server-backed collaboration room (`POST /api/v1/vaults/{slug}/collab/join`), catches up missed binary updates (`GET .../collab/catch-up`), and binds a `Y.Doc` to the active CodeMirror 6 editor.
+2. **CodeMirror 6 Live Carets**: Remote cursor positions and collaborator badges broadcast via Laravel Reverb private channel whispers (`vault-collaboration.{documentId}`).
+3. **E2EE AAD Protection**: On E2EE vaults, Yjs updates and checkpoints are encrypted client-side using WebCrypto AES-256-GCM bound to document AAD (`synkk-v2:{vaultId}:{documentId}:{purpose}:2`).
+4. **Durable Markdown Checkpointing**: After edits settle (3-second debounce) or on leaving a note, state flushes cleanly back to standard `.md` files and posts a compacted checkpoint (`POST .../collab/checkpoint`).
+
+---
+
+## 🔀 Visual Conflict Sandbox & AI Smart Merge
+
+When two devices edit the same note offline, Synkk never silently overwrites either side:
+- Pull conflicts save the remote version as `<note>.sync-conflict-<timestamp>.md`; push collisions save `<note>.conflict-<user>-<timestamp>.md`.
+- Open the **Visual Conflict Sandbox** (split ribbon icon or Command Palette: `Visual Conflict Sandbox: Reconcile Notes`) to inspect **Canonical** vs **Conflict Copy** side-by-side.
+- Choose **Keep Canonical Version**, **Keep Conflict Version**, **Combine Both**, or **✨ Smart Merge with AI** (uses server AI on standard vaults, or your local Ollama/OpenAI-compatible model on E2EE vaults).
+- Review/edit the reconciled preview and click **Reconcile & Clean Up Conflict** to save, remove the conflict copy, and sync.
+
+Next: Learn how mobile devices handle large media with [[02-Core-Sync/Mobile Ghost Files & Streaming|Mobile Ghost Files & Attachment Hydration]].

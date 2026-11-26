@@ -1,6 +1,6 @@
 ---
 title: "Atomic Safety Shield & Snapshots"
-description: "Hard deletion limits and automatic local snapshots protecting your knowledge base."
+description: "Configurable deletion circuit breaker, local pre-mutation snapshots, and 25-version server history."
 tags:
   - safety-shield
   - snapshots
@@ -10,24 +10,22 @@ tags:
 
 # 🛡️ Atomic Safety Shield & Snapshots
 
-Sync tools must adhere to the first rule of medicine: *Primum non nocere* (First, do no harm).
-
-Synkk implements an active defense system against accidental mass file deletion and sync corruption.
+Sync engines must follow one rule above all: never silently destroy a user's vault.
 
 ---
 
-## 🛑 Guard Thresholds
+## 🛑 Deletion Circuit Breaker
 
-1. **Percentage Threshold**: If a sync pulse proposes deleting more than **20%** of your tracked vault files, the sync is halted instantly.
-2. **Bulk Count Limit**: If a deletion set contains more than **10 files** simultaneously, the shield engages unless an explicit one-time safety override is toggled.
-3. **Audit Trail**: Every file deletion generates a soft-delete tombstone record with timestamp, user ID, device name, and commit version.
+- **Client-Side Threshold (Default: `10%`):** Before applying incoming remote deletions or pushing outgoing local deletions, the Obsidian plugin compares the deletion ratio against **Deletion safety threshold** (`deletionThresholdPercent`, configurable from `1%` to `100%` in **Settings → Synkk Vault Sync → Atomic Safety Shield**).
+- **One-Time Guarded Override:** If a sync exceeds the threshold, synchronization halts immediately and notifies you in the status bar. Review the pending changes and either toggle **Allow next guarded sync** in settings or click the Safety Shield status bar prompt to authorize that single run.
+- **Pre-Flight Guidance:** The server's `POST /api/v1/vaults/{slug}/preflight` endpoint also reports recommended bulk-deletion guardrails (`20%` / `>10 files`) during initial migration checks.
 
 ---
 
-## 📸 Automatic Local Snapshots
+## 📸 Local Snapshots & 25-Version Server Rollback
 
-Before any remote modification or deletion is applied to your local disk:
-- The Obsidian plugin writes an exact binary snapshot of the local note into `.synkk/snapshots/YYYY-MM-DD/`.
-- If an accidental overwrite occurs on another device, you can restore previous versions in one click from the Synkk Web Dashboard or directly from your local snapshot folder.
+- **Local Pre-Mutation Backups:** Before applying a remote overwrite or remote deletion to your local vault, the Obsidian plugin writes a backup into `.synkk/snapshots/<ISO-timestamp>/<path>`.
+- **Server Version History:** Every accepted update archives the prior revision (preserving E2EE IV/tag metadata on encrypted vaults), retaining up to **25 versions per file** by default (`SYNKK_VERSION_RETENTION_LIMIT`). Restore any version in one click from the Synkk web workspace.
+- **Soft-Delete Tombstones:** Deleted files record tombstones in the changelog and are pruned after 30 days (`vaults:prune-deleted --days=30`). Re-uploading at the same path resurrects the file cleanly.
 
-Next: Publish your notes online with [[04-Portals/Interactive Livewire Vault Portals|Interactive Livewire Vault Portals]].
+Next: Learn about [[03-Security/Role-Based Scoped Permissions|Team Roles & Path-Level ACLs]].

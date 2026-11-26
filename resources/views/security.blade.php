@@ -71,10 +71,10 @@
                     <h2 class="text-xl font-bold text-zinc-900 dark:text-white">1. Security Architecture</h2>
                     <p>Synkk is built from the ground up on local-first, zero-knowledge principles:</p>
                     <ul class="list-disc pl-6 space-y-2">
-                        <li><strong>Client-Side Cryptography:</strong> All encrypted notes and binary attachments are transformed using <strong>AES-256-GCM</strong> with authenticated associated data (AAD) via standard WebCrypto primitives before leaving your device.</li>
-                        <li><strong>Key Material Isolation:</strong> Master passphrases reside exclusively in volatile client memory for the active session. Passphrases are never written to disk (`data.json`) or transmitted over HTTP.</li>
-                        <li><strong>Tenant Isolation &amp; Continuous Authorization:</strong> Every API endpoint and Livewire portal interaction re-verifies tenant membership and cryptographic session grants on every single lifecycle invocation.</li>
-                        <li><strong>Token Lifecycle &amp; Remote Wipe:</strong> Device tokens are hashed using SHA-256. Offboarding a team member instantly and transactionally revokes all active sync tokens.</li>
+                        <li><strong>Client-Side Cryptography:</strong> When E2EE is enabled on a vault, note contents, binary attachments, and real-time Yjs collaboration updates are encrypted using <strong>AES-256-GCM</strong> (with 100,000-iteration PBKDF2-SHA-256 key derivation and authenticated associated data on collaboration payloads) via standard WebCrypto primitives before leaving your device. Vault names, file paths, sizes, and version metadata remain unencrypted on the server to enforce path ACLs and synchronization routing.</li>
+                        <li><strong>Key Material Isolation:</strong> Vault passphrases reside exclusively in volatile client memory for the active session. Passphrases are never written to disk (<code>data.json</code>) or transmitted over HTTP.</li>
+                        <li><strong>Account &amp; Tenant Security:</strong> Supports WebAuthn Passkeys, TOTP two-factor authentication with recovery codes, and Argon2id password hashing. Every API endpoint and Livewire portal interaction re-verifies tenant membership and path-level ACLs on every request.</li>
+                        <li><strong>Token Lifecycle, DLP &amp; Remote Wipe:</strong> Device and MCP tokens (<code>synkk_...</code>) are stored as SHA-256 hashes. Plaintext uploads are inspected server-side for leaked credential patterns (skipped on E2EE ciphertext), and offboarding or remote wipe immediately revokes active tokens and instructs the plugin to clear local credentials (HTTP 410).</li>
                     </ul>
                 </section>
 
